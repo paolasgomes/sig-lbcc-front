@@ -30,6 +30,12 @@ const navItems: NavItem[] = [
   { label: "Pacientes", href: "/pacientes", icon: Users },
   { label: "Atendimentos", href: "/atendimentos", icon: ClipboardList },
   {
+    label: "Usuários",
+    href: "/usuarios",
+    icon: Users,
+    perfilMinimo: [PerfilUsuario.GESTOR],
+  },
+  {
     label: "Cotações",
     href: "/cotacoes",
     icon: FileText,
@@ -69,7 +75,7 @@ export function AppSidebar() {
     <aside className="flex h-screen w-64 flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6 ">
         <div className="flex items-center justify-center rounded-xl mx-auto">
-          <Image src={Logo} alt="Logo LBCC" width={108} height={108} />
+          <Image src={Logo} alt="Logo LBCC" width={108} height={108} loading="eager" />
         </div>
       </div>
 

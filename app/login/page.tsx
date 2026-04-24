@@ -50,7 +50,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto flex  items-center justify-center rounded-xl">
-            <Image src={Logo} alt="Logo LBCC" width={192} height={192} />
+            <Image src={Logo} alt="Logo LBCC" width={192} height={192} loading="eager" />
           </div>
         </CardHeader>
         <CardContent>
