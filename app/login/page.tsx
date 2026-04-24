@@ -2,15 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Heart, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth-context";
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
@@ -32,14 +26,14 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const sucesso = await login(email, senha);
-      if (sucesso) {
-        router.push("/dashboard");
+      await login(email, senha);
+      router.push("/dashboard");
+    } catch (error) {
+      if (error instanceof Error) {
+        setErro(error.message);
       } else {
-        setErro("Email ou senha inválidos");
+        setErro("Erro ao fazer login. Tente novamente.");
       }
-    } catch {
-      setErro("Erro ao fazer login. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -64,6 +58,7 @@ export default function LoginPage() {
                   placeholder="seu.email@exemplo.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
                   required
                 />
               </Field>
@@ -78,11 +73,13 @@ export default function LoginPage() {
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
                     required
+                    disabled={loading}
                     className="pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setMostrarSenha(!mostrarSenha)}
+                    disabled={loading}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     {mostrarSenha ? (
@@ -105,28 +102,6 @@ export default function LoginPage() {
               </Button>
             </FieldGroup>
           </form>
-
-          <div className="mt-6 border-t pt-6">
-            <p className="mb-3 text-center text-sm text-muted-foreground">
-              Usuários de demonstração:
-            </p>
-            <div className="space-y-2 text-xs text-muted-foreground">
-              <div className="rounded-lg bg-muted p-2">
-                <p>
-                  <strong>Operador:</strong> operador@lbcc.org.br
-                </p>
-                <p>
-                  <strong>Gestor:</strong> gestor@lbcc.org.br
-                </p>
-                <p>
-                  <strong>Prefeitura:</strong> prefeitura@bataguassu.gov.br
-                </p>
-                <p className="mt-1">
-                  <strong>Senha:</strong> 123456
-                </p>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
