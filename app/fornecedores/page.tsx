@@ -1,44 +1,71 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { ProtectedRoute } from "@/components/auth/protected-route"
-import { useData } from "@/contexts/data-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, Building2 } from "lucide-react"
-import Link from "next/link"
+import { useState } from "react";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { useData } from "@/contexts/data-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Eye,
+  Building2,
+} from "lucide-react";
+import Link from "next/link";
 
 export default function FornecedoresPage() {
-  const { fornecedores, deleteFornecedor } = useData()
-  const [searchTerm, setSearchTerm] = useState("")
+  const { fornecedores, deleteFornecedor } = useData();
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredFornecedores = fornecedores.filter(fornecedor =>
-    fornecedor.nomeFantasia.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    fornecedor.razaoSocial.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    fornecedor.cnpj.includes(searchTerm)
-  )
+  const filteredFornecedores = fornecedores.filter(
+    (fornecedor) =>
+      (fornecedor.nomeFantasia ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (fornecedor.razaoSocial ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (fornecedor.cnpj ?? "").includes(searchTerm),
+  );
 
   const handleDelete = (id: string) => {
     if (confirm("Tem certeza que deseja excluir este fornecedor?")) {
-      deleteFornecedor(id)
+      deleteFornecedor(id);
     }
-  }
+  };
 
   const formatCNPJ = (cnpj: string) => {
-    return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")
-  }
+    return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+  };
 
   const formatPhone = (phone: string) => {
     if (phone.length === 11) {
-      return phone.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3")
+      return phone.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
     }
-    return phone.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3")
-  }
+    return phone.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
+  };
 
   return (
     <ProtectedRoute allowedRoles={["admin", "gestor"]}>
@@ -91,7 +118,7 @@ export default function FornecedoresPage() {
                       <TableHead>Telefone</TableHead>
                       <TableHead>Cidade/UF</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="w-[70px]">Acoes</TableHead>
+                      <TableHead className="w-17.5">Acoes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -108,11 +135,9 @@ export default function FornecedoresPage() {
                             {fornecedor.nomeFantasia}
                           </TableCell>
                           <TableCell className="font-mono text-sm">
-                            {formatCNPJ(fornecedor.cnpj)}
+                            {formatCNPJ(fornecedor.cnpj ?? "")}
                           </TableCell>
-                          <TableCell>
-                            {formatPhone(fornecedor.telefone)}
-                          </TableCell>
+                          <TableCell>{formatPhone(fornecedor.telefone)}</TableCell>
                           <TableCell>
                             {fornecedor.cidade}/{fornecedor.uf}
                           </TableCell>
@@ -163,5 +188,5 @@ export default function FornecedoresPage() {
         </div>
       </DashboardLayout>
     </ProtectedRoute>
-  )
+  );
 }

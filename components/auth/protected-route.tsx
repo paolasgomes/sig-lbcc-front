@@ -1,29 +1,56 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/auth-context'
-import { PerfilUsuario } from '@/types'
-import { Spinner } from '@/components/ui/spinner'
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
+import { PerfilUsuario } from "@/types";
+import { Spinner } from "@/components/ui/spinner";
 
 interface ProtectedRouteProps {
-  children: React.ReactNode
-  perfisPermitidos?: PerfilUsuario[]
+  children: React.ReactNode;
+  perfisPermitidos?: (PerfilUsuario | string)[];
+  allowedRoles?: string[];
 }
 
-export function ProtectedRoute({ children, perfisPermitidos }: ProtectedRouteProps) {
-  const { usuario, isLoading } = useAuth()
-  const router = useRouter()
+function mapLegacyRoleToPerfil(role: string): PerfilUsuario {
+  const normalizedRole = role.toLowerCase();
+
+  if (normalizedRole === "gestor") {
+    return PerfilUsuario.GESTOR;
+  }
+
+  if (normalizedRole === "prefeitura") {
+    return PerfilUsuario.PREFEITURA;
+  }
+
+  return PerfilUsuario.OPERADOR;
+}
+
+export function ProtectedRoute({
+  children,
+  perfisPermitidos,
+  allowedRoles,
+}: ProtectedRouteProps) {
+  const { usuario, isLoading } = useAuth();
+  const router = useRouter();
+  const perfisEfetivos =
+    perfisPermitidos?.map((perfil) => mapLegacyRoleToPerfil(String(perfil))) ??
+    allowedRoles?.map((role) => mapLegacyRoleToPerfil(role));
 
   useEffect(() => {
     if (!isLoading && !usuario) {
-      router.push('/login')
+      router.push("/login");
     }
 
-    if (!isLoading && usuario && perfisPermitidos && !perfisPermitidos.includes(usuario.perfil)) {
-      router.push('/403')
+    if (
+      !isLoading &&
+      usuario &&
+      perfisEfetivos &&
+      !perfisEfetivos.includes(usuario.perfil)
+    ) {
+      router.push("/403");
     }
-  }, [usuario, isLoading, router, perfisPermitidos])
+  }, [usuario, isLoading, router, perfisEfetivos]);
 
   if (isLoading) {
     return (
@@ -33,16 +60,16 @@ export function ProtectedRoute({ children, perfisPermitidos }: ProtectedRoutePro
           <p className="text-muted-foreground">Carregando...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!usuario) {
-    return null
+    return null;
   }
 
-  if (perfisPermitidos && !perfisPermitidos.includes(usuario.perfil)) {
-    return null
+  if (perfisEfetivos && !perfisEfetivos.includes(usuario.perfil)) {
+    return null;
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }

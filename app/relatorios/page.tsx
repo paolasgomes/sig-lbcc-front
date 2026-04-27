@@ -1,95 +1,175 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { ProtectedRoute } from "@/components/auth/protected-route"
-import { useData } from "@/contexts/data-context"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { FieldGroup, Field, FieldLabel } from "@/components/ui/field"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { BarChart3, Users, ClipboardList, FileText, Download, TrendingUp, Calendar } from "lucide-react"
-import { format, parseISO, isWithinInterval, startOfMonth, endOfMonth } from "date-fns"
-import { ptBR } from "date-fns/locale"
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, Legend, LineChart, Line 
-} from "recharts"
+import { useState } from "react";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { useData } from "@/contexts/data-context";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  BarChart3,
+  Users,
+  ClipboardList,
+  FileText,
+  Download,
+  TrendingUp,
+  Calendar,
+} from "lucide-react";
+import { format, parseISO, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  LineChart,
+  Line,
+} from "recharts";
 
-const COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"]
+const COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+];
 
 export default function RelatoriosPage() {
-  const { pacientes, atendimentos, cotacoes, areas } = useData()
+  const { pacientes, atendimentos, cotacoes, areas } = useData();
   const [periodoInicio, setPeriodoInicio] = useState(
-    format(startOfMonth(new Date()), "yyyy-MM-dd")
-  )
+    format(startOfMonth(new Date()), "yyyy-MM-dd"),
+  );
   const [periodoFim, setPeriodoFim] = useState(
-    format(endOfMonth(new Date()), "yyyy-MM-dd")
-  )
+    format(endOfMonth(new Date()), "yyyy-MM-dd"),
+  );
 
-  const filtrarPorPeriodo = <T extends { dataHora?: string; dataCriacao?: string }>(items: T[]) => {
-    return items.filter(item => {
-      const data = item.dataHora || item.dataCriacao
-      if (!data) return false
+  const filtrarPorPeriodo = <
+    T extends {
+      data?: string;
+      dataHora?: string;
+      dataCriacao?: string;
+      dataSolicitacao?: string;
+    },
+  >(
+    items: T[],
+  ) => {
+    return items.filter((item) => {
+      const data = item.dataHora || item.dataCriacao || item.dataSolicitacao || item.data;
+      if (!data) return false;
       try {
         return isWithinInterval(parseISO(data), {
           start: parseISO(periodoInicio),
-          end: parseISO(periodoFim)
-        })
+          end: parseISO(periodoFim),
+        });
       } catch {
-        return false
+        return false;
       }
-    })
-  }
+    });
+  };
 
-  const atendimentosFiltrados = filtrarPorPeriodo(atendimentos)
-  const cotacoesFiltradas = filtrarPorPeriodo(cotacoes)
+  const atendimentosFiltrados = filtrarPorPeriodo(atendimentos);
+  const cotacoesFiltradas = filtrarPorPeriodo(cotacoes);
 
   // Estatisticas de pacientes por status
   const pacientesPorStatus = [
-    { name: "Ativos", value: pacientes.filter(p => p.status === "ativo").length },
-    { name: "Inativos", value: pacientes.filter(p => p.status === "inativo").length },
-    { name: "Em Tratamento", value: pacientes.filter(p => p.status === "em_tratamento").length },
-    { name: "Alta", value: pacientes.filter(p => p.status === "alta").length },
-    { name: "Obito", value: pacientes.filter(p => p.status === "obito").length }
-  ].filter(item => item.value > 0)
+    { name: "Ativos", value: pacientes.filter((p) => p.status === "ativo").length },
+    { name: "Suspensos", value: pacientes.filter((p) => p.status === "suspenso").length },
+    {
+      name: "Encerrados",
+      value: pacientes.filter((p) => p.status === "encerrado").length,
+    },
+  ].filter((item) => item.value > 0);
 
   // Atendimentos por area
-  const atendimentosPorArea = areas.map(area => ({
-    name: area.nome,
-    atendimentos: atendimentosFiltrados.filter(a => a.areaId === area.id).length
-  })).filter(item => item.atendimentos > 0)
+  const atendimentosPorArea = areas
+    .map((area) => ({
+      name: area.nome,
+      atendimentos: atendimentosFiltrados.filter((a) => a.areaId === area.id).length,
+    }))
+    .filter((item) => item.atendimentos > 0);
 
   // Atendimentos por status
   const atendimentosPorStatus = [
-    { name: "Agendados", value: atendimentosFiltrados.filter(a => a.status === "agendado").length },
-    { name: "Em Andamento", value: atendimentosFiltrados.filter(a => a.status === "em_andamento").length },
-    { name: "Concluidos", value: atendimentosFiltrados.filter(a => a.status === "concluido").length },
-    { name: "Cancelados", value: atendimentosFiltrados.filter(a => a.status === "cancelado").length }
-  ].filter(item => item.value > 0)
+    {
+      name: "Agendados",
+      value: atendimentosFiltrados.filter((a) => a.status === "agendado").length,
+    },
+    {
+      name: "Em Andamento",
+      value: atendimentosFiltrados.filter((a) => a.status === "em_andamento").length,
+    },
+    {
+      name: "Concluidos",
+      value: atendimentosFiltrados.filter((a) => a.status === "concluido").length,
+    },
+    {
+      name: "Cancelados",
+      value: atendimentosFiltrados.filter((a) => a.status === "cancelado").length,
+    },
+  ].filter((item) => item.value > 0);
 
   // Cotacoes por status
   const cotacoesPorStatus = [
-    { name: "Rascunho", value: cotacoesFiltradas.filter(c => c.status === "rascunho").length },
-    { name: "Enviada", value: cotacoesFiltradas.filter(c => c.status === "enviada").length },
-    { name: "Em Analise", value: cotacoesFiltradas.filter(c => c.status === "em_analise").length },
-    { name: "Aprovada", value: cotacoesFiltradas.filter(c => c.status === "aprovada").length },
-    { name: "Reprovada", value: cotacoesFiltradas.filter(c => c.status === "reprovada").length }
-  ].filter(item => item.value > 0)
+    {
+      name: "Rascunho",
+      value: cotacoesFiltradas.filter((c) => c.status === "rascunho").length,
+    },
+    {
+      name: "Enviada",
+      value: cotacoesFiltradas.filter((c) => c.status === "enviada").length,
+    },
+    {
+      name: "Em Analise",
+      value: cotacoesFiltradas.filter((c) => c.status === "em_analise").length,
+    },
+    {
+      name: "Aprovada",
+      value: cotacoesFiltradas.filter((c) => c.status === "aprovada").length,
+    },
+    {
+      name: "Reprovada",
+      value: cotacoesFiltradas.filter((c) => c.status === "reprovada").length,
+    },
+  ].filter((item) => item.value > 0);
 
   // Valor total das cotacoes
-  const valorTotalCotacoes = cotacoesFiltradas.reduce((acc, c) => acc + c.valorTotal, 0)
+  const valorTotalCotacoes = cotacoesFiltradas.reduce(
+    (acc, c) => acc + (c.valorTotal || 0),
+    0,
+  );
   const valorAprovado = cotacoesFiltradas
-    .filter(c => c.status === "aprovada")
-    .reduce((acc, c) => acc + c.valorTotal, 0)
+    .filter((c) => c.status === "aprovada")
+    .reduce((acc, c) => acc + (c.valorTotal || 0), 0);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
-      currency: "BRL"
-    }).format(value)
-  }
+      currency: "BRL",
+    }).format(value);
+  };
 
   return (
     <ProtectedRoute allowedRoles={["admin", "gestor"]}>
@@ -144,20 +224,23 @@ export default function RelatoriosPage() {
               <CardContent>
                 <div className="text-2xl font-bold">{pacientes.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  {pacientes.filter(p => p.status === "ativo").length} ativos
+                  {pacientes.filter((p) => p.status === "ativo").length} ativos
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Atendimentos no Periodo</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Atendimentos no Periodo
+                </CardTitle>
                 <ClipboardList className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{atendimentosFiltrados.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  {atendimentosFiltrados.filter(a => a.status === "concluido").length} concluidos
+                  {atendimentosFiltrados.filter((a) => a.status === "concluido").length}{" "}
+                  concluidos
                 </p>
               </CardContent>
             </Card>
@@ -170,7 +253,8 @@ export default function RelatoriosPage() {
               <CardContent>
                 <div className="text-2xl font-bold">{cotacoesFiltradas.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  {cotacoesFiltradas.filter(c => c.status === "aprovada").length} aprovadas
+                  {cotacoesFiltradas.filter((c) => c.status === "aprovada").length}{" "}
+                  aprovadas
                 </p>
               </CardContent>
             </Card>
@@ -212,14 +296,18 @@ export default function RelatoriosPage() {
                         contentStyle={{
                           backgroundColor: "hsl(var(--card))",
                           border: "1px solid hsl(var(--border))",
-                          borderRadius: "var(--radius)"
+                          borderRadius: "var(--radius)",
                         }}
                       />
-                      <Bar dataKey="atendimentos" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                      <Bar
+                        dataKey="atendimentos"
+                        fill="hsl(var(--chart-1))"
+                        radius={[4, 4, 0, 0]}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                  <div className="flex h-75 items-center justify-center text-muted-foreground">
                     Nenhum atendimento no periodo selecionado.
                   </div>
                 )}
@@ -242,26 +330,31 @@ export default function RelatoriosPage() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        label={({ name, percent }) =>
+                          `${name} (${(percent * 100).toFixed(0)}%)`
+                        }
                         outerRadius={100}
                         fill="#8884d8"
                         dataKey="value"
                       >
                         {pacientesPorStatus.map((entry, index) => (
-                          <Cell key={`cell-${entry.name}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell
+                            key={`cell-${entry.name}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
                         ))}
                       </Pie>
                       <Tooltip
                         contentStyle={{
                           backgroundColor: "hsl(var(--card))",
                           border: "1px solid hsl(var(--border))",
-                          borderRadius: "var(--radius)"
+                          borderRadius: "var(--radius)",
                         }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                  <div className="flex h-75 items-center justify-center text-muted-foreground">
                     Nenhum paciente cadastrado.
                   </div>
                 )}
@@ -271,9 +364,7 @@ export default function RelatoriosPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Atendimentos por Status</CardTitle>
-                <CardDescription>
-                  Status dos atendimentos no periodo
-                </CardDescription>
+                <CardDescription>Status dos atendimentos no periodo</CardDescription>
               </CardHeader>
               <CardContent>
                 {atendimentosPorStatus.length > 0 ? (
@@ -284,26 +375,31 @@ export default function RelatoriosPage() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        label={({ name, percent }) =>
+                          `${name} (${(percent * 100).toFixed(0)}%)`
+                        }
                         outerRadius={100}
                         fill="#8884d8"
                         dataKey="value"
                       >
                         {atendimentosPorStatus.map((entry, index) => (
-                          <Cell key={`cell-${entry.name}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell
+                            key={`cell-${entry.name}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
                         ))}
                       </Pie>
                       <Tooltip
                         contentStyle={{
                           backgroundColor: "hsl(var(--card))",
                           border: "1px solid hsl(var(--border))",
-                          borderRadius: "var(--radius)"
+                          borderRadius: "var(--radius)",
                         }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                  <div className="flex h-75 items-center justify-center text-muted-foreground">
                     Nenhum atendimento no periodo selecionado.
                   </div>
                 )}
@@ -313,9 +409,7 @@ export default function RelatoriosPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Cotacoes por Status</CardTitle>
-                <CardDescription>
-                  Status das cotacoes no periodo
-                </CardDescription>
+                <CardDescription>Status das cotacoes no periodo</CardDescription>
               </CardHeader>
               <CardContent>
                 {cotacoesPorStatus.length > 0 ? (
@@ -323,19 +417,28 @@ export default function RelatoriosPage() {
                     <BarChart data={cotacoesPorStatus} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis type="number" className="text-xs" />
-                      <YAxis dataKey="name" type="category" className="text-xs" width={80} />
+                      <YAxis
+                        dataKey="name"
+                        type="category"
+                        className="text-xs"
+                        width={80}
+                      />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: "hsl(var(--card))",
                           border: "1px solid hsl(var(--border))",
-                          borderRadius: "var(--radius)"
+                          borderRadius: "var(--radius)",
                         }}
                       />
-                      <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={[0, 4, 4, 0]} />
+                      <Bar
+                        dataKey="value"
+                        fill="hsl(var(--chart-2))"
+                        radius={[0, 4, 4, 0]}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                  <div className="flex h-75 items-center justify-center text-muted-foreground">
                     Nenhuma cotacao no periodo selecionado.
                   </div>
                 )}
@@ -363,12 +466,15 @@ export default function RelatoriosPage() {
                   </TableHeader>
                   <TableBody>
                     {(() => {
-                      const diagnosticos = pacientes.reduce((acc, p) => {
-                        if (p.diagnostico) {
-                          acc[p.diagnostico] = (acc[p.diagnostico] || 0) + 1
-                        }
-                        return acc
-                      }, {} as Record<string, number>)
+                      const diagnosticos = pacientes.reduce(
+                        (acc, p) => {
+                          if (p.diagnostico) {
+                            acc[p.diagnostico] = (acc[p.diagnostico] || 0) + 1;
+                          }
+                          return acc;
+                        },
+                        {} as Record<string, number>,
+                      );
 
                       return Object.entries(diagnosticos)
                         .sort((a, b) => b[1] - a[1])
@@ -381,7 +487,7 @@ export default function RelatoriosPage() {
                               {((count / pacientes.length) * 100).toFixed(1)}%
                             </TableCell>
                           </TableRow>
-                        ))
+                        ));
                     })()}
                   </TableBody>
                 </Table>
@@ -391,5 +497,5 @@ export default function RelatoriosPage() {
         </div>
       </DashboardLayout>
     </ProtectedRoute>
-  )
+  );
 }

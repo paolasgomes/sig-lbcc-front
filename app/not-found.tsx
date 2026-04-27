@@ -1,10 +1,12 @@
 'use client'
 
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { FileQuestion } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function NotFoundPage() {
+  const router = useRouter()
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="text-center">
@@ -17,11 +19,11 @@ export default function NotFoundPage() {
           A página que você está procurando não existe ou foi movida.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button asChild>
-            <Link href="/dashboard">Voltar ao Dashboard</Link>
+          <Button type="button" onClick={() => router.replace('/dashboard')}>
+            Voltar ao Dashboard
           </Button>
-          <Button variant="outline" asChild>
-            <Link href="/">Página Inicial</Link>
+          <Button type="button" variant="outline" onClick={() => router.replace('/') }>
+            Página Inicial
           </Button>
         </div>
       </div>

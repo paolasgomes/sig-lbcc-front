@@ -1,51 +1,77 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { ProtectedRoute } from "@/components/auth/protected-route"
-import { useData } from "@/contexts/data-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { StatusBadge } from "@/components/shared/status-badge"
-import { Plus, Search, MoreHorizontal, Eye, Pencil, ClipboardList } from "lucide-react"
-import Link from "next/link"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { useState } from "react";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { useData } from "@/contexts/data-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { Plus, Search, MoreHorizontal, Eye, Pencil, ClipboardList } from "lucide-react";
+import Link from "next/link";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function AtendimentosPage() {
-  const { atendimentos, pacientes, areas } = useData()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("todos")
-  const [areaFilter, setAreaFilter] = useState<string>("todas")
+  const { atendimentos, pacientes, areas } = useData();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("todos");
+  const [areaFilter, setAreaFilter] = useState<string>("todas");
 
-  const filteredAtendimentos = atendimentos.filter(atendimento => {
-    const paciente = pacientes.find(p => p.id === atendimento.pacienteId)
-    const matchesSearch = paciente?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      atendimento.id.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "todos" || atendimento.status === statusFilter
-    const matchesArea = areaFilter === "todas" || atendimento.areaId === areaFilter
-    return matchesSearch && matchesStatus && matchesArea
-  })
+  const filteredAtendimentos = atendimentos.filter((atendimento) => {
+    const paciente = pacientes.find((p) => p.id === atendimento.pacienteId);
+    const matchesSearch =
+      paciente?.nomeCompleto.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      atendimento.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "todos" || atendimento.status === statusFilter;
+    const matchesArea =
+      areaFilter === "todas" || atendimento.areaAtendimentoId === areaFilter;
+    return matchesSearch && matchesStatus && matchesArea;
+  });
 
   const getPacienteNome = (pacienteId: string) => {
-    const paciente = pacientes.find(p => p.id === pacienteId)
-    return paciente?.nome || "Paciente nao encontrado"
-  }
+    const paciente = pacientes.find((p) => p.id === pacienteId);
+    return paciente?.nomeCompleto || "Paciente nao encontrado";
+  };
 
-  const getAreaNome = (areaId: string) => {
-    const area = areas.find(a => a.id === areaId)
-    return area?.nome || "Area nao encontrada"
-  }
+  const getAreaNome = (areaId?: string) => {
+    if (!areaId) {
+      return "Area nao encontrada";
+    }
+    const area = areas.find((a) => a.id === areaId);
+    return area?.nome || "Area nao encontrada";
+  };
 
-  const formatDateTime = (dateString: string) => {
-    return format(new Date(dateString), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })
-  }
+  const formatDateTime = (dateString?: string) => {
+    if (!dateString) {
+      return "-";
+    }
+    return format(new Date(dateString), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR });
+  };
 
   return (
-    <ProtectedRoute allowedRoles={["admin", "gestor", "atendente"]}>
+    <ProtectedRoute perfisPermitidos={["operador", "gestor", "prefeitura"]}>
       <DashboardLayout>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -90,9 +116,13 @@ export default function AtendimentosPage() {
                   className="flex h-9 w-full sm:w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   <option value="todas">Todas as areas</option>
-                  {areas.filter(a => a.ativa).map(area => (
-                    <option key={area.id} value={area.id}>{area.nome}</option>
-                  ))}
+                  {areas
+                    .filter((a) => a.ativa)
+                    .map((area) => (
+                      <option key={area.id} value={area.id}>
+                        {area.nome}
+                      </option>
+                    ))}
                 </select>
                 <select
                   value={statusFilter}
@@ -116,7 +146,7 @@ export default function AtendimentosPage() {
                       <TableHead>Data/Hora</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="w-[70px]">Acoes</TableHead>
+                      <TableHead className="w-17.5">Acoes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -132,13 +162,22 @@ export default function AtendimentosPage() {
                           <TableCell className="font-medium">
                             {getPacienteNome(atendimento.pacienteId)}
                           </TableCell>
-                          <TableCell>{getAreaNome(atendimento.areaId)}</TableCell>
-                          <TableCell className="text-sm">
-                            {formatDateTime(atendimento.dataHora)}
-                          </TableCell>
-                          <TableCell className="capitalize">{atendimento.tipo}</TableCell>
                           <TableCell>
-                            <StatusBadge status={atendimento.status} type="atendimento" />
+                            {getAreaNome(
+                              atendimento.areaId ?? atendimento.areaAtendimentoId,
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {formatDateTime(atendimento.dataHora ?? atendimento.data)}
+                          </TableCell>
+                          <TableCell className="capitalize">
+                            {atendimento.tipo ?? atendimento.tipoAtendimento}
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge
+                              status={atendimento.status ?? "agendado"}
+                              type="atendimento"
+                            />
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -155,14 +194,17 @@ export default function AtendimentosPage() {
                                     Visualizar
                                   </Link>
                                 </DropdownMenuItem>
-                                {atendimento.status !== "concluido" && atendimento.status !== "cancelado" && (
-                                  <DropdownMenuItem asChild>
-                                    <Link href={`/atendimentos/${atendimento.id}/editar`}>
-                                      <Pencil className="mr-2 h-4 w-4" />
-                                      Editar
-                                    </Link>
-                                  </DropdownMenuItem>
-                                )}
+                                {atendimento.status !== "concluido" &&
+                                  atendimento.status !== "cancelado" && (
+                                    <DropdownMenuItem asChild>
+                                      <Link
+                                        href={`/atendimentos/${atendimento.id}/editar`}
+                                      >
+                                        <Pencil className="mr-2 h-4 w-4" />
+                                        Editar
+                                      </Link>
+                                    </DropdownMenuItem>
+                                  )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -177,5 +219,5 @@ export default function AtendimentosPage() {
         </div>
       </DashboardLayout>
     </ProtectedRoute>
-  )
+  );
 }

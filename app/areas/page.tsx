@@ -1,68 +1,95 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { ProtectedRoute } from "@/components/auth/protected-route"
-import { useData } from "@/contexts/data-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
-import { FieldGroup, Field, FieldLabel } from "@/components/ui/field"
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, MapPin } from "lucide-react"
-import type { AreaAtendimento } from "@/types"
+import { useState } from "react";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { useData } from "@/contexts/data-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, MapPin } from "lucide-react";
+import type { AreaAtendimento } from "@/types";
 
 export default function AreasPage() {
-  const { areas, addArea, updateArea, deleteArea } = useData()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingArea, setEditingArea] = useState<AreaAtendimento | null>(null)
+  const { areas, addArea, updateArea, deleteArea } = useData();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingArea, setEditingArea] = useState<AreaAtendimento | null>(null);
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
-    ativa: true
-  })
+    ativa: true,
+  });
 
-  const filteredAreas = areas.filter(area =>
-    area.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    area.descricao.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredAreas = areas.filter(
+    (area) =>
+      area.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      area.descricao.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
 
   const handleOpenDialog = (area?: AreaAtendimento) => {
     if (area) {
-      setEditingArea(area)
+      setEditingArea(area);
       setFormData({
         nome: area.nome,
         descricao: area.descricao,
-        ativa: area.ativa
-      })
+        ativa: area.ativa,
+      });
     } else {
-      setEditingArea(null)
-      setFormData({ nome: "", descricao: "", ativa: true })
+      setEditingArea(null);
+      setFormData({ nome: "", descricao: "", ativa: true });
     }
-    setIsDialogOpen(true)
-  }
+    setIsDialogOpen(true);
+  };
 
   const handleSubmit = () => {
     if (editingArea) {
-      updateArea(editingArea.id, formData)
+      updateArea(editingArea.id, formData);
     } else {
-      addArea(formData)
+      addArea(formData);
     }
-    setIsDialogOpen(false)
-    setEditingArea(null)
-    setFormData({ nome: "", descricao: "", ativa: true })
-  }
+    setIsDialogOpen(false);
+    setEditingArea(null);
+    setFormData({ nome: "", descricao: "", ativa: true });
+  };
 
   const handleDelete = (id: string) => {
     if (confirm("Tem certeza que deseja excluir esta area?")) {
-      deleteArea(id)
+      deleteArea(id);
     }
-  }
+  };
 
   return (
     <ProtectedRoute allowedRoles={["admin", "gestor", "atendente"]}>
@@ -106,7 +133,9 @@ export default function AreasPage() {
                     <FieldLabel>Descricao</FieldLabel>
                     <Textarea
                       value={formData.descricao}
-                      onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, descricao: e.target.value })
+                      }
                       placeholder="Descreva os servicos oferecidos nesta area..."
                       rows={3}
                     />
@@ -116,10 +145,14 @@ export default function AreasPage() {
                       type="checkbox"
                       id="ativa"
                       checked={formData.ativa}
-                      onChange={(e) => setFormData({ ...formData, ativa: e.target.checked })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, ativa: e.target.checked })
+                      }
                       className="h-4 w-4 rounded border-border"
                     />
-                    <FieldLabel htmlFor="ativa" className="mb-0">Area ativa</FieldLabel>
+                    <FieldLabel htmlFor="ativa" className="mb-0">
+                      Area ativa
+                    </FieldLabel>
                   </Field>
                 </FieldGroup>
                 <DialogFooter>
@@ -140,9 +173,7 @@ export default function AreasPage() {
                 <MapPin className="h-5 w-5" />
                 Areas Cadastradas
               </CardTitle>
-              <CardDescription>
-                {areas.length} area(s) cadastrada(s)
-              </CardDescription>
+              <CardDescription>{areas.length} area(s) cadastrada(s)</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="mb-4">
@@ -164,7 +195,7 @@ export default function AreasPage() {
                       <TableHead>Nome</TableHead>
                       <TableHead>Descricao</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="w-[70px]">Acoes</TableHead>
+                      <TableHead className="w-17.5">Acoes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -220,5 +251,5 @@ export default function AreasPage() {
         </div>
       </DashboardLayout>
     </ProtectedRoute>
-  )
+  );
 }

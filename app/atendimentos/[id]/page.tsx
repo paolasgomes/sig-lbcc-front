@@ -1,59 +1,71 @@
-"use client"
+"use client";
 
-import { use } from "react"
-import { notFound } from "next/navigation"
-import Link from "next/link"
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { ProtectedRoute } from "@/components/auth/protected-route"
-import { useData } from "@/contexts/data-context"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { StatusBadge } from "@/components/shared/status-badge"
-import { ArrowLeft, Pencil, User, MapPin, Calendar, FileText, CheckCircle, XCircle } from "lucide-react"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { use } from "react";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { useData } from "@/contexts/data-context";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge } from "@/components/shared/status-badge";
+import {
+  ArrowLeft,
+  Pencil,
+  User,
+  MapPin,
+  Calendar,
+  FileText,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface AtendimentoDetailPageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageProps) {
-  const { id } = use(params)
-  const { atendimentos, pacientes, areas, usuarios, updateAtendimento } = useData()
-  const atendimento = atendimentos.find(a => a.id === id)
+  const { id } = use(params);
+  const { atendimentos, pacientes, areas, usuarios, updateAtendimento } = useData();
+  const atendimento = atendimentos.find((a) => a.id === id);
 
   if (!atendimento) {
-    notFound()
+    notFound();
   }
 
-  const paciente = pacientes.find(p => p.id === atendimento.pacienteId)
-  const area = areas.find(a => a.id === atendimento.areaId)
-  const responsavel = usuarios.find(u => u.id === atendimento.responsavelId)
+  const paciente = pacientes.find((p) => p.id === atendimento.pacienteId);
+  const area = areas.find(
+    (a) => a.id === (atendimento.areaId ?? atendimento.areaAtendimentoId),
+  );
+  const responsavel = usuarios.find((u) => u.id === atendimento.responsavelId);
 
   const handleConcluir = () => {
     if (confirm("Tem certeza que deseja concluir este atendimento?")) {
-      updateAtendimento(atendimento.id, { status: "concluido" })
+      updateAtendimento(atendimento.id, { status: "concluido" });
     }
-  }
+  };
 
   const handleCancelar = () => {
     if (confirm("Tem certeza que deseja cancelar este atendimento?")) {
-      updateAtendimento(atendimento.id, { status: "cancelado" })
+      updateAtendimento(atendimento.id, { status: "cancelado" });
     }
-  }
+  };
 
-  const getTipoLabel = (tipo: string) => {
+  const getTipoLabel = (tipo?: string) => {
     const labels: Record<string, string> = {
       consulta: "Consulta",
       exame: "Exame",
       procedimento: "Procedimento",
       retorno: "Retorno",
-      acompanhamento: "Acompanhamento"
-    }
-    return labels[tipo] || tipo
-  }
+      acompanhamento: "Acompanhamento",
+    };
+    return labels[tipo ?? ""] || tipo || "Nao informado";
+  };
 
-  const canEdit = atendimento.status !== "concluido" && atendimento.status !== "cancelado"
+  const canEdit =
+    atendimento.status !== "concluido" && atendimento.status !== "cancelado";
 
   return (
     <ProtectedRoute allowedRoles={["admin", "gestor", "atendente"]}>
@@ -71,10 +83,18 @@ export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageP
                   <h1 className="text-2xl font-bold tracking-tight">
                     Atendimento #{atendimento.id.slice(0, 8).toUpperCase()}
                   </h1>
-                  <StatusBadge status={atendimento.status} type="atendimento" />
+                  <StatusBadge
+                    status={atendimento.status ?? "agendado"}
+                    type="atendimento"
+                  />
                 </div>
                 <p className="text-muted-foreground">
-                  {getTipoLabel(atendimento.tipo)} - {format(new Date(atendimento.dataHora), "dd 'de' MMMM 'de' yyyy 'as' HH:mm", { locale: ptBR })}
+                  {getTipoLabel(atendimento.tipo ?? atendimento.tipoAtendimento)} -{" "}
+                  {format(
+                    new Date(atendimento.dataHora ?? atendimento.data),
+                    "dd 'de' MMMM 'de' yyyy 'as' HH:mm",
+                    { locale: ptBR },
+                  )}
                 </p>
               </div>
             </div>
@@ -86,7 +106,11 @@ export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageP
                     Editar
                   </Link>
                 </Button>
-                <Button variant="outline" onClick={handleCancelar} className="text-destructive">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelar}
+                  className="text-destructive"
+                >
                   <XCircle className="mr-2 h-4 w-4" />
                   Cancelar
                 </Button>
@@ -115,10 +139,14 @@ export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageP
                       href={`/pacientes/${paciente.id}`}
                       className="font-medium hover:underline"
                     >
-                      {paciente.nome}
+                      {paciente.nome ?? paciente.nomeCompleto}
                     </Link>
                     <p className="text-sm text-muted-foreground">
-                      CPF: {paciente.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}
+                      CPF:{" "}
+                      {paciente.cpf.replace(
+                        /(\d{3})(\d{3})(\d{3})(\d{2})/,
+                        "$1.$2.$3-$4",
+                      )}
                     </p>
                     {paciente.telefone && (
                       <p className="text-sm text-muted-foreground">
@@ -161,11 +189,18 @@ export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageP
               <CardContent className="flex flex-col gap-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tipo:</span>
-                  <span>{getTipoLabel(atendimento.tipo)}</span>
+                  <span>
+                    {getTipoLabel(atendimento.tipo ?? atendimento.tipoAtendimento)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Data/Hora:</span>
-                  <span>{format(new Date(atendimento.dataHora), "dd/MM/yyyy HH:mm")}</span>
+                  <span>
+                    {format(
+                      new Date(atendimento.dataHora ?? atendimento.data),
+                      "dd/MM/yyyy HH:mm",
+                    )}
+                  </span>
                 </div>
                 {responsavel && (
                   <div className="flex justify-between">
@@ -199,12 +234,14 @@ export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageP
                 <CardTitle>Observacoes</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="whitespace-pre-wrap text-muted-foreground">{atendimento.observacoes}</p>
+                <p className="whitespace-pre-wrap text-muted-foreground">
+                  {atendimento.observacoes}
+                </p>
               </CardContent>
             </Card>
           )}
         </div>
       </DashboardLayout>
     </ProtectedRoute>
-  )
+  );
 }

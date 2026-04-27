@@ -1,43 +1,43 @@
-"use client"
+"use client";
 
-import { use } from "react"
-import { notFound } from "next/navigation"
-import Link from "next/link"
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { ProtectedRoute } from "@/components/auth/protected-route"
-import { useData } from "@/contexts/data-context"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Pencil, Building2, Phone, Mail, MapPin, User } from "lucide-react"
+import { use } from "react";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { useData } from "@/contexts/data-context";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Pencil, Building2, Phone, Mail, MapPin, User } from "lucide-react";
 
 interface FornecedorDetailPageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 export default function FornecedorDetailPage({ params }: FornecedorDetailPageProps) {
-  const { id } = use(params)
-  const { fornecedores } = useData()
-  const fornecedor = fornecedores.find(f => f.id === id)
+  const { id } = use(params);
+  const { fornecedores } = useData();
+  const fornecedor = fornecedores.find((f) => f.id === id);
 
   if (!fornecedor) {
-    notFound()
+    notFound();
   }
 
   const formatCNPJ = (cnpj: string) => {
-    return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")
-  }
+    return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+  };
 
   const formatPhone = (phone: string) => {
     if (phone.length === 11) {
-      return phone.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3")
+      return phone.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
     }
-    return phone.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3")
-  }
+    return phone.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
+  };
 
   const formatCEP = (cep: string) => {
-    return cep.replace(/^(\d{5})(\d{3})$/, "$1-$2")
-  }
+    return cep.replace(/^(\d{5})(\d{3})$/, "$1-$2");
+  };
 
   return (
     <ProtectedRoute allowedRoles={["admin", "gestor"]}>
@@ -81,7 +81,7 @@ export default function FornecedorDetailPage({ params }: FornecedorDetailPagePro
               <CardContent className="grid gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">CNPJ</p>
-                  <p className="font-mono">{formatCNPJ(fornecedor.cnpj)}</p>
+                  <p className="font-mono">{formatCNPJ(fornecedor.cnpj ?? "")}</p>
                 </div>
                 {fornecedor.inscricaoEstadual && (
                   <div>
@@ -113,7 +113,8 @@ export default function FornecedorDetailPage({ params }: FornecedorDetailPagePro
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span>
                       {fornecedor.contato}
-                      {fornecedor.telefoneContato && ` - ${formatPhone(fornecedor.telefoneContato)}`}
+                      {fornecedor.telefoneContato &&
+                        ` - ${formatPhone(fornecedor.telefoneContato)}`}
                     </span>
                   </div>
                 )}
@@ -135,12 +136,14 @@ export default function FornecedorDetailPage({ params }: FornecedorDetailPagePro
                 <p>
                   {fornecedor.bairro} - {fornecedor.cidade}/{fornecedor.uf}
                 </p>
-                <p className="text-muted-foreground">CEP: {formatCEP(fornecedor.cep)}</p>
+                <p className="text-muted-foreground">
+                  CEP: {formatCEP(fornecedor.cep ?? "")}
+                </p>
               </CardContent>
             </Card>
           </div>
         </div>
       </DashboardLayout>
     </ProtectedRoute>
-  )
+  );
 }
