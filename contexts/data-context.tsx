@@ -79,30 +79,34 @@ interface DataContextType {
 
   // Áreas
   getAreaById: (id: string) => AreaAtendimento | undefined;
-  addArea: (area: AreaAtendimento) => void;
+  addArea: (area: Partial<AreaAtendimento>) => void;
   updateArea: (id: string, dados: Partial<AreaAtendimento>) => void;
+  deleteArea: (id: string) => void;
 
   // Fornecedores
   getFornecedorById: (id: string) => Fornecedor | undefined;
-  addFornecedor: (fornecedor: Fornecedor) => void;
+  addFornecedor: (fornecedor: Partial<Fornecedor>) => void;
   updateFornecedor: (id: string, dados: Partial<Fornecedor>) => void;
+  deleteFornecedor: (id: string) => void;
 
   // Produtos
   getProdutoById: (id: string) => Produto | undefined;
-  addProduto: (produto: Produto) => void;
+  addProduto: (produto: Partial<Produto>) => void;
   updateProduto: (id: string, dados: Partial<Produto>) => void;
+  deleteProduto: (id: string) => void;
 
   // Cotações
   getCotacaoById: (id: string) => Cotacao | undefined;
   getCotacoesByPaciente: (pacienteId: string) => Cotacao[];
-  addCotacao: (cotacao: Cotacao) => void;
+  addCotacao: (cotacao: Partial<Cotacao>) => void;
   updateCotacao: (id: string, dados: Partial<Cotacao>) => void;
   verificarCotacoesVencidas: () => void;
 
   // Atendimentos
   getAtendimentoById: (id: string) => Atendimento | undefined;
   getAtendimentosByPaciente: (pacienteId: string) => Atendimento[];
-  addAtendimento: (atendimento: Atendimento) => void;
+  addAtendimento: (atendimento: Partial<Atendimento>) => void;
+  updateAtendimento: (id: string, dados: Partial<Atendimento>) => void;
 
   // Histórico
   getHistoricoByPaciente: (pacienteId: string) => Historico[];
@@ -138,7 +142,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const usuariosCarregados = await listarUsuarios();
       setUsuarios(usuariosCarregados);
     } catch (error) {
-      setUsuariosError(error instanceof Error ? error.message : "Erro ao carregar usuários.");
+      setUsuariosError(
+        error instanceof Error ? error.message : "Erro ao carregar usuários.",
+      );
     } finally {
       setUsuariosLoading(false);
     }
@@ -251,12 +257,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [areas],
   );
 
-  const addArea = useCallback((area: AreaAtendimento) => {
-    setAreas((prev) => [...prev, area]);
+  const addArea = useCallback((area: Partial<AreaAtendimento>) => {
+    const novaArea: AreaAtendimento = {
+      id: area.id ?? `area-${Date.now()}`,
+      nome: area.nome ?? "",
+      descricao: area.descricao ?? "",
+      ativa: area.ativa ?? true,
+    };
+    setAreas((prev) => [...prev, novaArea]);
   }, []);
 
   const updateArea = useCallback((id: string, dados: Partial<AreaAtendimento>) => {
     setAreas((prev) => prev.map((a) => (a.id === id ? { ...a, ...dados } : a)));
+  }, []);
+
+  const deleteArea = useCallback((id: string) => {
+    setAreas((prev) => prev.filter((a) => a.id !== id));
   }, []);
 
   // Fornecedores
@@ -267,12 +283,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [fornecedores],
   );
 
-  const addFornecedor = useCallback((fornecedor: Fornecedor) => {
-    setFornecedores((prev) => [...prev, fornecedor]);
+  const addFornecedor = useCallback((fornecedor: Partial<Fornecedor>) => {
+    const novoFornecedor: Fornecedor = {
+      id: fornecedor.id ?? `forn-${Date.now()}`,
+      nome: fornecedor.nome ?? fornecedor.nomeFantasia ?? fornecedor.razaoSocial ?? "",
+      tipoServico: fornecedor.tipoServico ?? "geral",
+      contato: fornecedor.contato ?? "",
+      email: fornecedor.email ?? "",
+      telefone: fornecedor.telefone ?? "",
+      ativo: fornecedor.ativo ?? true,
+      ...fornecedor,
+    };
+    setFornecedores((prev) => [...prev, novoFornecedor]);
   }, []);
 
   const updateFornecedor = useCallback((id: string, dados: Partial<Fornecedor>) => {
     setFornecedores((prev) => prev.map((f) => (f.id === id ? { ...f, ...dados } : f)));
+  }, []);
+
+  const deleteFornecedor = useCallback((id: string) => {
+    setFornecedores((prev) => prev.filter((f) => f.id !== id));
   }, []);
 
   // Produtos
@@ -283,12 +313,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [produtos],
   );
 
-  const addProduto = useCallback((produto: Produto) => {
-    setProdutos((prev) => [...prev, produto]);
+  const addProduto = useCallback((produto: Partial<Produto>) => {
+    const novoProduto: Produto = {
+      id: produto.id ?? `prod-${Date.now()}`,
+      descricao: produto.descricao ?? produto.nome ?? "",
+      unidadeMedida: produto.unidadeMedida ?? produto.unidade ?? "un",
+      referenciaPreco: produto.referenciaPreco ?? produto.precoReferencia ?? 0,
+      fornecedorId: produto.fornecedorId ?? "",
+      ativo: produto.ativo ?? true,
+      ...produto,
+    };
+    setProdutos((prev) => [...prev, novoProduto]);
   }, []);
 
   const updateProduto = useCallback((id: string, dados: Partial<Produto>) => {
     setProdutos((prev) => prev.map((p) => (p.id === id ? { ...p, ...dados } : p)));
+  }, []);
+
+  const deleteProduto = useCallback((id: string) => {
+    setProdutos((prev) => prev.filter((p) => p.id !== id));
   }, []);
 
   // Cotações
@@ -306,8 +349,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [cotacoes],
   );
 
-  const addCotacao = useCallback((cotacao: Cotacao) => {
-    setCotacoes((prev) => [...prev, cotacao]);
+  const addCotacao = useCallback((cotacao: Partial<Cotacao>) => {
+    const novaCotacao: Cotacao = {
+      id: cotacao.id ?? `cot-${Date.now()}`,
+      pacienteId: cotacao.pacienteId ?? "",
+      areaAtendimentoId: cotacao.areaAtendimentoId ?? "",
+      fornecedorId: cotacao.fornecedorId ?? "",
+      dataSolicitacao: cotacao.dataSolicitacao ?? new Date().toISOString().split("T")[0],
+      dataValidade: cotacao.dataValidade ?? new Date().toISOString().split("T")[0],
+      observacoes: cotacao.observacoes ?? "",
+      status: cotacao.status ?? StatusCotacao.PENDENTE,
+      itens: cotacao.itens ?? [],
+      criadoPor: cotacao.criadoPor ?? usuario?.id ?? "sistema",
+      criadoEm: cotacao.criadoEm ?? new Date().toISOString(),
+      ...cotacao,
+    };
+    setCotacoes((prev) => [...prev, novaCotacao]);
   }, []);
 
   const updateCotacao = useCallback((id: string, dados: Partial<Cotacao>) => {
@@ -341,8 +398,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [atendimentos],
   );
 
-  const addAtendimento = useCallback((atendimento: Atendimento) => {
-    setAtendimentos((prev) => [...prev, atendimento]);
+  const addAtendimento = useCallback((atendimento: Partial<Atendimento>) => {
+    const novoAtendimento: Atendimento = {
+      id: atendimento.id ?? `atend-${Date.now()}`,
+      pacienteId: atendimento.pacienteId ?? "",
+      data:
+        atendimento.data ??
+        atendimento.dataHora?.split("T")[0] ??
+        new Date().toISOString().split("T")[0],
+      areaAtendimentoId: atendimento.areaAtendimentoId ?? atendimento.areaId ?? "",
+      tipoAtendimento: atendimento.tipoAtendimento ?? atendimento.tipo ?? "",
+      descricao: atendimento.descricao ?? "",
+      cotacaoId: atendimento.cotacaoId,
+      criadoPor:
+        atendimento.criadoPor ?? atendimento.responsavelId ?? usuario?.id ?? "sistema",
+      criadoEm: atendimento.criadoEm ?? new Date().toISOString(),
+      ...atendimento,
+    };
+    setAtendimentos((prev) => [...prev, novoAtendimento]);
+  }, []);
+
+  const updateAtendimento = useCallback((id: string, dados: Partial<Atendimento>) => {
+    setAtendimentos((prev) => prev.map((a) => (a.id === id ? { ...a, ...dados } : a)));
   }, []);
 
   // Histórico
@@ -418,12 +495,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
         getAreaById,
         addArea,
         updateArea,
+        deleteArea,
         getFornecedorById,
         addFornecedor,
         updateFornecedor,
+        deleteFornecedor,
         getProdutoById,
         addProduto,
         updateProduto,
+        deleteProduto,
         getCotacaoById,
         getCotacoesByPaciente,
         addCotacao,
@@ -432,6 +512,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         getAtendimentoById,
         getAtendimentosByPaciente,
         addAtendimento,
+        updateAtendimento,
         getHistoricoByPaciente,
         addHistorico,
         getDocumentosByPaciente,

@@ -38,6 +38,11 @@ export enum StatusPaciente {
 }
 
 export enum StatusCotacao {
+  RASCUNHO = "rascunho",
+  ENVIADA = "enviada",
+  EM_ANALISE = "em_analise",
+  APROVADA = "aprovada",
+  REPROVADA = "reprovada",
   PENDENTE = "pendente",
   VALIDA = "valida",
   EXPIRADA = "expirada",
@@ -78,6 +83,7 @@ export interface Usuario {
 
 export interface Paciente {
   id: string;
+  nome?: string;
   nomeCompleto: string;
   cpf: string;
   rg: string;
@@ -93,6 +99,7 @@ export interface Paciente {
   nomeMae: string;
   numeroSUS: string;
   diagnosticoOncologico: string;
+  diagnostico?: string;
   setor: string;
   areaTratamento: string;
   dataInicioTratamento: string;
@@ -122,17 +129,33 @@ export interface AreaAtendimento {
 export interface Fornecedor {
   id: string;
   nome: string;
+  razaoSocial?: string;
+  nomeFantasia?: string;
+  cnpj?: string;
+  inscricaoEstadual?: string;
   tipoServico: string;
   contato: string;
+  telefoneContato?: string;
   email: string;
   telefone: string;
+  endereco?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  cep?: string;
   ativo: boolean;
 }
 
 export interface Produto {
   id: string;
+  nome?: string;
   descricao: string;
+  categoria?: string;
+  unidade?: string;
   unidadeMedida: string;
+  precoReferencia?: number;
   referenciaPreco: number;
   fornecedorId: string;
   ativo: boolean;
@@ -144,9 +167,19 @@ export interface Cotacao {
   areaAtendimentoId: string;
   fornecedorId: string;
   dataSolicitacao: string;
+  dataCriacao?: string;
+  dataAprovacao?: string;
+  aprovadoPor?: string;
   dataValidade: string;
   observacoes: string;
-  status: StatusCotacao;
+  status:
+    | StatusCotacao
+    | "rascunho"
+    | "enviada"
+    | "em_analise"
+    | "aprovada"
+    | "reprovada";
+  valorTotal?: number;
   itens: ItemCotacao[];
   criadoPor: string;
   criadoEm: string;
@@ -154,9 +187,13 @@ export interface Cotacao {
 
 export interface ItemCotacao {
   id: string;
+  produtoId?: string;
+  fornecedorId?: string;
+  observacao?: string;
   descricao: string;
   unidade: string;
   quantidade: number;
+  precoUnitario?: number;
   valorUnitario: number;
 }
 
@@ -164,9 +201,15 @@ export interface Atendimento {
   id: string;
   pacienteId: string;
   data: string;
+  dataHora?: string;
   areaAtendimentoId: string;
+  areaId?: string;
   tipoAtendimento: string;
+  tipo?: string;
   descricao: string;
+  observacoes?: string;
+  status?: string;
+  responsavelId?: string;
   cotacaoId?: string;
   criadoPor: string;
   criadoEm: string;

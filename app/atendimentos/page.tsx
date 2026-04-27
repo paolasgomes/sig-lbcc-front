@@ -44,8 +44,7 @@ export default function AtendimentosPage() {
     const matchesSearch =
       paciente?.nomeCompleto.toLowerCase().includes(searchTerm.toLowerCase()) ||
       atendimento.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === "todos" || atendimento.areaAtendimentoId === statusFilter;
+    const matchesStatus = statusFilter === "todos" || atendimento.status === statusFilter;
     const matchesArea =
       areaFilter === "todas" || atendimento.areaAtendimentoId === areaFilter;
     return matchesSearch && matchesStatus && matchesArea;
@@ -56,12 +55,18 @@ export default function AtendimentosPage() {
     return paciente?.nomeCompleto || "Paciente nao encontrado";
   };
 
-  const getAreaNome = (areaId: string) => {
+  const getAreaNome = (areaId?: string) => {
+    if (!areaId) {
+      return "Area nao encontrada";
+    }
     const area = areas.find((a) => a.id === areaId);
     return area?.nome || "Area nao encontrada";
   };
 
-  const formatDateTime = (dateString: string) => {
+  const formatDateTime = (dateString?: string) => {
+    if (!dateString) {
+      return "-";
+    }
     return format(new Date(dateString), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR });
   };
 
@@ -141,7 +146,7 @@ export default function AtendimentosPage() {
                       <TableHead>Data/Hora</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="w-[70px]">Acoes</TableHead>
+                      <TableHead className="w-17.5">Acoes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -157,13 +162,22 @@ export default function AtendimentosPage() {
                           <TableCell className="font-medium">
                             {getPacienteNome(atendimento.pacienteId)}
                           </TableCell>
-                          <TableCell>{getAreaNome(atendimento.areaId)}</TableCell>
-                          <TableCell className="text-sm">
-                            {formatDateTime(atendimento.dataHora)}
-                          </TableCell>
-                          <TableCell className="capitalize">{atendimento.tipo}</TableCell>
                           <TableCell>
-                            <StatusBadge status={atendimento.status} type="atendimento" />
+                            {getAreaNome(
+                              atendimento.areaId ?? atendimento.areaAtendimentoId,
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {formatDateTime(atendimento.dataHora ?? atendimento.data)}
+                          </TableCell>
+                          <TableCell className="capitalize">
+                            {atendimento.tipo ?? atendimento.tipoAtendimento}
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge
+                              status={atendimento.status ?? "agendado"}
+                              type="atendimento"
+                            />
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>

@@ -1,26 +1,52 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { ProtectedRoute } from "@/components/auth/protected-route"
-import { useData } from "@/contexts/data-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
-import { FieldGroup, Field, FieldLabel } from "@/components/ui/field"
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Package } from "lucide-react"
-import type { Produto } from "@/types"
+import { useState } from "react";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { useData } from "@/contexts/data-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Package } from "lucide-react";
+import type { Produto } from "@/types";
 
 export default function ProdutosPage() {
-  const { produtos, fornecedores, addProduto, updateProduto, deleteProduto } = useData()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingProduto, setEditingProduto] = useState<Produto | null>(null)
+  const { produtos, fornecedores, addProduto, updateProduto, deleteProduto } = useData();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingProduto, setEditingProduto] = useState<Produto | null>(null);
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
@@ -28,33 +54,36 @@ export default function ProdutosPage() {
     categoria: "",
     fornecedorId: "",
     precoReferencia: 0,
-    ativo: true
-  })
+    ativo: true,
+  });
 
-  const filteredProdutos = produtos.filter(produto =>
-    produto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    produto.categoria.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredProdutos = produtos.filter(
+    (produto) =>
+      (produto.nome ?? produto.descricao ?? "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (produto.categoria ?? "").toLowerCase().includes(searchTerm.toLowerCase()),
+  );
 
   const getFornecedorNome = (fornecedorId: string) => {
-    const fornecedor = fornecedores.find(f => f.id === fornecedorId)
-    return fornecedor?.nomeFantasia || "Nao informado"
-  }
+    const fornecedor = fornecedores.find((f) => f.id === fornecedorId);
+    return fornecedor?.nomeFantasia || "Nao informado";
+  };
 
   const handleOpenDialog = (produto?: Produto) => {
     if (produto) {
-      setEditingProduto(produto)
+      setEditingProduto(produto);
       setFormData({
-        nome: produto.nome,
+        nome: produto.nome ?? produto.descricao,
         descricao: produto.descricao,
-        unidade: produto.unidade,
-        categoria: produto.categoria,
+        unidade: produto.unidade ?? produto.unidadeMedida,
+        categoria: produto.categoria ?? "",
         fornecedorId: produto.fornecedorId || "",
         precoReferencia: produto.precoReferencia || 0,
-        ativo: produto.ativo
-      })
+        ativo: produto.ativo,
+      });
     } else {
-      setEditingProduto(null)
+      setEditingProduto(null);
       setFormData({
         nome: "",
         descricao: "",
@@ -62,34 +91,34 @@ export default function ProdutosPage() {
         categoria: "",
         fornecedorId: "",
         precoReferencia: 0,
-        ativo: true
-      })
+        ativo: true,
+      });
     }
-    setIsDialogOpen(true)
-  }
+    setIsDialogOpen(true);
+  };
 
   const handleSubmit = () => {
     if (editingProduto) {
-      updateProduto(editingProduto.id, formData)
+      updateProduto(editingProduto.id, formData);
     } else {
-      addProduto(formData)
+      addProduto(formData);
     }
-    setIsDialogOpen(false)
-    setEditingProduto(null)
-  }
+    setIsDialogOpen(false);
+    setEditingProduto(null);
+  };
 
   const handleDelete = (id: string) => {
     if (confirm("Tem certeza que deseja excluir este produto?")) {
-      deleteProduto(id)
+      deleteProduto(id);
     }
-  }
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
-      currency: "BRL"
-    }).format(value)
-  }
+      currency: "BRL",
+    }).format(value);
+  };
 
   return (
     <ProtectedRoute allowedRoles={["admin", "gestor"]}>
@@ -132,7 +161,9 @@ export default function ProdutosPage() {
                     <FieldLabel>Descricao</FieldLabel>
                     <Textarea
                       value={formData.descricao}
-                      onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, descricao: e.target.value })
+                      }
                       rows={2}
                     />
                   </Field>
@@ -141,7 +172,9 @@ export default function ProdutosPage() {
                       <FieldLabel>Unidade</FieldLabel>
                       <select
                         value={formData.unidade}
-                        onChange={(e) => setFormData({ ...formData, unidade: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, unidade: e.target.value })
+                        }
                         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       >
                         <option value="UN">Unidade (UN)</option>
@@ -159,7 +192,9 @@ export default function ProdutosPage() {
                       <FieldLabel>Categoria</FieldLabel>
                       <Input
                         value={formData.categoria}
-                        onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, categoria: e.target.value })
+                        }
                         placeholder="Ex: Medicamento, Servico..."
                       />
                     </Field>
@@ -169,13 +204,19 @@ export default function ProdutosPage() {
                       <FieldLabel>Fornecedor</FieldLabel>
                       <select
                         value={formData.fornecedorId}
-                        onChange={(e) => setFormData({ ...formData, fornecedorId: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, fornecedorId: e.target.value })
+                        }
                         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       >
                         <option value="">Selecione...</option>
-                        {fornecedores.filter(f => f.ativo).map(f => (
-                          <option key={f.id} value={f.id}>{f.nomeFantasia}</option>
-                        ))}
+                        {fornecedores
+                          .filter((f) => f.ativo)
+                          .map((f) => (
+                            <option key={f.id} value={f.id}>
+                              {f.nomeFantasia}
+                            </option>
+                          ))}
                       </select>
                     </Field>
                     <Field>
@@ -185,7 +226,12 @@ export default function ProdutosPage() {
                         step="0.01"
                         min="0"
                         value={formData.precoReferencia}
-                        onChange={(e) => setFormData({ ...formData, precoReferencia: parseFloat(e.target.value) || 0 })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            precoReferencia: parseFloat(e.target.value) || 0,
+                          })
+                        }
                       />
                     </Field>
                   </div>
@@ -194,10 +240,14 @@ export default function ProdutosPage() {
                       type="checkbox"
                       id="ativo"
                       checked={formData.ativo}
-                      onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, ativo: e.target.checked })
+                      }
                       className="h-4 w-4 rounded border-border"
                     />
-                    <FieldLabel htmlFor="ativo" className="mb-0">Produto ativo</FieldLabel>
+                    <FieldLabel htmlFor="ativo" className="mb-0">
+                      Produto ativo
+                    </FieldLabel>
                   </Field>
                 </FieldGroup>
                 <DialogFooter>
@@ -245,7 +295,7 @@ export default function ProdutosPage() {
                       <TableHead>Fornecedor</TableHead>
                       <TableHead className="text-right">Preco Ref.</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="w-[70px]">Acoes</TableHead>
+                      <TableHead className="w-17.5">Acoes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -261,9 +311,13 @@ export default function ProdutosPage() {
                           <TableCell className="font-medium">{produto.nome}</TableCell>
                           <TableCell>{produto.categoria}</TableCell>
                           <TableCell>{produto.unidade}</TableCell>
-                          <TableCell>{getFornecedorNome(produto.fornecedorId || "")}</TableCell>
+                          <TableCell>
+                            {getFornecedorNome(produto.fornecedorId || "")}
+                          </TableCell>
                           <TableCell className="text-right font-mono">
-                            {produto.precoReferencia ? formatCurrency(produto.precoReferencia) : "-"}
+                            {produto.precoReferencia
+                              ? formatCurrency(produto.precoReferencia)
+                              : "-"}
                           </TableCell>
                           <TableCell>
                             <Badge variant={produto.ativo ? "default" : "secondary"}>
@@ -279,7 +333,9 @@ export default function ProdutosPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleOpenDialog(produto)}>
+                                <DropdownMenuItem
+                                  onClick={() => handleOpenDialog(produto)}
+                                >
                                   <Pencil className="mr-2 h-4 w-4" />
                                   Editar
                                 </DropdownMenuItem>
@@ -304,5 +360,5 @@ export default function ProdutosPage() {
         </div>
       </DashboardLayout>
     </ProtectedRoute>
-  )
+  );
 }

@@ -1,130 +1,161 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useData } from "@/contexts/data-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { FieldGroup, Field, FieldLabel } from "@/components/ui/field"
-import { ArrowLeft, Save, Plus, Trash2, Send, FileText } from "lucide-react"
-import Link from "next/link"
-import type { Cotacao, ItemCotacao } from "@/types"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useData } from "@/contexts/data-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
+import { ArrowLeft, Save, Plus, Trash2, Send, FileText } from "lucide-react";
+import Link from "next/link";
+import type { Cotacao, ItemCotacao, StatusCotacao } from "@/types";
 
 interface CotacaoFormProps {
-  cotacao?: Cotacao
-  isEditing?: boolean
+  cotacao?: Cotacao;
+  isEditing?: boolean;
 }
 
+type CotacaoItemForm = {
+  produtoId: string;
+  quantidade: number;
+  precoUnitario: number;
+  fornecedorId?: string;
+  observacao?: string;
+};
+
 export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
-  const router = useRouter()
-  const { pacientes, produtos, fornecedores, addCotacao, updateCotacao } = useData()
-  
-  const [pacienteId, setPacienteId] = useState(cotacao?.pacienteId || "")
-  const [observacoes, setObservacoes] = useState(cotacao?.observacoes || "")
-  const [itens, setItens] = useState<Omit<ItemCotacao, "id">[]>(
-    cotacao?.itens.map(i => ({
-      produtoId: i.produtoId,
+  const router = useRouter();
+  const { pacientes, produtos, fornecedores, addCotacao, updateCotacao } = useData();
+
+  const [pacienteId, setPacienteId] = useState(cotacao?.pacienteId || "");
+  const [observacoes, setObservacoes] = useState(cotacao?.observacoes || "");
+  const [itens, setItens] = useState<CotacaoItemForm[]>(
+    cotacao?.itens.map((i) => ({
+      produtoId: i.produtoId || "",
       quantidade: i.quantidade,
-      precoUnitario: i.precoUnitario,
+      precoUnitario: i.precoUnitario ?? i.valorUnitario,
       fornecedorId: i.fornecedorId,
-      observacao: i.observacao
-    })) || []
-  )
-  
+      observacao: i.observacao,
+    })) || [],
+  );
+
   const [novoItem, setNovoItem] = useState({
     produtoId: "",
     quantidade: 1,
     fornecedorId: "",
-    observacao: ""
-  })
+    observacao: "",
+  });
 
   const calcularTotal = () => {
-    return itens.reduce((total, item) => total + (item.precoUnitario * item.quantidade), 0)
-  }
+    return itens.reduce((total, item) => total + item.precoUnitario * item.quantidade, 0);
+  };
 
   const handleAddItem = () => {
-    if (!novoItem.produtoId || novoItem.quantidade <= 0) return
-    
-    const produto = produtos.find(p => p.id === novoItem.produtoId)
-    if (!produto) return
-    
-    const itemToAdd: Omit<ItemCotacao, "id"> = {
+    if (!novoItem.produtoId || novoItem.quantidade <= 0) return;
+
+    const produto = produtos.find((p) => p.id === novoItem.produtoId);
+    if (!produto) return;
+
+    const itemToAdd: CotacaoItemForm = {
       produtoId: novoItem.produtoId,
       quantidade: novoItem.quantidade,
       precoUnitario: produto.precoReferencia || 0,
       fornecedorId: novoItem.fornecedorId || undefined,
-      observacao: novoItem.observacao || undefined
-    }
-    
-    setItens([...itens, itemToAdd])
-    setNovoItem({ produtoId: "", quantidade: 1, fornecedorId: "", observacao: "" })
-  }
+      observacao: novoItem.observacao || undefined,
+    };
+
+    setItens([...itens, itemToAdd]);
+    setNovoItem({ produtoId: "", quantidade: 1, fornecedorId: "", observacao: "" });
+  };
 
   const handleRemoveItem = (index: number) => {
-    setItens(itens.filter((_, i) => i !== index))
-  }
+    setItens(itens.filter((_, i) => i !== index));
+  };
 
   const handleUpdateItemPrice = (index: number, price: number) => {
-    const newItens = [...itens]
-    newItens[index].precoUnitario = price
-    setItens(newItens)
-  }
+    const newItens = [...itens];
+    newItens[index].precoUnitario = price;
+    setItens(newItens);
+  };
 
   const handleSubmit = (enviar: boolean = false) => {
     if (!pacienteId || itens.length === 0) {
-      alert("Selecione um paciente e adicione pelo menos um item.")
-      return
+      alert("Selecione um paciente e adicione pelo menos um item.");
+      return;
     }
 
     const cotacaoData = {
       pacienteId,
-      itens: itens.map((item, index) => ({
-        id: `item-${Date.now()}-${index}`,
-        ...item
-      })),
+      itens: itens.map((item, index) => {
+        const produto = produtos.find((p) => p.id === item.produtoId);
+        return {
+          id: `item-${Date.now()}-${index}`,
+          produtoId: item.produtoId,
+          fornecedorId: item.fornecedorId,
+          observacao: item.observacao,
+          descricao: produto?.descricao || produto?.nome || "Item",
+          unidade: produto?.unidade || produto?.unidadeMedida || "UN",
+          quantidade: item.quantidade,
+          precoUnitario: item.precoUnitario,
+          valorUnitario: item.precoUnitario,
+        };
+      }) as ItemCotacao[],
       valorTotal: calcularTotal(),
       observacoes,
-      status: enviar ? "enviada" as const : "rascunho" as const
-    }
+      status: (enviar ? "enviada" : "rascunho") as StatusCotacao | "enviada" | "rascunho",
+    };
 
     if (isEditing && cotacao) {
-      updateCotacao(cotacao.id, cotacaoData)
+      updateCotacao(cotacao.id, cotacaoData);
     } else {
-      addCotacao(cotacaoData)
+      addCotacao(cotacaoData);
     }
 
-    router.push("/cotacoes")
-  }
+    router.push("/cotacoes");
+  };
 
   const getProdutoNome = (produtoId: string) => {
-    const produto = produtos.find(p => p.id === produtoId)
-    return produto?.nome || "Produto nao encontrado"
-  }
+    const produto = produtos.find((p) => p.id === produtoId);
+    return produto?.nome || "Produto nao encontrado";
+  };
 
   const getProdutoUnidade = (produtoId: string) => {
-    const produto = produtos.find(p => p.id === produtoId)
-    return produto?.unidade || ""
-  }
+    const produto = produtos.find((p) => p.id === produtoId);
+    return produto?.unidade || "";
+  };
 
   const getFornecedorNome = (fornecedorId?: string) => {
-    if (!fornecedorId) return "-"
-    const fornecedor = fornecedores.find(f => f.id === fornecedorId)
-    return fornecedor?.nomeFantasia || "-"
-  }
+    if (!fornecedorId) return "-";
+    const fornecedor = fornecedores.find((f) => f.id === fornecedorId);
+    return fornecedor?.nomeFantasia || "-";
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
-      currency: "BRL"
-    }).format(value)
-  }
+      currency: "BRL",
+    }).format(value);
+  };
 
-  const pacientesAtivos = pacientes.filter(p => p.status === "ativo")
-  const produtosAtivos = produtos.filter(p => p.ativo)
-  const fornecedoresAtivos = fornecedores.filter(f => f.ativo)
+  const pacientesAtivos = pacientes.filter((p) => p.status === "ativo");
+  const produtosAtivos = produtos.filter((p) => p.ativo);
+  const fornecedoresAtivos = fornecedores.filter((f) => f.ativo);
 
   return (
     <div className="flex flex-col gap-6">
@@ -162,8 +193,10 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
                 required
               >
                 <option value="">Selecione um paciente...</option>
-                {pacientesAtivos.map(p => (
-                  <option key={p.id} value={p.id}>{p.nome}</option>
+                {pacientesAtivos.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome}
+                  </option>
                 ))}
               </select>
             </Field>
@@ -183,7 +216,9 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>Adicionar Item</CardTitle>
-          <CardDescription>Selecione produtos e quantidades para a cotacao</CardDescription>
+          <CardDescription>
+            Selecione produtos e quantidades para a cotacao
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <FieldGroup className="grid gap-4 sm:grid-cols-12">
@@ -195,8 +230,10 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="">Selecione...</option>
-                {produtosAtivos.map(p => (
-                  <option key={p.id} value={p.id}>{p.nome} ({p.unidade})</option>
+                {produtosAtivos.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome} ({p.unidade})
+                  </option>
                 ))}
               </select>
             </Field>
@@ -206,19 +243,25 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
                 type="number"
                 min="1"
                 value={novoItem.quantidade}
-                onChange={(e) => setNovoItem({ ...novoItem, quantidade: parseInt(e.target.value) || 1 })}
+                onChange={(e) =>
+                  setNovoItem({ ...novoItem, quantidade: parseInt(e.target.value) || 1 })
+                }
               />
             </Field>
             <Field className="sm:col-span-3">
               <FieldLabel>Fornecedor</FieldLabel>
               <select
                 value={novoItem.fornecedorId}
-                onChange={(e) => setNovoItem({ ...novoItem, fornecedorId: e.target.value })}
+                onChange={(e) =>
+                  setNovoItem({ ...novoItem, fornecedorId: e.target.value })
+                }
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="">Selecione...</option>
-                {fornecedoresAtivos.map(f => (
-                  <option key={f.id} value={f.id}>{f.nomeFantasia}</option>
+                {fornecedoresAtivos.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.nomeFantasia}
+                  </option>
                 ))}
               </select>
             </Field>
@@ -250,9 +293,7 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
             <FileText className="h-5 w-5" />
             Itens da Cotacao
           </CardTitle>
-          <CardDescription>
-            {itens.length} item(ns) adicionado(s)
-          </CardDescription>
+          <CardDescription>{itens.length} item(ns) adicionado(s)</CardDescription>
         </CardHeader>
         <CardContent>
           {itens.length === 0 ? (
@@ -271,7 +312,7 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
                     <TableHead>Fornecedor</TableHead>
                     <TableHead className="text-right">Preco Unit.</TableHead>
                     <TableHead className="text-right">Subtotal</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className="w-12.5"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -281,7 +322,9 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
                         <div>
                           <p className="font-medium">{getProdutoNome(item.produtoId)}</p>
                           {item.observacao && (
-                            <p className="text-xs text-muted-foreground">{item.observacao}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.observacao}
+                            </p>
                           )}
                         </div>
                       </TableCell>
@@ -295,7 +338,9 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
                           step="0.01"
                           min="0"
                           value={item.precoUnitario}
-                          onChange={(e) => handleUpdateItemPrice(index, parseFloat(e.target.value) || 0)}
+                          onChange={(e) =>
+                            handleUpdateItemPrice(index, parseFloat(e.target.value) || 0)
+                          }
                           className="w-28 text-right"
                         />
                       </TableCell>
@@ -354,5 +399,5 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
         </Button>
       </div>
     </div>
-  )
+  );
 }

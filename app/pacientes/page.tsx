@@ -1,48 +1,48 @@
-'use client'
+"use client";
 
-import { useState, useMemo } from 'react'
-import Link from 'next/link'
-import { Plus, Search, Eye, Edit, Filter } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import { Plus, Search, Eye, Edit, Filter } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
-} from '@/components/ui/table'
-import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { StatusBadge } from '@/components/shared/status-badge'
-import { Empty } from '@/components/ui/empty'
-import { useData } from '@/contexts/data-context'
-import { StatusPaciente } from '@/types'
+  TableRow,
+} from "@/components/ui/table";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { Empty } from "@/components/ui/empty";
+import { useData } from "@/contexts/data-context";
+import { StatusPaciente } from "@/types";
 
 export default function PacientesPage() {
-  const { pacientes } = useData()
-  const [busca, setBusca] = useState('')
-  const [filtroStatus, setFiltroStatus] = useState<string>('todos')
+  const { pacientes } = useData();
+  const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState<string>("todos");
 
   const pacientesFiltrados = useMemo(() => {
-    return pacientes.filter(paciente => {
+    return pacientes.filter((paciente) => {
       const matchBusca =
         paciente.nomeCompleto.toLowerCase().includes(busca.toLowerCase()) ||
-        paciente.cpf.includes(busca)
+        paciente.cpf.includes(busca);
 
-      const matchStatus = filtroStatus === 'todos' || paciente.status === filtroStatus
+      const matchStatus = filtroStatus === "todos" || paciente.status === filtroStatus;
 
-      return matchBusca && matchStatus
-    })
-  }, [pacientes, busca, filtroStatus])
+      return matchBusca && matchStatus;
+    });
+  }, [pacientes, busca, filtroStatus]);
 
   return (
     <DashboardLayout>
@@ -76,7 +76,7 @@ export default function PacientesPage() {
                 <Input
                   placeholder="Buscar por nome ou CPF..."
                   value={busca}
-                  onChange={e => setBusca(e.target.value)}
+                  onChange={(e) => setBusca(e.target.value)}
                   className="pl-9"
                 />
               </div>
@@ -116,11 +116,13 @@ export default function PacientesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pacientesFiltrados.map(paciente => (
+                  {pacientesFiltrados.map((paciente) => (
                     <TableRow key={paciente.id}>
-                      <TableCell className="font-medium">{paciente.nomeCompleto}</TableCell>
+                      <TableCell className="font-medium">
+                        {paciente.nomeCompleto}
+                      </TableCell>
                       <TableCell>{paciente.cpf}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">
+                      <TableCell className="max-w-50 truncate">
                         {paciente.diagnosticoOncologico}
                       </TableCell>
                       <TableCell>{paciente.areaTratamento}</TableCell>
@@ -156,5 +158,5 @@ export default function PacientesPage() {
         </div>
       </div>
     </DashboardLayout>
-  )
+  );
 }

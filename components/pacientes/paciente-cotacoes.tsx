@@ -1,52 +1,61 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { Plus, Eye, AlertTriangle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import Link from "next/link";
+import { Plus, Eye, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
-} from '@/components/ui/table'
-import { Empty } from '@/components/ui/empty'
-import { StatusBadge } from '@/components/shared/status-badge'
-import { useData } from '@/contexts/data-context'
-import { useAuth } from '@/contexts/auth-context'
-import { StatusCotacao } from '@/types'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+  TableRow,
+} from "@/components/ui/table";
+import { Empty } from "@/components/ui/empty";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { useData } from "@/contexts/data-context";
+import { useAuth } from "@/contexts/auth-context";
+import { StatusCotacao } from "@/types";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface PacienteCotacoesProps {
-  pacienteId: string
+  pacienteId: string;
 }
 
 export function PacienteCotacoes({ pacienteId }: PacienteCotacoesProps) {
-  const { getCotacoesByPaciente, getAreaById, getFornecedorById } = useData()
-  const { podeVisualizarValores, podeCriarCotacao } = useAuth()
+  const { getCotacoesByPaciente, getAreaById, getFornecedorById } = useData();
+  const { podeVisualizarValores, podeCriarCotacao } = useAuth();
   const cotacoes = getCotacoesByPaciente(pacienteId).sort(
-    (a, b) => new Date(b.dataSolicitacao).getTime() - new Date(a.dataSolicitacao).getTime()
-  )
+    (a, b) =>
+      new Date(b.dataSolicitacao).getTime() - new Date(a.dataSolicitacao).getTime(),
+  );
 
   const formatDate = (dateStr: string) => {
     try {
-      return format(new Date(dateStr), 'dd/MM/yyyy', { locale: ptBR })
+      return format(new Date(dateStr), "dd/MM/yyyy", { locale: ptBR });
     } catch {
-      return dateStr
+      return dateStr;
     }
-  }
+  };
 
   const calcularTotal = (itens: { quantidade: number; valorUnitario: number }[]) => {
-    return itens.reduce((acc, item) => acc + item.quantidade * item.valorUnitario, 0)
-  }
+    return itens.reduce((acc, item) => acc + item.quantidade * item.valorUnitario, 0);
+  };
 
-  const isVencida = (dataValidade: string, status: StatusCotacao) => {
-    const hoje = new Date().toISOString().split('T')[0]
-    return dataValidade < hoje || status === StatusCotacao.EXPIRADA
-  }
+  const isVencida = (dataValidade: string, status: StatusCotacao | string) => {
+    const hoje = new Date().toISOString().split("T")[0];
+    return (
+      dataValidade < hoje || status === StatusCotacao.EXPIRADA || status === "expirada"
+    );
+  };
 
   if (!podeVisualizarValores()) {
     return (
@@ -58,7 +67,7 @@ export function PacienteCotacoes({ pacienteId }: PacienteCotacoesProps) {
           </CardDescription>
         </CardHeader>
       </Card>
-    )
+    );
   }
 
   return (
@@ -97,17 +106,20 @@ export function PacienteCotacoes({ pacienteId }: PacienteCotacoesProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cotacoes.map(cotacao => {
-                const area = getAreaById(cotacao.areaAtendimentoId)
-                const fornecedor = getFornecedorById(cotacao.fornecedorId)
-                const vencida = isVencida(cotacao.dataValidade, cotacao.status)
-                const total = calcularTotal(cotacao.itens)
+              {cotacoes.map((cotacao) => {
+                const area = getAreaById(cotacao.areaAtendimentoId);
+                const fornecedor = getFornecedorById(cotacao.fornecedorId);
+                const vencida = isVencida(cotacao.dataValidade, cotacao.status);
+                const total = calcularTotal(cotacao.itens);
 
                 return (
-                  <TableRow key={cotacao.id} className={vencida ? 'bg-destructive/5' : ''}>
+                  <TableRow
+                    key={cotacao.id}
+                    className={vencida ? "bg-destructive/5" : ""}
+                  >
                     <TableCell>{formatDate(cotacao.dataSolicitacao)}</TableCell>
-                    <TableCell>{area?.nome || '-'}</TableCell>
-                    <TableCell>{fornecedor?.nome || '-'}</TableCell>
+                    <TableCell>{area?.nome || "-"}</TableCell>
+                    <TableCell>{fornecedor?.nome || "-"}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {formatDate(cotacao.dataValidade)}
@@ -120,7 +132,10 @@ export function PacienteCotacoes({ pacienteId }: PacienteCotacoesProps) {
                       <StatusBadge status={cotacao.status} />
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      {total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      {total.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" asChild>
@@ -131,12 +146,12 @@ export function PacienteCotacoes({ pacienteId }: PacienteCotacoesProps) {
                       </Button>
                     </TableCell>
                   </TableRow>
-                )
+                );
               })}
             </TableBody>
           </Table>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

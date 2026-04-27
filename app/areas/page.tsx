@@ -43,7 +43,7 @@ import { Plus, Search, MoreHorizontal, Pencil, Trash2, MapPin } from "lucide-rea
 import type { AreaAtendimento } from "@/types";
 
 export default function AreasPage() {
-  const { areas, addArea, updateArea } = useData();
+  const { areas, addArea, updateArea, deleteArea } = useData();
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<AreaAtendimento | null>(null);
@@ -195,7 +195,7 @@ export default function AreasPage() {
                       <TableHead>Nome</TableHead>
                       <TableHead>Descricao</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="w-[70px]">Acoes</TableHead>
+                      <TableHead className="w-17.5">Acoes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

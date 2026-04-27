@@ -10,6 +10,7 @@ import {
 
 interface AuthContextType {
   usuario: Usuario | null;
+  user: Usuario | null;
   isLoading: boolean;
   login: (email: string, senha: string) => Promise<void>;
   logout: () => void;
@@ -186,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         usuario,
+        user: usuario,
         isLoading,
         login,
         logout,
