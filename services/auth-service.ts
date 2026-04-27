@@ -1,8 +1,10 @@
 import axios from "axios";
 import { api, TOKEN_STORAGE_KEY } from "./api";
+import { UsuarioDTO } from "@/types";
 
 interface LoginResponse {
-  token: string;
+  access_token: string;
+  user: UsuarioDTO;
 }
 
 interface ApiErrorResponse {
@@ -24,6 +26,8 @@ export function saveToken(token: string) {
   }
 
   localStorage.setItem(TOKEN_STORAGE_KEY, token);
+
+  document.cookie = `${TOKEN_STORAGE_KEY}=${token}; path=/; max-age=86400; SameSite=Strict`;
 }
 
 export function removeToken() {
@@ -32,19 +36,24 @@ export function removeToken() {
   }
 
   localStorage.removeItem(TOKEN_STORAGE_KEY);
+
+  document.cookie = `${TOKEN_STORAGE_KEY}=; path=/; max-age=0; SameSite=Strict`;
 }
 
 export async function login(email: string, senha: string) {
   try {
-    const response = await api.post<LoginResponse>("/login", { email, senha });
+    const response = await api.post<LoginResponse>("/auth/login", {
+      email,
+      password: senha,
+    });
 
-    if (!response.data?.token) {
+    if (!response.data?.access_token) {
       throw new Error("Resposta de login inválida.");
     }
 
-    saveToken(response.data.token);
+    saveToken(response.data.access_token);
 
-    return response.data.token;
+    return response.data.access_token;
   } catch (error) {
     if (axios.isAxiosError<ApiErrorResponse>(error)) {
       const mensagemErro = error.response?.data?.error || error.response?.data?.message;
