@@ -90,13 +90,17 @@ export interface Paciente {
   dataNascimento: string;
   sexo: Sexo;
   estadoCivil: EstadoCivil;
-  naturalidade: string;
-  escolaridade: string;
+  /** @deprecated - Not persisted in API, kept for backward compatibility */
+  naturalidade?: string;
+  /** @deprecated - Not persisted in API, kept for backward compatibility */
+  escolaridade?: string;
   profissao: string;
   endereco: Endereco;
   telefone: string;
-  nomePai: string;
-  nomeMae: string;
+  /** @deprecated - Not persisted in API, kept for backward compatibility */
+  nomePai?: string;
+  /** @deprecated - Not persisted in API, kept for backward compatibility */
+  nomeMae?: string;
   numeroSUS: string;
   diagnosticoOncologico: string;
   diagnostico?: string;

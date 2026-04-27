@@ -24,11 +24,13 @@ import {
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Empty } from "@/components/ui/empty";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import { useData } from "@/contexts/data-context";
 import { StatusPaciente } from "@/types";
 
 export default function PacientesPage() {
-  const { pacientes } = useData();
+  const { pacientes, pacientesLoading, pacientesError, refreshPacientes } = useData();
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
 
@@ -43,6 +45,8 @@ export default function PacientesPage() {
       return matchBusca && matchStatus;
     });
   }, [pacientes, busca, filtroStatus]);
+
+  const temFiltroAtivo = busca.trim().length > 0 || filtroStatus !== "todos";
 
   return (
     <DashboardLayout>
@@ -61,6 +65,18 @@ export default function PacientesPage() {
             </Link>
           </Button>
         </div>
+
+        {pacientesError && (
+          <Alert variant="destructive">
+            <AlertTitle>Não foi possível carregar os pacientes</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>{pacientesError}</span>
+              <Button variant="outline" onClick={() => void refreshPacientes()}>
+                Tentar novamente
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card>
           <CardHeader>
@@ -97,10 +113,23 @@ export default function PacientesPage() {
 
         <Card>
           <CardContent className="p-0">
-            {pacientesFiltrados.length === 0 ? (
+            {pacientesLoading ? (
+              <div className="flex min-h-64 items-center justify-center gap-3 py-12 text-muted-foreground">
+                <Spinner className="h-5 w-5" />
+                <span>Carregando pacientes...</span>
+              </div>
+            ) : pacientesFiltrados.length === 0 ? (
               <Empty
-                title="Nenhum paciente encontrado"
-                description="Tente ajustar os filtros ou cadastre um novo paciente."
+                title={
+                  temFiltroAtivo
+                    ? "Nenhum paciente encontrado"
+                    : "Nenhum paciente cadastrado"
+                }
+                description={
+                  temFiltroAtivo
+                    ? "Tente ajustar os filtros ou limpar a busca para ver todos os pacientes."
+                    : "Cadastre o primeiro paciente para iniciar o gerenciamento."
+                }
                 className="py-12"
               />
             ) : (
@@ -153,9 +182,11 @@ export default function PacientesPage() {
           </CardContent>
         </Card>
 
-        <div className="text-sm text-muted-foreground">
-          Exibindo {pacientesFiltrados.length} de {pacientes.length} pacientes
-        </div>
+        {!pacientesLoading && !pacientesError && (
+          <div className="text-sm text-muted-foreground">
+            Exibindo {pacientesFiltrados.length} de {pacientes.length} pacientes
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
