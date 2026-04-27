@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const TOKEN_STORAGE_KEY = "sig-lbcc-token";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname === "/login") {
     const token = request.cookies.get(TOKEN_STORAGE_KEY)?.value;
 
@@ -15,8 +15,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-  
-    "/((?!_next/static|_next/image|favicon.ico|public).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|public).*)"],
 };
