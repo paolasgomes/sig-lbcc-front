@@ -1,8 +1,9 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useState } from "react";
+import { RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -10,43 +11,59 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
-} from '@/components/ui/dialog'
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
-import { FieldGroup, Field, FieldLabel } from '@/components/ui/field'
-import { useData } from '@/contexts/data-context'
-import { useAuth } from '@/contexts/auth-context'
-import { StatusPaciente } from '@/types'
+  SelectValue,
+} from "@/components/ui/select";
+import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
+import { useData } from "@/contexts/data-context";
+import { useAuth } from "@/contexts/auth-context";
+import { StatusPaciente } from "@/types";
 
 interface AlterarStatusModalProps {
-  pacienteId: string
-  statusAtual: StatusPaciente
+  pacienteId: string;
+  statusAtual: StatusPaciente;
 }
 
 const statusOptions = [
-  { value: StatusPaciente.ATIVO, label: 'Ativo' },
-  { value: StatusPaciente.SUSPENSO, label: 'Suspenso' },
-  { value: StatusPaciente.ENCERRADO, label: 'Encerrado' }
-]
+  { value: StatusPaciente.ATIVO, label: "Ativo" },
+  { value: StatusPaciente.SUSPENSO, label: "Suspenso" },
+  { value: StatusPaciente.ENCERRADO, label: "Encerrado" },
+];
 
 export function AlterarStatusModal({ pacienteId, statusAtual }: AlterarStatusModalProps) {
-  const { alterarStatusPaciente } = useData()
-  const { usuario } = useAuth()
-  const [open, setOpen] = useState(false)
-  const [novoStatus, setNovoStatus] = useState<StatusPaciente>(statusAtual)
+  const { alterarStatusPaciente } = useData();
+  const { usuario } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [novoStatus, setNovoStatus] = useState<StatusPaciente>(statusAtual);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (novoStatus !== statusAtual) {
-      alterarStatusPaciente(pacienteId, novoStatus, usuario?.nome || 'Sistema')
+      setIsSubmitting(true);
+      setSubmitError(null);
+
+      try {
+        await alterarStatusPaciente(pacienteId, novoStatus, usuario?.nome || "Sistema");
+      } catch (error) {
+        setSubmitError(
+          error instanceof Error ? error.message : "Erro ao alterar status do paciente.",
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      setIsSubmitting(false);
     }
-    setOpen(false)
-  }
+
+    setOpen(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -60,18 +77,22 @@ export function AlterarStatusModal({ pacienteId, statusAtual }: AlterarStatusMod
         <DialogHeader>
           <DialogTitle>Alterar Status do Paciente</DialogTitle>
           <DialogDescription>
-            Selecione o novo status para o paciente. Esta ação será registrada no histórico.
+            Selecione o novo status para o paciente. Esta ação será registrada no
+            histórico.
           </DialogDescription>
         </DialogHeader>
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="status">Novo Status</FieldLabel>
-            <Select value={novoStatus} onValueChange={v => setNovoStatus(v as StatusPaciente)}>
+            <Select
+              value={novoStatus}
+              onValueChange={(v) => setNovoStatus(v as StatusPaciente)}
+            >
               <SelectTrigger id="status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {statusOptions.map(opt => (
+                {statusOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>
@@ -80,15 +101,27 @@ export function AlterarStatusModal({ pacienteId, statusAtual }: AlterarStatusMod
             </Select>
           </Field>
         </FieldGroup>
+        {submitError && (
+          <Alert variant="destructive">
+            <AlertDescription>{submitError}</AlertDescription>
+          </Alert>
+        )}
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isSubmitting}
+          >
             Cancelar
           </Button>
-          <Button onClick={handleConfirm} disabled={novoStatus === statusAtual}>
-            Confirmar Alteração
+          <Button
+            onClick={() => void handleConfirm()}
+            disabled={novoStatus === statusAtual || isSubmitting}
+          >
+            {isSubmitting ? "Salvando..." : "Confirmar Alteração"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

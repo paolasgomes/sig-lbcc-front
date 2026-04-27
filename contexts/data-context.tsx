@@ -24,9 +24,10 @@ import {
   StatusCotacao,
   TipoEvento,
   DashboardStats,
+  Sexo,
+  EstadoCivil,
 } from "@/types";
 import {
-  pacientesMock,
   areasMock,
   fornecedoresMock,
   produtosMock,
@@ -42,6 +43,194 @@ import {
   atualizarUsuario,
   excluirUsuario,
 } from "@/services/usuarios-service";
+import {
+  ApiPacienteDTO,
+  PacienteCreateInput,
+  PacienteUpdateInput,
+  listarPacientes,
+  obterPaciente,
+  criarPaciente,
+  atualizarPaciente,
+  inativarPaciente,
+} from "@/services/pacientes-service";
+
+function formatApiDate(date?: string | null) {
+  return date ?? "";
+}
+
+function mapApiSexoToSexo(sexo?: string | null): Sexo {
+  if (!sexo) {
+    return Sexo.OUTRO;
+  }
+
+  const normalized = sexo.trim().toUpperCase();
+
+  if (normalized === "M" || normalized === "MASCULINO") {
+    return Sexo.MASCULINO;
+  }
+
+  if (normalized === "F" || normalized === "FEMININO") {
+    return Sexo.FEMININO;
+  }
+
+  return Sexo.OUTRO;
+}
+
+function mapSexoToApiSexo(sexo?: Sexo) {
+  if (sexo === Sexo.MASCULINO) {
+    return "M";
+  }
+
+  if (sexo === Sexo.FEMININO) {
+    return "F";
+  }
+
+  return "O";
+}
+
+function mapApiEstadoCivilToEstadoCivil(estadoCivil?: string | null): EstadoCivil {
+  if (!estadoCivil) {
+    return EstadoCivil.SOLTEIRO;
+  }
+
+  const normalized = estadoCivil.trim().toLowerCase();
+
+  if (normalized.includes("casad")) {
+    return EstadoCivil.CASADO;
+  }
+
+  if (normalized.includes("divorc")) {
+    return EstadoCivil.DIVORCIADO;
+  }
+
+  if (normalized.includes("viuv")) {
+    return EstadoCivil.VIUVO;
+  }
+
+  if (normalized.includes("uniao") || normalized.includes("união")) {
+    return EstadoCivil.UNIAO_ESTAVEL;
+  }
+
+  return EstadoCivil.SOLTEIRO;
+}
+
+function mapEstadoCivilToApiEstadoCivil(estadoCivil?: EstadoCivil) {
+  if (estadoCivil === EstadoCivil.CASADO) {
+    return "Casado";
+  }
+
+  if (estadoCivil === EstadoCivil.DIVORCIADO) {
+    return "Divorciado";
+  }
+
+  if (estadoCivil === EstadoCivil.VIUVO) {
+    return "Viuvo";
+  }
+
+  if (estadoCivil === EstadoCivil.UNIAO_ESTAVEL) {
+    return "Uniao Estavel";
+  }
+
+  return "Solteiro";
+}
+
+function mapApiStatusToStatusPaciente(status?: string | null): StatusPaciente {
+  if (!status) {
+    return StatusPaciente.ATIVO;
+  }
+
+  const normalized = status.trim().toLowerCase();
+
+  if (normalized === "suspenso") {
+    return StatusPaciente.SUSPENSO;
+  }
+
+  if (normalized === "encerrado" || normalized === "inativo") {
+    return StatusPaciente.ENCERRADO;
+  }
+
+  return StatusPaciente.ATIVO;
+}
+
+function mapStatusPacienteToApiStatus(status?: StatusPaciente) {
+  if (status === StatusPaciente.SUSPENSO) {
+    return "suspenso";
+  }
+
+  if (status === StatusPaciente.ENCERRADO) {
+    return "inativo";
+  }
+
+  return "ativo";
+}
+
+function mapApiPacienteToPaciente(apiPaciente: ApiPacienteDTO): Paciente {
+  return {
+    id: apiPaciente.id,
+    nome: apiPaciente.nome,
+    nomeCompleto: apiPaciente.nome,
+    cpf: apiPaciente.cpf,
+    rg: apiPaciente.rg ?? "",
+    dataNascimento: formatApiDate(apiPaciente.data_nascimento),
+    sexo: mapApiSexoToSexo(apiPaciente.sexo),
+    estadoCivil: mapApiEstadoCivilToEstadoCivil(apiPaciente.estado_civil),
+    naturalidade: "",
+    escolaridade: "",
+    profissao: apiPaciente.profissao ?? "",
+    endereco: {
+      logradouro: apiPaciente.endereco ?? "",
+      numero: apiPaciente.numero ?? "",
+      complemento: apiPaciente.complemento ?? "",
+      bairro: apiPaciente.bairro ?? "",
+      cidade: apiPaciente.cidade ?? "",
+      estado: apiPaciente.estado ?? "",
+      cep: apiPaciente.cep ?? "",
+    },
+    telefone: apiPaciente.celular ?? apiPaciente.telefone ?? "",
+    nomePai: "",
+    nomeMae: "",
+    numeroSUS: apiPaciente.id_origem ?? "",
+    diagnosticoOncologico: apiPaciente.diagnostico ?? "",
+    diagnostico: apiPaciente.diagnostico ?? "",
+    setor: apiPaciente.hospital_tratamento ?? "",
+    areaTratamento: apiPaciente.origem ?? "",
+    dataInicioTratamento: formatApiDate(apiPaciente.data_inicio_tratamento),
+    medicoResponsavel: apiPaciente.medico_responsavel ?? "",
+    status: mapApiStatusToStatusPaciente(apiPaciente.status),
+    criadoEm: apiPaciente.created_at,
+    atualizadoEm: apiPaciente.updated_at,
+  };
+}
+
+function mapPacienteToApiPayload(
+  paciente: Partial<Paciente>,
+  status?: StatusPaciente,
+): PacienteCreateInput {
+  return {
+    nome: paciente.nomeCompleto ?? paciente.nome ?? "",
+    cpf: paciente.cpf ?? "",
+    rg: paciente.rg,
+    data_nascimento: paciente.dataNascimento ?? "",
+    sexo: mapSexoToApiSexo(paciente.sexo),
+    estado_civil: mapEstadoCivilToApiEstadoCivil(paciente.estadoCivil),
+    profissao: paciente.profissao,
+    telefone: paciente.telefone,
+    celular: paciente.telefone,
+    endereco: paciente.endereco?.logradouro,
+    numero: paciente.endereco?.numero,
+    complemento: paciente.endereco?.complemento,
+    bairro: paciente.endereco?.bairro,
+    cidade: paciente.endereco?.cidade,
+    estado: paciente.endereco?.estado,
+    cep: paciente.endereco?.cep,
+    diagnostico: paciente.diagnosticoOncologico ?? paciente.diagnostico,
+    hospital_tratamento: paciente.setor,
+    medico_responsavel: paciente.medicoResponsavel,
+    data_inicio_tratamento: paciente.dataInicioTratamento,
+    status: mapStatusPacienteToApiStatus(status ?? paciente.status),
+    id_origem: paciente.numeroSUS,
+  };
+}
 
 interface DataContextType {
   // Dados
@@ -49,6 +238,8 @@ interface DataContextType {
   usuariosLoading: boolean;
   usuariosError: string | null;
   pacientes: Paciente[];
+  pacientesLoading: boolean;
+  pacientesError: string | null;
   areas: AreaAtendimento[];
   fornecedores: Fornecedor[];
   produtos: Produto[];
@@ -68,14 +259,17 @@ interface DataContextType {
   deleteUsuario: (id: string) => Promise<void>;
 
   // Pacientes
+  refreshPacientes: () => Promise<void>;
   getPacienteById: (id: string) => Paciente | undefined;
-  addPaciente: (paciente: Paciente) => void;
-  updatePaciente: (id: string, dados: Partial<Paciente>) => void;
+  fetchPacienteById: (id: string) => Promise<Paciente>;
+  addPaciente: (paciente: Partial<Paciente>) => Promise<Paciente>;
+  updatePaciente: (id: string, dados: Partial<Paciente>) => Promise<Paciente>;
+  deletePaciente: (id: string) => Promise<void>;
   alterarStatusPaciente: (
     id: string,
     novoStatus: StatusPaciente,
     usuarioNome: string,
-  ) => void;
+  ) => Promise<void>;
 
   // Áreas
   getAreaById: (id: string) => AreaAtendimento | undefined;
@@ -125,7 +319,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [usuarios, setUsuarios] = useState<UsuarioDTO[]>([]);
   const [usuariosLoading, setUsuariosLoading] = useState(true);
   const [usuariosError, setUsuariosError] = useState<string | null>(null);
-  const [pacientes, setPacientes] = useState<Paciente[]>(pacientesMock);
+  const [pacientes, setPacientes] = useState<Paciente[]>([]);
+  const [pacientesLoading, setPacientesLoading] = useState(true);
+  const [pacientesError, setPacientesError] = useState<string | null>(null);
   const [areas, setAreas] = useState<AreaAtendimento[]>(areasMock);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>(fornecedoresMock);
   const [produtos, setProdutos] = useState<Produto[]>(produtosMock);
@@ -150,6 +346,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const refreshPacientes = useCallback(async () => {
+    setPacientesLoading(true);
+    setPacientesError(null);
+
+    try {
+      const pacientesCarregados = await listarPacientes();
+      setPacientes(pacientesCarregados.map(mapApiPacienteToPaciente));
+    } catch (error) {
+      setPacientesError(
+        error instanceof Error ? error.message : "Erro ao carregar pacientes.",
+      );
+    } finally {
+      setPacientesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (authLoading) {
       return;
@@ -159,11 +371,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setUsuarios([]);
       setUsuariosError(null);
       setUsuariosLoading(false);
+      setPacientes([]);
+      setPacientesError(null);
+      setPacientesLoading(false);
       return;
     }
 
     void refreshUsuarios();
-  }, [authLoading, usuario, refreshUsuarios]);
+    void refreshPacientes();
+  }, [authLoading, usuario, refreshUsuarios, refreshPacientes]);
 
   // Usuarios
   const getUsuarioById = useCallback(
@@ -220,21 +436,84 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [pacientes],
   );
 
-  const addPaciente = useCallback((paciente: Paciente) => {
-    setPacientes((prev) => [...prev, paciente]);
+  const fetchPacienteById = useCallback(async (id: string) => {
+    const pacienteApi = await obterPaciente(id);
+    const pacienteMapeado = mapApiPacienteToPaciente(pacienteApi);
+
+    setPacientes((prev) => {
+      const pacienteExiste = prev.some((p) => p.id === pacienteMapeado.id);
+
+      if (!pacienteExiste) {
+        return [...prev, pacienteMapeado];
+      }
+
+      return prev.map((p) => (p.id === pacienteMapeado.id ? pacienteMapeado : p));
+    });
+
+    return pacienteMapeado;
   }, []);
 
-  const updatePaciente = useCallback((id: string, dados: Partial<Paciente>) => {
+  const addPaciente = useCallback(async (paciente: Partial<Paciente>) => {
+    const payload = mapPacienteToApiPayload(
+      {
+        ...paciente,
+        status: paciente.status ?? StatusPaciente.ATIVO,
+      },
+      paciente.status ?? StatusPaciente.ATIVO,
+    );
+
+    const pacienteCriado = await criarPaciente(payload);
+    const pacienteMapeado = mapApiPacienteToPaciente(pacienteCriado);
+
+    setPacientes((prev) => [...prev, pacienteMapeado]);
+
+    return pacienteMapeado;
+  }, []);
+
+  const updatePaciente = useCallback(
+    async (id: string, dados: Partial<Paciente>) => {
+      const pacienteAtual = pacientes.find((p) => p.id === id);
+
+      const payloadBase = {
+        ...(pacienteAtual ?? {}),
+        ...dados,
+      };
+
+      const payload = mapPacienteToApiPayload(
+        payloadBase,
+        dados.status ?? pacienteAtual?.status,
+      );
+      const pacienteAtualizado = await atualizarPaciente(
+        id,
+        payload as PacienteUpdateInput,
+      );
+      const pacienteMapeado = mapApiPacienteToPaciente(pacienteAtualizado);
+
+      setPacientes((prev) => prev.map((p) => (p.id === id ? pacienteMapeado : p)));
+
+      return pacienteMapeado;
+    },
+    [pacientes],
+  );
+
+  const deletePaciente = useCallback(async (id: string) => {
+    await inativarPaciente(id);
     setPacientes((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, ...dados, atualizadoEm: new Date().toISOString() } : p,
+      prev.map((paciente) =>
+        paciente.id === id
+          ? {
+              ...paciente,
+              status: StatusPaciente.ENCERRADO,
+              atualizadoEm: new Date().toISOString(),
+            }
+          : paciente,
       ),
     );
   }, []);
 
   const alterarStatusPaciente = useCallback(
-    (id: string, novoStatus: StatusPaciente, usuarioNome: string) => {
-      updatePaciente(id, { status: novoStatus });
+    async (id: string, novoStatus: StatusPaciente, usuarioNome: string) => {
+      await updatePaciente(id, { status: novoStatus });
 
       const novoHistorico: Historico = {
         id: `hist-${Date.now()}`,
@@ -475,6 +754,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         usuariosLoading,
         usuariosError,
         pacientes,
+        pacientesLoading,
+        pacientesError,
         areas,
         fornecedores,
         produtos,
@@ -488,9 +769,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         addUsuario,
         updateUsuario,
         deleteUsuario,
+        refreshPacientes,
         getPacienteById,
+        fetchPacienteById,
         addPaciente,
         updatePaciente,
+        deletePaciente,
         alterarStatusPaciente,
         getAreaById,
         addArea,
