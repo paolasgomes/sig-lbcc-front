@@ -15,6 +15,22 @@ export interface UsuarioDTO {
   updated_at: string;
 }
 
+export interface UsuarioCreateInput {
+  nome: string;
+  email: string;
+  perfil: PerfilUsuario;
+  ativo?: boolean;
+  senha: string;
+}
+
+export interface UsuarioUpdateInput {
+  nome?: string;
+  email?: string;
+  perfil?: PerfilUsuario;
+  ativo?: boolean;
+  senha?: string;
+}
+
 export enum StatusPaciente {
   ATIVO = "ativo",
   SUSPENSO = "suspenso",
@@ -55,7 +71,7 @@ export interface Usuario {
   id: string;
   nome: string;
   email: string;
-  senha: string;
+  senha?: string;
   perfil: PerfilUsuario;
   ativo: boolean;
 }

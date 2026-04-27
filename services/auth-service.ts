@@ -17,15 +17,21 @@ export function getStoredToken() {
     return null;
   }
 
-  return localStorage.getItem(TOKEN_STORAGE_KEY);
+  const cookie = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith(`${TOKEN_STORAGE_KEY}=`));
+
+  if (!cookie) {
+    return null;
+  }
+
+  return decodeURIComponent(cookie.slice(TOKEN_STORAGE_KEY.length + 1));
 }
 
 export function saveToken(token: string) {
   if (typeof window === "undefined") {
     return;
   }
-
-  localStorage.setItem(TOKEN_STORAGE_KEY, token);
 
   document.cookie = `${TOKEN_STORAGE_KEY}=${token}; path=/; max-age=86400; SameSite=Strict`;
 }
@@ -34,8 +40,6 @@ export function removeToken() {
   if (typeof window === "undefined") {
     return;
   }
-
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
 
   document.cookie = `${TOKEN_STORAGE_KEY}=; path=/; max-age=0; SameSite=Strict`;
 }

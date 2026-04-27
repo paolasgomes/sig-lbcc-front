@@ -1,8 +1,17 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode, useCallback } from "react";
 import {
-  Usuario,
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useCallback,
+} from "react";
+import {
+  UsuarioDTO,
+  UsuarioCreateInput,
+  UsuarioUpdateInput,
   Paciente,
   AreaAtendimento,
   Fornecedor,
@@ -17,7 +26,6 @@ import {
   DashboardStats,
 } from "@/types";
 import {
-  usuariosMock,
   pacientesMock,
   areasMock,
   fornecedoresMock,
@@ -27,10 +35,19 @@ import {
   historicoMock,
   documentosMock,
 } from "@/mocks";
+import { useAuth } from "@/contexts/auth-context";
+import {
+  listarUsuarios,
+  criarUsuario,
+  atualizarUsuario,
+  excluirUsuario,
+} from "@/services/usuarios-service";
 
 interface DataContextType {
   // Dados
-  usuarios: Usuario[];
+  usuarios: UsuarioDTO[];
+  usuariosLoading: boolean;
+  usuariosError: string | null;
   pacientes: Paciente[];
   areas: AreaAtendimento[];
   fornecedores: Fornecedor[];
@@ -44,9 +61,11 @@ interface DataContextType {
   getStats: () => DashboardStats;
 
   // Usuarios
-  getUsuarioById: (id: string) => Usuario | undefined;
-  addUsuario: (usuario: Usuario) => void;
-  updateUsuario: (id: string, dados: Partial<Usuario>) => void;
+  refreshUsuarios: () => Promise<void>;
+  getUsuarioById: (id: string) => UsuarioDTO | undefined;
+  addUsuario: (usuario: UsuarioCreateInput) => Promise<UsuarioDTO>;
+  updateUsuario: (id: string, dados: UsuarioUpdateInput) => Promise<UsuarioDTO>;
+  deleteUsuario: (id: string) => Promise<void>;
 
   // Pacientes
   getPacienteById: (id: string) => Paciente | undefined;
@@ -98,7 +117,10 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [usuarios, setUsuarios] = useState<Usuario[]>(usuariosMock);
+  const { usuario, isLoading: authLoading } = useAuth();
+  const [usuarios, setUsuarios] = useState<UsuarioDTO[]>([]);
+  const [usuariosLoading, setUsuariosLoading] = useState(true);
+  const [usuariosError, setUsuariosError] = useState<string | null>(null);
   const [pacientes, setPacientes] = useState<Paciente[]>(pacientesMock);
   const [areas, setAreas] = useState<AreaAtendimento[]>(areasMock);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>(fornecedoresMock);
@@ -108,6 +130,35 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [historico, setHistorico] = useState<Historico[]>(historicoMock);
   const [documentos, setDocumentos] = useState<Documento[]>(documentosMock);
 
+  const refreshUsuarios = useCallback(async () => {
+    setUsuariosLoading(true);
+    setUsuariosError(null);
+
+    try {
+      const usuariosCarregados = await listarUsuarios();
+      setUsuarios(usuariosCarregados);
+    } catch (error) {
+      setUsuariosError(error instanceof Error ? error.message : "Erro ao carregar usuários.");
+    } finally {
+      setUsuariosLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!usuario) {
+      setUsuarios([]);
+      setUsuariosError(null);
+      setUsuariosLoading(false);
+      return;
+    }
+
+    void refreshUsuarios();
+  }, [authLoading, usuario, refreshUsuarios]);
+
   // Usuarios
   const getUsuarioById = useCallback(
     (id: string) => {
@@ -116,12 +167,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [usuarios],
   );
 
-  const addUsuario = useCallback((usuario: Usuario) => {
-    setUsuarios((prev) => [...prev, usuario]);
+  const addUsuario = useCallback(async (dados: UsuarioCreateInput) => {
+    const usuarioCriado = await criarUsuario(dados);
+    setUsuarios((prev) => [...prev, usuarioCriado]);
+
+    return usuarioCriado;
   }, []);
 
-  const updateUsuario = useCallback((id: string, dados: Partial<Usuario>) => {
-    setUsuarios((prev) => prev.map((u) => (u.id === id ? { ...u, ...dados } : u)));
+  const updateUsuario = useCallback(async (id: string, dados: UsuarioUpdateInput) => {
+    const usuarioAtualizado = await atualizarUsuario(id, dados);
+    setUsuarios((prev) => prev.map((u) => (u.id === id ? usuarioAtualizado : u)));
+
+    return usuarioAtualizado;
+  }, []);
+
+  const deleteUsuario = useCallback(async (id: string) => {
+    await excluirUsuario(id);
+    setUsuarios((prev) => prev.filter((u) => u.id !== id));
   }, []);
 
   // Estatísticas
@@ -333,6 +395,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     <DataContext.Provider
       value={{
         usuarios,
+        usuariosLoading,
+        usuariosError,
         pacientes,
         areas,
         fornecedores,
@@ -342,9 +406,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
         historico,
         documentos,
         getStats,
+        refreshUsuarios,
         getUsuarioById,
         addUsuario,
         updateUsuario,
+        deleteUsuario,
         getPacienteById,
         addPaciente,
         updatePaciente,

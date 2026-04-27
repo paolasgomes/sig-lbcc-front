@@ -4,16 +4,41 @@ export const TOKEN_STORAGE_KEY = "sig-lbcc-token";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL;
 
+function getCookieValue(name: string) {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const cookie = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith(`${name}=`));
+
+  if (!cookie) {
+    return null;
+  }
+
+  return decodeURIComponent(cookie.slice(name.length + 1));
+}
+
+function clearCookie(name: string) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  document.cookie = `${name}=; path=/; max-age=0; SameSite=Strict`;
+}
+
 export const api = axios.create({
   baseURL,
 });
 
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+    const token = getCookieValue(TOKEN_STORAGE_KEY);
 
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers = config.headers ?? {};
+      (config.headers as Record<string, string>).Authorization = `Bearer ${token}`;
     }
   }
 
@@ -28,7 +53,7 @@ api.interceptors.response.use(
       error?.response?.status === 401 &&
       !error?.config?.url?.includes("/login")
     ) {
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      clearCookie(TOKEN_STORAGE_KEY);
       window.dispatchEvent(new Event("auth:unauthorized"));
 
       if (window.location.pathname !== "/login") {

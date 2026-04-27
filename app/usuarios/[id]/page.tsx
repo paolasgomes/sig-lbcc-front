@@ -1,224 +1,257 @@
-'use client'
+"use client";
 
-import { use } from 'react'
-import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import { ArrowLeft, Edit, Phone, MapPin, Calendar, User, Stethoscope } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { StatusBadge } from '@/components/shared/status-badge'
-import { PacienteHistorico } from '@/components/pacientes/paciente-historico'
-import { PacienteAtendimentos } from '@/components/pacientes/paciente-atendimentos'
-import { PacienteCotacoes } from '@/components/pacientes/paciente-cotacoes'
-import { PacienteDocumentos } from '@/components/pacientes/paciente-documentos'
-import { AlterarStatusModal } from '@/components/pacientes/alterar-status-modal'
-import { useData } from '@/contexts/data-context'
-import { useAuth } from '@/contexts/auth-context'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { use, useState } from "react";
+import { notFound, useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  BadgeCheck,
+  CalendarDays,
+  Edit,
+  Mail,
+  Shield,
+  Trash2,
+  User,
+} from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { useData } from "@/contexts/data-context";
+import { PerfilUsuario } from "@/types";
 
 interface PageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
-export default function PacienteDetalhePage({ params }: PageProps) {
-  const { id } = use(params)
-  const { getPacienteById } = useData()
-  const { podeAlterarStatus } = useAuth()
-  const paciente = getPacienteById(id)
+const PERFIL_LABEL: Record<PerfilUsuario, string> = {
+  [PerfilUsuario.OPERADOR]: "Operador",
+  [PerfilUsuario.GESTOR]: "Gestor",
+  [PerfilUsuario.PREFEITURA]: "Prefeitura",
+};
 
-  if (!paciente) {
-    notFound()
+function formatDateTime(value?: string) {
+  if (!value) {
+    return "-";
   }
 
-  const formatDate = (dateStr: string) => {
-    try {
-      return format(new Date(dateStr), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-    } catch {
-      return dateStr
+  try {
+    return format(new Date(value), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  } catch {
+    return value;
+  }
+}
+
+export default function UsuarioDetalhePage({ params }: PageProps) {
+  const { id } = use(params);
+  const router = useRouter();
+  const {
+    getUsuarioById,
+    usuariosLoading,
+    usuariosError,
+    refreshUsuarios,
+    deleteUsuario,
+  } = useData();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const usuario = getUsuarioById(id);
+
+  const handleDelete = async () => {
+    if (!usuario) {
+      return;
     }
+
+    const confirmar = window.confirm(`Excluir o usuário ${usuario.nome}?`);
+
+    if (!confirmar) {
+      return;
+    }
+
+    setDeleteError(null);
+    setIsDeleting(true);
+
+    try {
+      await deleteUsuario(usuario.id);
+      router.replace("/usuarios");
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Erro ao excluir usuário.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  if (usuariosLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex min-h-[60vh] items-center justify-center gap-3 text-muted-foreground">
+          <Spinner className="h-5 w-5" />
+          <span>Carregando usuário...</span>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (usuariosError) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/usuarios">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Detalhe do Usuário</h1>
+              <p className="text-muted-foreground">Não foi possível carregar os dados.</p>
+            </div>
+          </div>
+
+          <Alert variant="destructive">
+            <AlertTitle>Erro ao carregar usuários</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>{usuariosError}</span>
+              <Button variant="outline" onClick={() => void refreshUsuarios()}>
+                Tentar novamente
+              </Button>
+            </AlertDescription>
+          </Alert>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!usuario) {
+    notFound();
   }
 
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
-        {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
             <Button variant="ghost" size="icon" asChild>
-              <Link href="/pacientes">
+              <Link href="/usuarios">
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-foreground">{paciente.nomeCompleto}</h1>
-                <StatusBadge status={paciente.status} />
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl font-bold text-foreground">{usuario.nome}</h1>
+                <Badge
+                  variant="outline"
+                  className={
+                    usuario.ativo
+                      ? "border-success/30 text-success"
+                      : "text-muted-foreground"
+                  }
+                >
+                  {usuario.ativo ? "Ativo" : "Inativo"}
+                </Badge>
               </div>
-              <p className="text-muted-foreground">
-                CPF: {paciente.cpf} | SUS: {paciente.numeroSUS}
+              <p className="flex flex-wrap items-center gap-2 text-muted-foreground">
+                <Mail className="h-4 w-4" />
+                <span>{usuario.email}</span>
               </p>
             </div>
           </div>
+
           <div className="flex gap-2">
-            {podeAlterarStatus() && (
-              <AlterarStatusModal pacienteId={paciente.id} statusAtual={paciente.status} />
-            )}
-            <Button asChild>
-              <Link href={`/pacientes/${paciente.id}/editar`}>
+            <Button variant="outline" asChild>
+              <Link href={`/usuarios/${usuario.id}/editar`}>
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </Link>
             </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void handleDelete()}
+              disabled={isDeleting}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {isDeleting ? "Excluindo..." : "Excluir"}
+            </Button>
           </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="dados" className="w-full">
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="dados">Dados Gerais</TabsTrigger>
-            <TabsTrigger value="historico">Histórico</TabsTrigger>
-            <TabsTrigger value="atendimentos">Atendimentos</TabsTrigger>
-            <TabsTrigger value="cotacoes">Cotações</TabsTrigger>
-            <TabsTrigger value="documentos">Documentos</TabsTrigger>
-          </TabsList>
+        {deleteError && (
+          <Alert variant="destructive">
+            <AlertTitle>Não foi possível excluir o usuário</AlertTitle>
+            <AlertDescription>{deleteError}</AlertDescription>
+          </Alert>
+        )}
 
-          {/* Dados Gerais */}
-          <TabsContent value="dados" className="mt-6">
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Dados Pessoais */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    Dados Pessoais
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Data de Nascimento</p>
-                      <p className="font-medium">{formatDate(paciente.dataNascimento)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Sexo</p>
-                      <p className="font-medium capitalize">{paciente.sexo}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Estado Civil</p>
-                      <p className="font-medium capitalize">{paciente.estadoCivil.replace('_', ' ')}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Naturalidade</p>
-                      <p className="font-medium">{paciente.naturalidade || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Escolaridade</p>
-                      <p className="font-medium">{paciente.escolaridade || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Profissão</p>
-                      <p className="font-medium">{paciente.profissao || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Nome do Pai</p>
-                      <p className="font-medium">{paciente.nomePai || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Nome da Mãe</p>
-                      <p className="font-medium">{paciente.nomeMae || '-'}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Dados básicos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <p className="text-sm text-muted-foreground">Nome</p>
+                <p className="font-medium">{usuario.nome}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Email</p>
+                <p className="font-medium">{usuario.email}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Perfil</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-muted-foreground" />
+                  <Badge variant="outline">{PERFIL_LABEL[usuario.perfil]}</Badge>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <BadgeCheck className="h-4 w-4 text-muted-foreground" />
+                  <span
+                    className={
+                      usuario.ativo
+                        ? "text-success font-medium"
+                        : "text-muted-foreground font-medium"
+                    }
+                  >
+                    {usuario.ativo ? "Ativo" : "Inativo"}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-              {/* Contato e Endereço */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    Contato e Endereço
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4">
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{paciente.telefone}</span>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Endereço</p>
-                    <p className="font-medium">
-                      {paciente.endereco.logradouro}, {paciente.endereco.numero}
-                      {paciente.endereco.complemento && ` - ${paciente.endereco.complemento}`}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {paciente.endereco.bairro} - {paciente.endereco.cidade}/{paciente.endereco.estado}
-                    </p>
-                    <p className="text-muted-foreground">CEP: {paciente.endereco.cep}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Dados Clínicos */}
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Stethoscope className="h-5 w-5" />
-                    Dados Clínicos
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="sm:col-span-2">
-                    <p className="text-sm text-muted-foreground">Diagnóstico Oncológico</p>
-                    <p className="font-medium">{paciente.diagnosticoOncologico}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Setor</p>
-                    <p className="font-medium">{paciente.setor || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Área de Tratamento</p>
-                    <p className="font-medium">{paciente.areaTratamento || '-'}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Início do Tratamento</p>
-                      <p className="font-medium">{formatDate(paciente.dataInicioTratamento)}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Médico Responsável</p>
-                    <p className="font-medium">{paciente.medicoResponsavel || '-'}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Histórico */}
-          <TabsContent value="historico" className="mt-6">
-            <PacienteHistorico pacienteId={paciente.id} />
-          </TabsContent>
-
-          {/* Atendimentos */}
-          <TabsContent value="atendimentos" className="mt-6">
-            <PacienteAtendimentos pacienteId={paciente.id} />
-          </TabsContent>
-
-          {/* Cotações */}
-          <TabsContent value="cotacoes" className="mt-6">
-            <PacienteCotacoes pacienteId={paciente.id} />
-          </TabsContent>
-
-          {/* Documentos */}
-          <TabsContent value="documentos" className="mt-6">
-            <PacienteDocumentos pacienteId={paciente.id} />
-          </TabsContent>
-        </Tabs>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5" />
+                Metadados
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <p className="text-sm text-muted-foreground">ID</p>
+                <p className="font-mono text-sm">{usuario.id}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Criado em</p>
+                <p className="font-medium">{formatDateTime(usuario.created_at)}</p>
+              </div>
+              <div className="sm:col-span-2">
+                <p className="text-sm text-muted-foreground">Atualizado em</p>
+                <p className="font-medium">{formatDateTime(usuario.updated_at)}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </DashboardLayout>
-  )
+  );
 }

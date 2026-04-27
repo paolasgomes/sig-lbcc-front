@@ -5,6 +5,7 @@ import { Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useData } from "@/contexts/data-context";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
@@ -22,10 +23,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { PerfilUsuario, type Usuario } from "@/types";
+import {
+  PerfilUsuario,
+  type UsuarioDTO,
+  type UsuarioCreateInput,
+  type UsuarioUpdateInput,
+} from "@/types";
 
 interface UsuarioFormProps {
-  usuario?: Usuario;
+  usuario?: UsuarioDTO;
   isEditing?: boolean;
 }
 
@@ -59,6 +65,8 @@ export function UsuarioForm({ usuario, isEditing = false }: UsuarioFormProps) {
     confirmarSenha: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const validate = () => {
     const nextErrors: FormErrors = {};
@@ -98,7 +106,7 @@ export function UsuarioForm({ usuario, isEditing = false }: UsuarioFormProps) {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!validate()) {
@@ -112,25 +120,35 @@ export function UsuarioForm({ usuario, isEditing = false }: UsuarioFormProps) {
       ativo: usuario?.ativo ?? true,
     };
 
-    if (isEditing && usuario) {
-      const payload: Partial<Usuario> = {
-        ...payloadBase,
-      };
+    setIsSubmitting(true);
+    setSubmitError(null);
 
-      if (formData.senha) {
-        payload.senha = formData.senha;
+    try {
+      if (isEditing && usuario) {
+        const payload: UsuarioUpdateInput = {
+          ...payloadBase,
+        };
+
+        if (formData.senha) {
+          payload.senha = formData.senha;
+        }
+
+        await updateUsuario(usuario.id, payload);
+      } else {
+        const payload: UsuarioCreateInput = {
+          ...payloadBase,
+          senha: formData.senha,
+        };
+
+        await addUsuario(payload);
       }
 
-      updateUsuario(usuario.id, payload);
-    } else {
-      addUsuario({
-        id: `usr-${Date.now()}`,
-        ...payloadBase,
-        senha: formData.senha,
-      });
+      router.push("/usuarios");
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Erro ao salvar usuário.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    router.push("/usuarios");
   };
 
   const handleChange = (field: keyof FormState, value: string) => {
@@ -261,13 +279,25 @@ export function UsuarioForm({ usuario, isEditing = false }: UsuarioFormProps) {
         </CardContent>
       </Card>
 
+      {submitError && (
+        <Alert variant="destructive">
+          <AlertTitle>Não foi possível salvar o usuário</AlertTitle>
+          <AlertDescription>{submitError}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex justify-end gap-3">
-        <Button type="button" variant="secondary" onClick={() => router.back()}>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => router.back()}
+          disabled={isSubmitting}
+        >
           Cancelar
         </Button>
-        <Button type="submit">
+        <Button type="submit" disabled={isSubmitting}>
           <Save className="h-4 w-4" />
-          Salvar
+          {isSubmitting ? "Salvando..." : "Salvar"}
         </Button>
       </div>
     </form>

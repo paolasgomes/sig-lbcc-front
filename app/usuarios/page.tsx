@@ -2,10 +2,11 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Plus, Eye, Edit, Filter, Search } from "lucide-react";
+import { Plus, Eye, Edit, Filter, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -24,6 +25,7 @@ import {
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 import { useData } from "@/contexts/data-context";
 import { PerfilUsuario } from "@/types";
 
@@ -34,21 +36,52 @@ const PERFIL_LABEL: Record<PerfilUsuario, string> = {
 };
 
 export default function UsuariosPage() {
-  const { usuarios } = useData();
+  const { usuarios, usuariosLoading, usuariosError, refreshUsuarios, deleteUsuario } =
+    useData();
   const [busca, setBusca] = useState("");
   const [filtroPerfil, setFiltroPerfil] = useState<string>("todos");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const usuariosFiltrados = useMemo(() => {
     return usuarios.filter((usuario) => {
+      if (!usuario) {
+        return false;
+      }
+
+      const nome = typeof usuario.nome === "string" ? usuario.nome : "";
+      const email = typeof usuario.email === "string" ? usuario.email : "";
+
       const matchBusca =
-        usuario.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        usuario.email.toLowerCase().includes(busca.toLowerCase());
+        nome.toLowerCase().includes(busca.toLowerCase()) ||
+        email.toLowerCase().includes(busca.toLowerCase());
 
       const matchPerfil = filtroPerfil === "todos" || usuario.perfil === filtroPerfil;
 
       return matchBusca && matchPerfil;
     });
   }, [usuarios, busca, filtroPerfil]);
+
+  const temFiltroAtivo = busca.trim().length > 0 || filtroPerfil !== "todos";
+
+  const handleDelete = async (usuarioId: string, usuarioNome: string) => {
+    const confirmar = window.confirm(`Excluir o usuário ${usuarioNome}?`);
+
+    if (!confirmar) {
+      return;
+    }
+
+    setDeleteError(null);
+    setDeletingId(usuarioId);
+
+    try {
+      await deleteUsuario(usuarioId);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Erro ao excluir usuário.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -67,6 +100,18 @@ export default function UsuariosPage() {
             </Link>
           </Button>
         </div>
+
+        {usuariosError && (
+          <Alert variant="destructive">
+            <AlertTitle>Não foi possível carregar os usuários</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>{usuariosError}</span>
+              <Button variant="outline" onClick={() => void refreshUsuarios()}>
+                Tentar novamente
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card>
           <CardHeader>
@@ -101,13 +146,31 @@ export default function UsuariosPage() {
           </CardContent>
         </Card>
 
+        {deleteError && (
+          <Alert variant="destructive">
+            <AlertTitle>Não foi possível excluir o usuário</AlertTitle>
+            <AlertDescription>{deleteError}</AlertDescription>
+          </Alert>
+        )}
+
         <Card>
           <CardContent className="p-0">
-            {usuariosFiltrados.length === 0 ? (
+            {usuariosLoading ? (
+              <div className="flex min-h-64 items-center justify-center gap-3 py-12 text-muted-foreground">
+                <Spinner className="h-5 w-5" />
+                <span>Carregando usuários...</span>
+              </div>
+            ) : usuariosFiltrados.length === 0 ? (
               <Empty className="py-12">
-                <EmptyTitle>Nenhum usuário encontrado</EmptyTitle>
+                <EmptyTitle>
+                  {temFiltroAtivo
+                    ? "Nenhum usuário encontrado"
+                    : "Nenhum usuário cadastrado"}
+                </EmptyTitle>
                 <EmptyDescription>
-                  Tente ajustar os filtros ou cadastre um novo usuário.
+                  {temFiltroAtivo
+                    ? "Tente ajustar os filtros ou limpe a busca para ver todos os usuários."
+                    : "Cadastre o primeiro usuário para iniciar o gerenciamento."}
                 </EmptyDescription>
               </Empty>
             ) : (
@@ -154,6 +217,15 @@ export default function UsuariosPage() {
                               <span className="sr-only">Editar</span>
                             </Link>
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => void handleDelete(usuario.id, usuario.nome)}
+                            disabled={deletingId === usuario.id}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Excluir</span>
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -164,9 +236,11 @@ export default function UsuariosPage() {
           </CardContent>
         </Card>
 
-        <div className="text-sm text-muted-foreground">
-          Exibindo {usuariosFiltrados.length} de {usuarios.length} usuários
-        </div>
+        {!usuariosLoading && !usuariosError && (
+          <div className="text-sm text-muted-foreground">
+            Exibindo {usuariosFiltrados.length} de {usuarios.length} usuários
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

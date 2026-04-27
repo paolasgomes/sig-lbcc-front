@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
     label: "Usuários",
     href: "/usuarios",
     icon: Users,
-    perfilMinimo: [PerfilUsuario.GESTOR],
+    perfilMinimo: [PerfilUsuario.OPERADOR, PerfilUsuario.GESTOR],
   },
   {
     label: "Cotações",
