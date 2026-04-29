@@ -130,6 +130,22 @@ export interface AreaAtendimento {
   ativa: boolean;
 }
 
+export interface ApiAreaDTO {
+  id: string;
+  nome: string;
+  descricao: string;
+  ativa: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AreaCreateInput {
+  nome: string;
+  descricao: string;
+}
+
+export type AreaUpdateInput = Partial<AreaCreateInput>;
+
 export interface Fornecedor {
   id: string;
   nome: string;

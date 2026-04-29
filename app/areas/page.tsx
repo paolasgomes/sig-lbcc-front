@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { useData } from "@/contexts/data-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
@@ -39,27 +40,57 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, MapPin } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  MapPin,
+  Loader2,
+} from "lucide-react";
 import type { AreaAtendimento } from "@/types";
 
 export default function AreasPage() {
-  const { areas, addArea, updateArea, deleteArea } = useData();
+  const {
+    areas,
+    areasLoading,
+    areasError,
+    refreshAreas,
+    addArea,
+    updateArea,
+    deleteArea,
+  } = useData();
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<AreaAtendimento | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
     ativa: true,
   });
 
-  const filteredAreas = areas.filter(
-    (area) =>
-      area.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      area.descricao.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filteredAreas = useMemo(() => {
+    return areas.filter(
+      (area) =>
+        area.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        area.descricao.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
+  }, [areas, searchTerm]);
+
+  const resetForm = () => {
+    setEditingArea(null);
+    setFormData({ nome: "", descricao: "", ativa: true });
+  };
 
   const handleOpenDialog = (area?: AreaAtendimento) => {
+    setSubmitError(null);
+    setSubmitMessage(null);
+
     if (area) {
       setEditingArea(area);
       setFormData({
@@ -74,20 +105,44 @@ export default function AreasPage() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = () => {
-    if (editingArea) {
-      updateArea(editingArea.id, formData);
-    } else {
-      addArea(formData);
-    }
+  const handleCloseDialog = () => {
     setIsDialogOpen(false);
-    setEditingArea(null);
-    setFormData({ nome: "", descricao: "", ativa: true });
+    setIsSubmitting(false);
+    resetForm();
   };
 
-  const handleDelete = (id: string) => {
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setSubmitMessage(null);
+
+    try {
+      if (editingArea) {
+        await updateArea(editingArea.id, formData);
+        setSubmitMessage("Área atualizada com sucesso.");
+      } else {
+        await addArea(formData);
+        setSubmitMessage("Área cadastrada com sucesso.");
+      }
+
+      handleCloseDialog();
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Erro ao salvar área.");
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir esta area?")) {
-      deleteArea(id);
+      setSubmitError(null);
+      setSubmitMessage(null);
+
+      try {
+        await deleteArea(id);
+        setSubmitMessage("Área inativada com sucesso.");
+      } catch (error) {
+        setSubmitError(error instanceof Error ? error.message : "Erro ao inativar área.");
+      }
     }
   };
 
@@ -102,7 +157,17 @@ export default function AreasPage() {
                 Gerencie as areas de servico oferecidas pela Liga
               </p>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog
+              open={isDialogOpen}
+              onOpenChange={(open) => {
+                if (open) {
+                  setIsDialogOpen(true);
+                  return;
+                }
+
+                handleCloseDialog();
+              }}
+            >
               <DialogTrigger asChild>
                 <Button onClick={() => handleOpenDialog()}>
                   <Plus className="mr-2 h-4 w-4" />
@@ -140,7 +205,7 @@ export default function AreasPage() {
                       rows={3}
                     />
                   </Field>
-                  <Field className="flex items-center gap-2">
+                  <Field className="flex flex-row items-center gap-2">
                     <input
                       type="checkbox"
                       id="ativa"
@@ -156,16 +221,55 @@ export default function AreasPage() {
                   </Field>
                 </FieldGroup>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={handleCloseDialog}
+                    disabled={isSubmitting}
+                  >
                     Cancelar
                   </Button>
-                  <Button onClick={handleSubmit} disabled={!formData.nome}>
-                    {editingArea ? "Salvar" : "Cadastrar"}
+                  <Button
+                    onClick={() => void handleSubmit()}
+                    disabled={!formData.nome || isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : editingArea ? (
+                      "Salvar"
+                    ) : (
+                      "Cadastrar"
+                    )}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
+
+          {areasError && (
+            <Alert variant="destructive">
+              <AlertTitle>Não foi possível carregar as áreas</AlertTitle>
+              <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <span>{areasError}</span>
+                <Button variant="outline" onClick={() => void refreshAreas()}>
+                  Tentar novamente
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {submitError ? (
+            <Alert variant="destructive">
+              <AlertTitle>Não foi possível salvar a área</AlertTitle>
+              <AlertDescription>{submitError}</AlertDescription>
+            </Alert>
+          ) : submitMessage ? (
+            <p className="text-sm text-muted-foreground" role="status" aria-live="polite">
+              {submitMessage}
+            </p>
+          ) : null}
 
           <Card>
             <CardHeader>
@@ -189,62 +293,80 @@ export default function AreasPage() {
               </div>
 
               <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Descricao</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="w-17.5">Acoes</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAreas.length === 0 ? (
+                {areasLoading ? (
+                  <div className="space-y-3 p-4">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <div
+                        key={index}
+                        className="grid grid-cols-[1.3fr_2fr_0.7fr_0.5fr] gap-4"
+                      >
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-10 justify-self-end" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
-                          Nenhuma area encontrada.
-                        </TableCell>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Descricao</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="w-17.5">Acoes</TableHead>
                       </TableRow>
-                    ) : (
-                      filteredAreas.map((area) => (
-                        <TableRow key={area.id}>
-                          <TableCell className="font-medium">{area.nome}</TableCell>
-                          <TableCell className="max-w-xs truncate">
-                            {area.descricao}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={area.ativa ? "default" : "secondary"}>
-                              {area.ativa ? "Ativa" : "Inativa"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Acoes</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleOpenDialog(area)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDelete(area.id)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Excluir
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAreas.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="h-24 text-center">
+                            Nenhuma area encontrada.
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                      ) : (
+                        filteredAreas.map((area) => (
+                          <TableRow key={area.id}>
+                            <TableCell className="font-medium">{area.nome}</TableCell>
+                            <TableCell className="max-w-xs truncate">
+                              {area.descricao}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={area.ativa ? "default" : "secondary"}>
+                                {area.ativa ? "Ativa" : "Inativa"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Acoes</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => handleOpenDialog(area)}
+                                  >
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => void handleDelete(area.id)}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
               </div>
             </CardContent>
           </Card>

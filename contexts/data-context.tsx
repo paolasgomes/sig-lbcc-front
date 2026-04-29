@@ -9,6 +9,8 @@ import {
   useCallback,
 } from "react";
 import {
+  AreaCreateInput,
+  AreaUpdateInput,
   UsuarioDTO,
   UsuarioCreateInput,
   UsuarioUpdateInput,
@@ -28,7 +30,6 @@ import {
   EstadoCivil,
 } from "@/types";
 import {
-  areasMock,
   fornecedoresMock,
   produtosMock,
   cotacoesMock,
@@ -65,6 +66,13 @@ import {
   atualizarProduto,
   desativarProduto as desativarProdutoApi,
 } from "@/services/produtos-service";
+import {
+  criarArea,
+  listarAreas,
+  mapApiAreaToArea,
+  atualizarArea as atualizarAreaApi,
+  inativarArea as inativarAreaApi,
+} from "../services/areas-service";
 
 function formatApiDate(date?: string | null) {
   return date ?? "";
@@ -176,6 +184,10 @@ function mapStatusPacienteToApiStatus(status?: StatusPaciente) {
   return "ativo";
 }
 
+function gerarAreaIdFallback() {
+  return `area-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function mapApiPacienteToPaciente(apiPaciente: ApiPacienteDTO): Paciente {
   return {
     id: apiPaciente.id ?? apiPaciente.id_origem ?? "",
@@ -253,6 +265,8 @@ interface DataContextType {
   pacientesLoading: boolean;
   pacientesError: string | null;
   areas: AreaAtendimento[];
+  areasLoading: boolean;
+  areasError: string | null;
   fornecedores: Fornecedor[];
   produtos: Produto[];
   produtosLoading: boolean;
@@ -286,10 +300,11 @@ interface DataContextType {
   ) => Promise<void>;
 
   // Áreas
+  refreshAreas: () => Promise<void>;
   getAreaById: (id: string) => AreaAtendimento | undefined;
-  addArea: (area: Partial<AreaAtendimento>) => void;
-  updateArea: (id: string, dados: Partial<AreaAtendimento>) => void;
-  deleteArea: (id: string) => void;
+  addArea: (area: Partial<AreaAtendimento>) => Promise<AreaAtendimento>;
+  updateArea: (id: string, dados: Partial<AreaAtendimento>) => Promise<AreaAtendimento>;
+  deleteArea: (id: string) => Promise<void>;
 
   // Fornecedores
   getFornecedorById: (id: string) => Fornecedor | undefined;
@@ -338,7 +353,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [pacientesLoading, setPacientesLoading] = useState(true);
   const [pacientesError, setPacientesError] = useState<string | null>(null);
-  const [areas, setAreas] = useState<AreaAtendimento[]>(areasMock);
+  const [areas, setAreas] = useState<AreaAtendimento[]>([]);
+  const [areasLoading, setAreasLoading] = useState(true);
+  const [areasError, setAreasError] = useState<string | null>(null);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>(fornecedoresMock);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [produtosLoading, setProdutosLoading] = useState(true);
@@ -379,6 +396,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setPacientesLoading(false);
     }
   }, []);
+
+  const refreshAreas = useCallback(async () => {
+    setAreasLoading(true);
+    setAreasError(null);
+
+    try {
+      const areasCarregadas = await listarAreas();
+      setAreas(
+        areasCarregadas.map((area, index) =>
+          mapApiAreaToArea(area, area.id || `area-list-${index}`),
+        ),
+      );
+    } catch (error) {
+      setAreasError(error instanceof Error ? error.message : "Erro ao carregar áreas.");
+    } finally {
+      setAreasLoading(false);
+    }
+  }, []);
   const refreshProdutos = useCallback(async () => {
     setProdutosLoading(true);
     setProdutosError(null);
@@ -407,6 +442,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setPacientes([]);
       setPacientesError(null);
       setPacientesLoading(false);
+      setAreas([]);
+      setAreasError(null);
+      setAreasLoading(false);
       setProdutos([]);
       setProdutosError(null);
       setProdutosLoading(false);
@@ -415,8 +453,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     void refreshUsuarios();
     void refreshPacientes();
+    void refreshAreas();
     void refreshProdutos();
-  }, [authLoading, usuario, refreshUsuarios, refreshPacientes, refreshProdutos]);
+  }, [
+    authLoading,
+    usuario,
+    refreshUsuarios,
+    refreshPacientes,
+    refreshAreas,
+    refreshProdutos,
+  ]);
 
   // Usuarios
   const getUsuarioById = useCallback(
@@ -587,22 +633,66 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [areas],
   );
 
-  const addArea = useCallback((area: Partial<AreaAtendimento>) => {
-    const novaArea: AreaAtendimento = {
-      id: area.id ?? `area-${Date.now()}`,
+  const addArea = useCallback(async (area: Partial<AreaAtendimento>) => {
+    const payload: AreaCreateInput = {
       nome: area.nome ?? "",
       descricao: area.descricao ?? "",
-      ativa: area.ativa ?? true,
     };
-    setAreas((prev) => [...prev, novaArea]);
+
+    const areaCriada = await criarArea(payload);
+    const areaMapeada = mapApiAreaToArea(
+      areaCriada,
+      areaCriada.id || gerarAreaIdFallback(),
+    );
+    const areaCompleta: AreaAtendimento = {
+      ...areaMapeada,
+      nome: areaMapeada.nome || payload.nome,
+      descricao: areaMapeada.descricao || payload.descricao,
+    };
+
+    setAreas((prev) => [...prev, areaCompleta]);
+
+    return areaCompleta;
   }, []);
 
-  const updateArea = useCallback((id: string, dados: Partial<AreaAtendimento>) => {
-    setAreas((prev) => prev.map((a) => (a.id === id ? { ...a, ...dados } : a)));
-  }, []);
+  const updateArea = useCallback(
+    async (id: string, dados: Partial<AreaAtendimento>) => {
+      const areaAtual = areas.find((area) => area.id === id);
 
-  const deleteArea = useCallback((id: string) => {
-    setAreas((prev) => prev.filter((a) => a.id !== id));
+      const payload: AreaUpdateInput = {
+        nome: dados.nome,
+        descricao: dados.descricao,
+      };
+
+      const areaAtualizada = await atualizarAreaApi(id, payload);
+      const areaMapeada = mapApiAreaToArea(areaAtualizada, areaAtualizada.id || id);
+      const areaCompleta: AreaAtendimento = {
+        ...areaAtual,
+        ...areaMapeada,
+        id: areaMapeada.id || areaAtual?.id || id,
+        nome: areaMapeada.nome || dados.nome || areaAtual?.nome || "",
+        descricao: areaMapeada.descricao || dados.descricao || areaAtual?.descricao || "",
+      };
+
+      setAreas((prev) => prev.map((a) => (a.id === id ? areaCompleta : a)));
+
+      return areaCompleta;
+    },
+    [areas],
+  );
+
+  const deleteArea = useCallback(async (id: string) => {
+    await inativarAreaApi(id);
+    setAreas((prev) =>
+      prev.map((area) =>
+        area.id === id
+          ? {
+              ...area,
+              ativa: false,
+            }
+          : area,
+      ),
+    );
   }, []);
 
   // Fornecedores
@@ -689,10 +779,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       const produtoApi = await atualizarProduto(id, payload as ProdutoUpdateInput);
       const produtoMapeado = mapApiProdutoToProduto(produtoApi);
+      const produtoCompleto: Produto = {
+        ...produtoAtual,
+        ...produtoMapeado,
+        id: produtoMapeado.id || produtoAtual?.id || id,
+        nome: produtoMapeado.nome || payload.nome || produtoAtual?.nome || "",
+        descricao:
+          produtoMapeado.descricao || payload.descricao || produtoAtual?.descricao || "",
+        unidade:
+          produtoMapeado.unidade || payload.unidade || produtoAtual?.unidade || "UN",
+        ativo: produtoMapeado.ativo ?? produtoAtual?.ativo ?? true,
+        criadoEm: produtoMapeado.criadoEm || produtoAtual?.criadoEm,
+        atualizadoEm: produtoMapeado.atualizadoEm || new Date().toISOString(),
+      };
 
-      setProdutos((prev) => prev.map((p) => (p.id === id ? produtoMapeado : p)));
+      setProdutos((prev) => prev.map((p) => (p.id === id ? produtoCompleto : p)));
 
-      return produtoMapeado;
+      return produtoCompleto;
     },
     [produtos],
   );
@@ -856,6 +959,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         pacientesLoading,
         pacientesError,
         areas,
+        areasLoading,
+        areasError,
         fornecedores,
         produtos,
         produtosLoading,
@@ -877,6 +982,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         updatePaciente,
         deletePaciente,
         alterarStatusPaciente,
+        refreshAreas,
         getAreaById,
         addArea,
         updateArea,
