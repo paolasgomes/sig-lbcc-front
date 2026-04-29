@@ -96,6 +96,7 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
           ...formData,
           status: StatusPaciente.ATIVO,
         });
+        console.log("novoPaciente => ", novoPaciente);
 
         addHistorico({
           id: `hist-${Date.now()}`,

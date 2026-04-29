@@ -53,6 +53,18 @@ import {
   atualizarPaciente,
   inativarPaciente,
 } from "@/services/pacientes-service";
+import {
+  ApiProdutoDTO,
+  ProdutoCreateInput,
+  ProdutoUpdateInput,
+  mapApiProdutoToProduto,
+  mapProdutoToApiPayload,
+  listarProdutos,
+  obterProduto,
+  criarProduto,
+  atualizarProduto,
+  desativarProduto as desativarProdutoApi,
+} from "@/services/produtos-service";
 
 function formatApiDate(date?: string | null) {
   return date ?? "";
@@ -243,6 +255,8 @@ interface DataContextType {
   areas: AreaAtendimento[];
   fornecedores: Fornecedor[];
   produtos: Produto[];
+  produtosLoading: boolean;
+  produtosError: string | null;
   cotacoes: Cotacao[];
   atendimentos: Atendimento[];
   historico: Historico[];
@@ -284,10 +298,12 @@ interface DataContextType {
   deleteFornecedor: (id: string) => void;
 
   // Produtos
+  refreshProdutos: () => Promise<void>;
   getProdutoById: (id: string) => Produto | undefined;
-  addProduto: (produto: Partial<Produto>) => void;
-  updateProduto: (id: string, dados: Partial<Produto>) => void;
-  deleteProduto: (id: string) => void;
+  fetchProdutoById: (id: string) => Promise<Produto>;
+  addProduto: (produto: Partial<Produto>) => Promise<Produto>;
+  updateProduto: (id: string, dados: Partial<Produto>) => Promise<Produto>;
+  desativarProduto: (id: string) => Promise<void>;
 
   // Cotações
   getCotacaoById: (id: string) => Cotacao | undefined;
@@ -324,7 +340,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [pacientesError, setPacientesError] = useState<string | null>(null);
   const [areas, setAreas] = useState<AreaAtendimento[]>(areasMock);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>(fornecedoresMock);
-  const [produtos, setProdutos] = useState<Produto[]>(produtosMock);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [produtosLoading, setProdutosLoading] = useState(true);
+  const [produtosError, setProdutosError] = useState<string | null>(null);
   const [cotacoes, setCotacoes] = useState<Cotacao[]>(cotacoesMock);
   const [atendimentos, setAtendimentos] = useState<Atendimento[]>(atendimentosMock);
   const [historico, setHistorico] = useState<Historico[]>(historicoMock);
@@ -361,6 +379,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setPacientesLoading(false);
     }
   }, []);
+  const refreshProdutos = useCallback(async () => {
+    setProdutosLoading(true);
+    setProdutosError(null);
+
+    try {
+      const produtosCarregados = await listarProdutos();
+      setProdutos(produtosCarregados.map(mapApiProdutoToProduto));
+    } catch (error) {
+      setProdutosError(
+        error instanceof Error ? error.message : "Erro ao carregar produtos.",
+      );
+    } finally {
+      setProdutosLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (authLoading) {
@@ -374,12 +407,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setPacientes([]);
       setPacientesError(null);
       setPacientesLoading(false);
+      setProdutos([]);
+      setProdutosError(null);
+      setProdutosLoading(false);
       return;
     }
 
     void refreshUsuarios();
     void refreshPacientes();
-  }, [authLoading, usuario, refreshUsuarios, refreshPacientes]);
+    void refreshProdutos();
+  }, [authLoading, usuario, refreshUsuarios, refreshPacientes, refreshProdutos]);
 
   // Usuarios
   const getUsuarioById = useCallback(
@@ -585,6 +622,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Produtos
+
   const getProdutoById = useCallback(
     (id: string) => {
       return produtos.find((p) => p.id === id);
@@ -592,25 +630,62 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [produtos],
   );
 
-  const addProduto = useCallback((produto: Partial<Produto>) => {
-    const novoProduto: Produto = {
-      id: produto.id ?? `prod-${Date.now()}`,
-      descricao: produto.descricao ?? produto.nome ?? "",
-      unidadeMedida: produto.unidadeMedida ?? produto.unidade ?? "un",
-      referenciaPreco: produto.referenciaPreco ?? produto.precoReferencia ?? 0,
-      fornecedorId: produto.fornecedorId ?? "",
-      ativo: produto.ativo ?? true,
-      ...produto,
-    };
-    setProdutos((prev) => [...prev, novoProduto]);
+  const fetchProdutoById = useCallback(async (id: string) => {
+    const produtoApi = await obterProduto(id);
+    const produtoMapeado = mapApiProdutoToProduto(produtoApi);
+
+    setProdutos((prev) => {
+      const produtoExiste = prev.some((p) => p.id === produtoMapeado.id);
+
+      if (!produtoExiste) {
+        return [...prev, produtoMapeado];
+      }
+
+      return prev.map((p) => (p.id === produtoMapeado.id ? produtoMapeado : p));
+    });
+
+    return produtoMapeado;
   }, []);
 
-  const updateProduto = useCallback((id: string, dados: Partial<Produto>) => {
-    setProdutos((prev) => prev.map((p) => (p.id === id ? { ...p, ...dados } : p)));
+  const addProduto = useCallback(async (produto: Partial<Produto>) => {
+    const payload = mapProdutoToApiPayload(produto);
+    const produtoApi = await criarProduto(payload);
+    const produtoMapeado = mapApiProdutoToProduto(produtoApi);
+
+    setProdutos((prev) => [...prev, produtoMapeado]);
+
+    return produtoMapeado;
   }, []);
 
-  const deleteProduto = useCallback((id: string) => {
-    setProdutos((prev) => prev.filter((p) => p.id !== id));
+  const updateProduto = useCallback(
+    async (id: string, dados: Partial<Produto>) => {
+      const produtoAtual = produtos.find((p) => p.id === id);
+      const payloadBase = { ...(produtoAtual ?? {}), ...dados };
+      const payload = mapProdutoToApiPayload(payloadBase);
+
+      const produtoApi = await atualizarProduto(id, payload as ProdutoUpdateInput);
+      const produtoMapeado = mapApiProdutoToProduto(produtoApi);
+
+      setProdutos((prev) => prev.map((p) => (p.id === id ? produtoMapeado : p)));
+
+      return produtoMapeado;
+    },
+    [produtos],
+  );
+
+  const desativarProduto = useCallback(async (id: string) => {
+    await desativarProdutoApi(id);
+    setProdutos((prev) =>
+      prev.map((produto) =>
+        produto.id === id
+          ? {
+              ...produto,
+              ativo: false,
+              atualizadoEm: new Date().toISOString(),
+            }
+          : produto,
+      ),
+    );
   }, []);
 
   // Cotações
@@ -759,6 +834,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         areas,
         fornecedores,
         produtos,
+        produtosLoading,
+        produtosError,
         cotacoes,
         atendimentos,
         historico,
@@ -787,7 +864,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         getProdutoById,
         addProduto,
         updateProduto,
-        deleteProduto,
+        refreshProdutos,
+        fetchProdutoById,
+        desativarProduto,
         getCotacaoById,
         getCotacoesByPaciente,
         addCotacao,

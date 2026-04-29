@@ -152,18 +152,38 @@ export interface Fornecedor {
   ativo: boolean;
 }
 
+export interface ApiProdutoDTO {
+  id: string;
+  nome: string;
+  descricao: string;
+  unidade: string;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Produto {
   id: string;
-  nome?: string;
+  nome: string;
   descricao: string;
-  categoria?: string;
-  unidade?: string;
-  unidadeMedida: string;
-  precoReferencia?: number;
-  referenciaPreco: number;
-  fornecedorId: string;
+  unidade: string;
   ativo: boolean;
+  criadoEm?: string;
+  atualizadoEm?: string;
+  unidadeMedida?: string;
+  precoReferencia?: number;
+  referenciaPreco?: number;
+  fornecedorId?: string;
 }
+
+export interface ProdutoCreateInput {
+  nome: string;
+  descricao: string;
+  unidade: string;
+  ativo?: boolean;
+}
+
+export type ProdutoUpdateInput = Partial<ProdutoCreateInput>;
 
 export interface Cotacao {
   id: string;
