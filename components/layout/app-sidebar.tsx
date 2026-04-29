@@ -28,38 +28,38 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Pacientes", href: "/pacientes", icon: Users },
-  { label: "Atendimentos", href: "/atendimentos", icon: ClipboardList },
+  // { label: "Atendimentos", href: "/atendimentos", icon: ClipboardList },
   {
     label: "Usuários",
     href: "/usuarios",
     icon: Users,
     perfilMinimo: [PerfilUsuario.OPERADOR, PerfilUsuario.GESTOR],
   },
-  {
-    label: "Cotações",
-    href: "/cotacoes",
-    icon: FileText,
-    perfilMinimo: [PerfilUsuario.OPERADOR, PerfilUsuario.GESTOR],
-  },
+  // {
+  //   label: "Cotações",
+  //   href: "/cotacoes",
+  //   icon: FileText,
+  //   perfilMinimo: [PerfilUsuario.OPERADOR, PerfilUsuario.GESTOR],
+  // },
   {
     label: "Áreas",
     href: "/areas",
     icon: MapPin,
     perfilMinimo: [PerfilUsuario.OPERADOR, PerfilUsuario.GESTOR],
   },
-  {
-    label: "Fornecedores",
-    href: "/fornecedores",
-    icon: Truck,
-    perfilMinimo: [PerfilUsuario.OPERADOR, PerfilUsuario.GESTOR],
-  },
+  // {
+  //   label: "Fornecedores",
+  //   href: "/fornecedores",
+  //   icon: Truck,
+  //   perfilMinimo: [PerfilUsuario.OPERADOR, PerfilUsuario.GESTOR],
+  // },
   {
     label: "Produtos",
     href: "/produtos",
     icon: Package,
     perfilMinimo: [PerfilUsuario.OPERADOR, PerfilUsuario.GESTOR],
   },
-  { label: "Relatórios", href: "/relatorios", icon: BarChart3 },
+  // { label: "Relatórios", href: "/relatorios", icon: BarChart3 },
 ];
 
 export function AppSidebar() {
