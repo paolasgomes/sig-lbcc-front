@@ -8,6 +8,7 @@ import {
   ReactNode,
   useCallback,
 } from "react";
+import { useRouter } from "next/navigation";
 import {
   AreaCreateInput,
   AreaUpdateInput,
@@ -347,6 +348,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const { usuario, isLoading: authLoading } = useAuth();
+  const router = useRouter();
   const [usuarios, setUsuarios] = useState<UsuarioDTO[]>([]);
   const [usuariosLoading, setUsuariosLoading] = useState(true);
   const [usuariosError, setUsuariosError] = useState<string | null>(null);
@@ -567,23 +569,49 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const pacienteCriado = await criarPaciente(payload);
     const pacienteMapeado = mapApiPacienteToPaciente(pacienteCriado);
 
-    const idValido =
-      pacienteMapeado.id ||
-      (pacienteCriado && (pacienteCriado as any).id) ||
-      (pacienteCriado && (pacienteCriado as any).id_origem);
+    const idFromCriado =
+      (pacienteCriado as any)?.id ?? (pacienteCriado as any)?.id_origem;
 
-    const pacienteCompleto: Paciente = {
-      ...pacienteMapeado,
-      id: idValido,
-      nomeCompleto: pacienteMapeado.nomeCompleto || payload.nome,
-      numeroSUS: pacienteMapeado.numeroSUS || payload.id_origem || "",
-      criadoEm: pacienteMapeado.criadoEm || new Date().toISOString(),
-      atualizadoEm: pacienteMapeado.atualizadoEm || new Date().toISOString(),
-    };
+    // Se a API retornou um id, usamos diretamente e atualizamos o estado local
+    if (pacienteMapeado.id || idFromCriado) {
+      const idValido = pacienteMapeado.id || idFromCriado;
 
-    setPacientes((prev) => [...prev, pacienteCompleto]);
+      const pacienteCompleto: Paciente = {
+        ...pacienteMapeado,
+        id: idValido,
+        nomeCompleto: pacienteMapeado.nomeCompleto || payload.nome,
+        numeroSUS: pacienteMapeado.numeroSUS || payload.id_origem || "",
+        criadoEm: pacienteMapeado.criadoEm || new Date().toISOString(),
+        atualizadoEm: pacienteMapeado.atualizadoEm || new Date().toISOString(),
+      };
 
-    return pacienteCompleto;
+      setPacientes((prev) => [...prev, pacienteCompleto]);
+
+      // Recarrega a lista do servidor para garantir consistência
+      void refreshPacientes();
+
+      return pacienteCompleto;
+    }
+
+    // Se não houve id, reconsulta o servidor e tenta localizar o paciente criado
+    const pacientesServidor = await listarPacientes();
+    const pacientesMapeados = pacientesServidor.map(mapApiPacienteToPaciente);
+
+    const encontrado = pacientesMapeados.find((p) => {
+      if (payload.id_origem && p.numeroSUS === payload.id_origem) return true;
+      if (payload.cpf && p.cpf === payload.cpf) return true;
+      if (payload.nome && p.nomeCompleto === payload.nome) return true;
+      return false;
+    });
+
+    if (encontrado) {
+      setPacientes((prev) => [...prev, encontrado]);
+      return encontrado;
+    }
+
+    // Redireciona para a listagem se a API não retornar um id
+    router.push("/pacientes");
+    throw new Error("ID não retornado pelo servidor ao criar paciente.");
   }, []);
 
   const updatePaciente = useCallback(
@@ -682,6 +710,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       setPacientes((prev) => prev.map((p) => (p.id === id ? pacienteCompleto : p)));
 
+      // Recarrega a lista do servidor para garantir consistência
+      void refreshPacientes();
+
       return pacienteCompleto;
     },
     [pacientes],
@@ -700,6 +731,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
           : paciente,
       ),
     );
+    // Recarrega a lista do servidor após inativação
+    void refreshPacientes();
   }, []);
 
   const alterarStatusPaciente = useCallback(

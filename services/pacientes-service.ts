@@ -110,7 +110,10 @@ function formatFileSize(sizeInBytes: number) {
   return `${(sizeInBytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function mapApiDocumentoToDocumento(documento: ApiDocumentoDTO, fallbackFile?: File): Documento {
+function mapApiDocumentoToDocumento(
+  documento: ApiDocumentoDTO,
+  fallbackFile?: File,
+): Documento {
   return {
     id: documento.id,
     pacienteId: documento.paciente_id || documento.pacienteId || "",
@@ -161,7 +164,10 @@ export async function obterPaciente(id: string) {
   try {
     const response = await api.get<ApiPacienteDTO>(`/pacientes/${id}`);
 
-    return response.data;
+    // Normaliza resposta possivelmente embrulhada em { data: {...} }
+    const data = (response.data as any)?.data ?? response.data;
+
+    return data as ApiPacienteDTO;
   } catch (error) {
     throw new Error(getErrorMessage(error, "Erro ao carregar paciente."));
   }
@@ -171,7 +177,9 @@ export async function criarPaciente(dados: PacienteCreateInput) {
   try {
     const response = await api.post<ApiPacienteDTO>("/pacientes", dados);
 
-    return response.data;
+    const data = (response.data as any)?.data ?? response.data;
+
+    return data as ApiPacienteDTO;
   } catch (error) {
     throw new Error(getErrorMessage(error, "Erro ao criar paciente."));
   }
@@ -181,7 +189,9 @@ export async function atualizarPaciente(id: string, dados: PacienteUpdateInput) 
   try {
     const response = await api.put<ApiPacienteDTO>(`/pacientes/${id}`, dados);
 
-    return response.data;
+    const data = (response.data as any)?.data ?? response.data;
+
+    return data as ApiPacienteDTO;
   } catch (error) {
     throw new Error(getErrorMessage(error, "Erro ao atualizar paciente."));
   }
