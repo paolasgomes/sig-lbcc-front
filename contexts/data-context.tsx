@@ -178,9 +178,9 @@ function mapStatusPacienteToApiStatus(status?: StatusPaciente) {
 
 function mapApiPacienteToPaciente(apiPaciente: ApiPacienteDTO): Paciente {
   return {
-    id: apiPaciente.id,
-    nome: apiPaciente.nome,
-    nomeCompleto: apiPaciente.nome,
+    id: apiPaciente.id ?? apiPaciente.id_origem ?? "",
+    nome: apiPaciente.nome ?? "",
+    nomeCompleto: apiPaciente.nome ?? "",
     cpf: apiPaciente.cpf,
     rg: apiPaciente.rg ?? "",
     dataNascimento: formatApiDate(apiPaciente.data_nascimento),
@@ -502,9 +502,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const pacienteCriado = await criarPaciente(payload);
     const pacienteMapeado = mapApiPacienteToPaciente(pacienteCriado);
 
-    setPacientes((prev) => [...prev, pacienteMapeado]);
+    const idValido =
+      pacienteMapeado.id ||
+      (pacienteCriado && (pacienteCriado as any).id) ||
+      (pacienteCriado && (pacienteCriado as any).id_origem);
 
-    return pacienteMapeado;
+    const pacienteCompleto: Paciente = {
+      ...pacienteMapeado,
+      id: idValido,
+      nomeCompleto: pacienteMapeado.nomeCompleto || payload.nome,
+      numeroSUS: pacienteMapeado.numeroSUS || payload.id_origem || "",
+      criadoEm: pacienteMapeado.criadoEm || new Date().toISOString(),
+      atualizadoEm: pacienteMapeado.atualizadoEm || new Date().toISOString(),
+    };
+
+    setPacientes((prev) => [...prev, pacienteCompleto]);
+
+    return pacienteCompleto;
   }, []);
 
   const updatePaciente = useCallback(
