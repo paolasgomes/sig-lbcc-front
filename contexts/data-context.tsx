@@ -479,12 +479,31 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return usuarioCriado;
   }, []);
 
-  const updateUsuario = useCallback(async (id: string, dados: UsuarioUpdateInput) => {
-    const usuarioAtualizado = await atualizarUsuario(id, dados);
-    setUsuarios((prev) => prev.map((u) => (u.id === id ? usuarioAtualizado : u)));
+  const updateUsuario = useCallback(
+    async (id: string, dados: UsuarioUpdateInput) => {
+      const usuarioAtual = usuarios.find((usuario) => usuario.id === id);
+      const usuarioAtualizado = await atualizarUsuario(id, dados);
+      const usuarioCompleto: UsuarioDTO = {
+        ...usuarioAtual,
+        ...usuarioAtualizado,
+        id: usuarioAtualizado.id || usuarioAtual?.id || id,
+        nome: usuarioAtualizado.nome || dados.nome || usuarioAtual?.nome || "",
+        email: usuarioAtualizado.email || dados.email || usuarioAtual?.email || "",
+        perfil: usuarioAtualizado.perfil || dados.perfil || usuarioAtual?.perfil,
+        ativo: usuarioAtualizado.ativo ?? dados.ativo ?? usuarioAtual?.ativo ?? true,
+        created_at:
+          usuarioAtualizado.created_at ||
+          usuarioAtual?.created_at ||
+          new Date().toISOString(),
+        updated_at: usuarioAtualizado.updated_at || new Date().toISOString(),
+      };
 
-    return usuarioAtualizado;
-  }, []);
+      setUsuarios((prev) => prev.map((u) => (u.id === id ? usuarioCompleto : u)));
+
+      return usuarioCompleto;
+    },
+    [usuarios],
+  );
 
   const deleteUsuario = useCallback(async (id: string) => {
     await excluirUsuario(id);
@@ -585,10 +604,85 @@ export function DataProvider({ children }: { children: ReactNode }) {
         payload as PacienteUpdateInput,
       );
       const pacienteMapeado = mapApiPacienteToPaciente(pacienteAtualizado);
+      const pacienteCompleto: Paciente = {
+        ...pacienteAtual,
+        ...pacienteMapeado,
+        id: pacienteMapeado.id || pacienteAtual?.id || id,
+        nomeCompleto:
+          pacienteMapeado.nomeCompleto ||
+          payload.nome ||
+          pacienteAtual?.nomeCompleto ||
+          "",
+        nome: pacienteMapeado.nome || payload.nome || pacienteAtual?.nome,
+        cpf: pacienteMapeado.cpf || payload.cpf || pacienteAtual?.cpf || "",
+        rg: pacienteMapeado.rg || payload.rg || pacienteAtual?.rg || "",
+        dataNascimento:
+          pacienteMapeado.dataNascimento ||
+          payload.data_nascimento ||
+          pacienteAtual?.dataNascimento ||
+          "",
+        sexo: pacienteMapeado.sexo || pacienteAtual?.sexo,
+        estadoCivil: pacienteMapeado.estadoCivil || pacienteAtual?.estadoCivil,
+        profissao:
+          pacienteMapeado.profissao ||
+          payload.profissao ||
+          pacienteAtual?.profissao ||
+          "",
+        endereco: pacienteMapeado.endereco || pacienteAtual?.endereco,
+        telefone:
+          pacienteMapeado.telefone ||
+          payload.telefone ||
+          payload.celular ||
+          pacienteAtual?.telefone ||
+          "",
+        numeroSUS:
+          pacienteMapeado.numeroSUS ||
+          payload.id_origem ||
+          pacienteAtual?.numeroSUS ||
+          "",
+        diagnosticoOncologico:
+          pacienteMapeado.diagnosticoOncologico ||
+          payload.diagnostico ||
+          pacienteAtual?.diagnosticoOncologico ||
+          "",
+        diagnostico:
+          pacienteMapeado.diagnostico ||
+          payload.diagnostico ||
+          pacienteAtual?.diagnostico ||
+          "",
+        setor:
+          pacienteMapeado.setor ||
+          payload.hospital_tratamento ||
+          pacienteAtual?.setor ||
+          "",
+        areaTratamento:
+          pacienteMapeado.areaTratamento ||
+          payload.origem ||
+          pacienteAtual?.areaTratamento ||
+          "",
+        dataInicioTratamento:
+          pacienteMapeado.dataInicioTratamento ||
+          payload.data_inicio_tratamento ||
+          pacienteAtual?.dataInicioTratamento ||
+          "",
+        medicoResponsavel:
+          pacienteMapeado.medicoResponsavel ||
+          payload.medico_responsavel ||
+          pacienteAtual?.medicoResponsavel ||
+          "",
+        status:
+          pacienteMapeado.status ||
+          dados.status ||
+          pacienteAtual?.status ||
+          StatusPaciente.ATIVO,
+        criadoEm:
+          pacienteMapeado.criadoEm || pacienteAtual?.criadoEm || new Date().toISOString(),
+        atualizadoEm: pacienteMapeado.atualizadoEm || new Date().toISOString(),
+      };
 
-      setPacientes((prev) => prev.map((p) => (p.id === id ? pacienteMapeado : p)));
+      setPacientes((prev) => prev.map((p) => (p.id === id ? pacienteCompleto : p)));
 
-      return pacienteMapeado;
+      return pacienteCompleto;
     },
     [pacientes],
   );
