@@ -652,9 +652,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const produtoApi = await criarProduto(payload);
     const produtoMapeado = mapApiProdutoToProduto(produtoApi);
 
-    setProdutos((prev) => [...prev, produtoMapeado]);
+    const produtoCompleto: Produto = {
+      id: produtoMapeado.id,
+      nome: produtoMapeado.nome || payload.nome,
+      descricao: produtoMapeado.descricao || payload.descricao,
+      unidade: produtoMapeado.unidade || payload.unidade,
+      ativo: (produtoMapeado.ativo || payload.ativo) ?? false,
+      criadoEm: produtoMapeado.criadoEm || new Date().toISOString(),
+      atualizadoEm: produtoMapeado.atualizadoEm || new Date().toISOString(),
+    };
 
-    return produtoMapeado;
+    setProdutos((prev) => [...prev, produtoCompleto]);
+
+    return produtoCompleto;
   }, []);
 
   const updateProduto = useCallback(

@@ -54,6 +54,8 @@ export default function ProdutosPage() {
 
   const produtosFiltrados = useMemo(() => {
     return produtos.filter((produto) => {
+      if (!produto) return false;
+
       const matchBusca =
         produto.nome.toLowerCase().includes(busca.toLowerCase()) ||
         produto.descricao.toLowerCase().includes(busca.toLowerCase());

@@ -40,13 +40,13 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 export function mapApiProdutoToProduto(apiProduto: ApiProdutoDTO): Produto {
   return {
-    id: apiProduto.id,
-    nome: apiProduto.nome,
-    descricao: apiProduto.descricao,
-    unidade: apiProduto.unidade,
-    ativo: apiProduto.ativo,
-    criadoEm: apiProduto.created_at,
-    atualizadoEm: apiProduto.updated_at,
+    id: apiProduto.id ?? "",
+    nome: apiProduto.nome ?? "",
+    descricao: apiProduto.descricao ?? "",
+    unidade: apiProduto.unidade ?? "UN",
+    ativo: apiProduto.ativo ?? true,
+    criadoEm: apiProduto.created_at ?? new Date().toISOString(),
+    atualizadoEm: apiProduto.updated_at ?? new Date().toISOString(),
   };
 }
 

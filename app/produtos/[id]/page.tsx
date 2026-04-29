@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect, useState } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Pencil, Package } from "lucide-react";
+import { mapApiProdutoToProduto, obterProduto } from "@/services/produtos-service";
+import { Produto } from "@/types";
 
 interface ProdutoDetailPageProps {
   params: Promise<{ id: string }>;
@@ -18,9 +20,39 @@ interface ProdutoDetailPageProps {
 export default function ProdutoDetailPage({ params }: ProdutoDetailPageProps) {
   const { id } = use(params);
   const { produtos } = useData();
-  const produto = produtos.find((p) => p.id === id);
+  const [produtoCarregado, setProdutoCarregado] = useState<Produto | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!produto) {
+  const produtoLocal = produtos.find((p) => p.id === id);
+
+  useEffect(() => {
+    if (produtoLocal) {
+      setProdutoCarregado(produtoLocal);
+      setLoading(false);
+    } else {
+      // Se não encontrar na context, busca da API
+      obterProduto(id)
+        .then((produtoApi) => {
+          setProdutoCarregado(mapApiProdutoToProduto(produtoApi));
+          setLoading(false);
+        })
+        .catch(() => {
+          setLoading(false);
+        });
+    }
+  }, [id, produtoLocal]);
+
+  if (loading) {
+    return (
+      <ProtectedRoute allowedRoles={["admin", "gestor"]}>
+        <DashboardLayout>
+          <div>Carregando...</div>
+        </DashboardLayout>
+      </ProtectedRoute>
+    );
+  }
+
+  if (!produtoCarregado) {
     notFound();
   }
 
@@ -38,17 +70,17 @@ export default function ProdutoDetailPage({ params }: ProdutoDetailPageProps) {
               <div>
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl font-bold tracking-tight">
-                    {produto.nome || produto.descricao}
+                    {produtoCarregado.nome || produtoCarregado.descricao}
                   </h1>
-                  <Badge variant={produto.ativo ? "default" : "secondary"}>
-                    {produto.ativo ? "Ativo" : "Inativo"}
+                  <Badge variant={produtoCarregado.ativo ? "default" : "secondary"}>
+                    {produtoCarregado.ativo ? "Ativo" : "Inativo"}
                   </Badge>
                 </div>
-                <p className="text-muted-foreground">{produto.descricao}</p>
+                <p className="text-muted-foreground">{produtoCarregado.descricao}</p>
               </div>
             </div>
             <Button asChild>
-              <Link href={`/produtos/${produto.id}/editar`}>
+              <Link href={`/produtos/${produtoCarregado.id}/editar`}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
               </Link>
@@ -66,17 +98,14 @@ export default function ProdutoDetailPage({ params }: ProdutoDetailPageProps) {
               <CardContent className="grid gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Unidade</p>
-                  <p>{produto.unidade || produto.unidadeMedida}</p>
+                  <p>{produtoCarregado.unidade || produtoCarregado.unidadeMedida}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Fornecedor</p>
-                  <p>{produto.fornecedorId || "-"}</p>
-                </div>
+
                 <div>
                   <p className="text-sm text-muted-foreground">Preco Referencia</p>
                   <p>
-                    {produto.precoReferencia
-                      ? `R$ ${produto.precoReferencia.toFixed(2)}`
+                    {produtoCarregado.precoReferencia
+                      ? `R$ ${produtoCarregado.precoReferencia.toFixed(2)}`
                       : "-"}
                   </p>
                 </div>
