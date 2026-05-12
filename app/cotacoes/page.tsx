@@ -1,58 +1,81 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { ProtectedRoute } from "@/components/auth/protected-route"
-import { useData } from "@/contexts/data-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { StatusBadge } from "@/components/shared/status-badge"
-import { Plus, Search, MoreHorizontal, Eye, Pencil, FileText } from "lucide-react"
-import Link from "next/link"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { useState } from "react";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { useCotacoes } from "@/hooks/use-cotacoes";
+import { usePacientes } from "@/hooks/use-pacientes";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { Plus, Search, MoreHorizontal, Eye, Pencil, FileText } from "lucide-react";
+import Link from "next/link";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function CotacoesPage() {
-  const { cotacoes, pacientes } = useData()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("todos")
+  const { cotacoes } = useCotacoes();
+  const { pacientes } = usePacientes();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("todos");
 
-  const calcularValorTotal = (itens: Array<{ quantidade: number; valorUnitario: number }>) => {
-    return itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0)
-  }
+  const calcularValorTotal = (
+    itens: Array<{ quantidade: number; valorUnitario: number }>,
+  ) => {
+    return itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0);
+  };
 
-  const filteredCotacoes = cotacoes.filter(cotacao => {
-    const paciente = pacientes.find(p => p.id === cotacao.pacienteId)
-    const matchesSearch = 
-      (paciente?.nomeCompleto?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-      cotacao.id.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "todos" || cotacao.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  const filteredCotacoes = cotacoes.filter((cotacao) => {
+    const paciente = pacientes.find((p) => p.id === cotacao.pacienteId);
+    const matchesSearch =
+      (paciente?.nomeCompleto?.toLowerCase().includes(searchTerm.toLowerCase()) ??
+        false) ||
+      cotacao.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "todos" || cotacao.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const getPacienteNome = (pacienteId: string) => {
-    const paciente = pacientes.find(p => p.id === pacienteId)
-    return paciente?.nomeCompleto || "Paciente nao encontrado"
-  }
+    const paciente = pacientes.find((p) => p.id === pacienteId);
+    return paciente?.nomeCompleto || "Paciente nao encontrado";
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
-      currency: "BRL"
-    }).format(value)
-  }
+      currency: "BRL",
+    }).format(value);
+  };
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       pendente: "Pendente",
       valida: "Valida",
-      expirada: "Expirada"
-    }
-    return labels[status] || status
-  }
+      expirada: "Expirada",
+    };
+    return labels[status] || status;
+  };
 
   return (
     <ProtectedRoute allowedRoles={["admin", "gestor", "atendente"]}>
@@ -136,7 +159,9 @@ export default function CotacoesPage() {
                             {getPacienteNome(cotacao.pacienteId)}
                           </TableCell>
                           <TableCell>
-                            {format(new Date(cotacao.dataSolicitacao), "dd/MM/yyyy", { locale: ptBR })}
+                            {format(new Date(cotacao.dataSolicitacao), "dd/MM/yyyy", {
+                              locale: ptBR,
+                            })}
                           </TableCell>
                           <TableCell>{cotacao.itens.length} item(ns)</TableCell>
                           <TableCell className="text-right font-mono">
@@ -182,5 +207,5 @@ export default function CotacoesPage() {
         </div>
       </DashboardLayout>
     </ProtectedRoute>
-  )
+  );
 }

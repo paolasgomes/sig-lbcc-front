@@ -26,7 +26,7 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { useData } from "@/contexts/data-context";
+import { useUsuarios } from "@/hooks/use-usuarios";
 import { PerfilUsuario } from "@/types";
 
 const PERFIL_LABEL: Record<PerfilUsuario, string> = {
@@ -36,8 +36,13 @@ const PERFIL_LABEL: Record<PerfilUsuario, string> = {
 };
 
 export default function UsuariosPage() {
-  const { usuarios, usuariosLoading, usuariosError, refreshUsuarios, deleteUsuario } =
-    useData();
+  const {
+    usuarios,
+    isLoading: usuariosLoading,
+    error: usuariosError,
+    refetch: refreshUsuarios,
+    deleteUsuario,
+  } = useUsuarios();
   const [busca, setBusca] = useState("");
   const [filtroPerfil, setFiltroPerfil] = useState<string>("todos");
   const [deleteError, setDeleteError] = useState<string | null>(null);

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ProtectedRoute } from "@/components/auth/protected-route";
-import { useData } from "@/contexts/data-context";
+import { useProdutos } from "@/hooks/use-produtos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -47,7 +47,12 @@ import {
 import Link from "next/link";
 
 export default function ProdutosPage() {
-  const { produtos, produtosLoading, produtosError, desativarProduto } = useData();
+  const {
+    produtos,
+    isLoading: produtosLoading,
+    error: produtosError,
+    desativarProduto,
+  } = useProdutos();
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ProtectedRoute } from "@/components/auth/protected-route";
-import { useData } from "@/contexts/data-context";
+import { useAreas } from "@/hooks/use-areas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -55,13 +55,13 @@ import type { AreaAtendimento } from "@/types";
 export default function AreasPage() {
   const {
     areas,
-    areasLoading,
-    areasError,
-    refreshAreas,
+    isLoading: areasLoading,
+    error: areasError,
+    refetch: refreshAreas,
     addArea,
     updateArea,
     deleteArea,
-  } = useData();
+  } = useAreas();
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<AreaAtendimento | null>(null);
