@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import PageHeader from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { PacienteHistorico } from "@/components/pacientes/paciente-historico";
 import { PacienteAtendimentos } from "@/components/pacientes/paciente-atendimentos";
@@ -114,41 +115,32 @@ export default function PacienteDetalhePage({ params }: PageProps) {
           </Alert>
         )}
 
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="/pacientes">
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-            </Button>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-foreground">
-                  {paciente.nomeCompleto}
-                </h1>
-                <StatusBadge status={paciente.status} />
-              </div>
-              <p className="text-muted-foreground">
-                CPF: {paciente.cpf} | SUS: {paciente.numeroSUS}
-              </p>
+        <PageHeader
+          title={
+            <div className="flex items-center gap-3">
+              <span>{paciente.nomeCompleto}</span>
+              <StatusBadge status={paciente.status} />
             </div>
-          </div>
-          <div className="flex gap-2">
-            {podeAlterarStatus() && (
-              <AlterarStatusModal
-                pacienteId={paciente.id}
-                statusAtual={paciente.status}
-              />
-            )}
-            <Button asChild>
-              <Link href={`/pacientes/${paciente.id}/editar`}>
-                <Edit className="mr-2 h-4 w-4" />
-                Editar
-              </Link>
-            </Button>
-          </div>
-        </div>
+          }
+          description={`CPF: ${paciente.cpf} | SUS: ${paciente.numeroSUS}`}
+          actions={
+            <div className="flex gap-2">
+              {podeAlterarStatus() && (
+                <AlterarStatusModal
+                  pacienteId={paciente.id}
+                  statusAtual={paciente.status}
+                />
+              )}
+              <Button asChild>
+                <Link href={`/pacientes/${paciente.id}/editar`}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar
+                </Link>
+              </Button>
+            </div>
+          }
+          backHref="/pacientes"
+        />
 
         {/* Tabs */}
         <Tabs defaultValue="dados" className="w-full">

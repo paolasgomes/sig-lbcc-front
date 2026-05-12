@@ -27,6 +27,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import TableActions, {
+  TableActionLink,
+  TableActionButton,
+} from "@/components/ui/table-actions";
+import { TableLoading } from "@/components/ui/table-state";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -75,6 +88,13 @@ export default function ProdutosPage() {
   }, [produtos, busca, filtroStatus]);
 
   const temFiltroAtivo = busca.trim().length > 0 || filtroStatus !== "todos";
+
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const total = produtosFiltrados.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const startIndex = (page - 1) * pageSize;
+  const displayedProdutos = produtosFiltrados.slice(startIndex, startIndex + pageSize);
 
   const handleDesativar = async (id: string) => {
     if (!confirm("Tem certeza que deseja desativar este produto?")) return;
@@ -188,9 +208,7 @@ export default function ProdutosPage() {
             </CardHeader>
             <CardContent>
               {produtosLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
+                <TableLoading message="Carregando produtos..." />
               ) : (
                 <div className="rounded-md border overflow-hidden">
                   <Table>
@@ -204,7 +222,7 @@ export default function ProdutosPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {produtosFiltrados.length === 0 ? (
+                      {displayedProdutos.length === 0 ? (
                         <TableRow>
                           <TableCell
                             colSpan={5}
@@ -216,7 +234,7 @@ export default function ProdutosPage() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        produtosFiltrados.map((produto) => (
+                        displayedProdutos.map((produto) => (
                           <TableRow key={produto.id}>
                             <TableCell className="font-medium">{produto.nome}</TableCell>
                             <TableCell className="text-sm text-muted-foreground">
@@ -229,8 +247,8 @@ export default function ProdutosPage() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
+                              <TableActions
+                                trigger={
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -243,31 +261,29 @@ export default function ProdutosPage() {
                                     )}
                                     <span className="sr-only">Ações</span>
                                   </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem asChild>
-                                    <Link href={`/produtos/${produto.id}`}>
-                                      <Eye className="mr-2 h-4 w-4" />
-                                      Visualizar
-                                    </Link>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem asChild>
-                                    <Link href={`/produtos/${produto.id}/editar`}>
-                                      <Pencil className="mr-2 h-4 w-4" />
-                                      Editar
-                                    </Link>
-                                  </DropdownMenuItem>
-                                  {produto.ativo && (
-                                    <DropdownMenuItem
-                                      onClick={() => handleDesativar(produto.id)}
-                                      className="text-destructive"
-                                    >
-                                      <AlertCircle className="mr-2 h-4 w-4" />
-                                      Desativar
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                                }
+                              >
+                                <TableActionLink href={`/produtos/${produto.id}`}>
+                                  <span className="flex items-center gap-2">
+                                    <Eye className="h-4 w-4" /> Visualizar
+                                  </span>
+                                </TableActionLink>
+                                <TableActionLink href={`/produtos/${produto.id}/editar`}>
+                                  <span className="flex items-center gap-2">
+                                    <Pencil className="h-4 w-4" /> Editar
+                                  </span>
+                                </TableActionLink>
+                                {produto.ativo && (
+                                  <TableActionButton
+                                    variant="destructive"
+                                    onSelect={() => handleDesativar(produto.id)}
+                                  >
+                                    <span className="flex items-center gap-2">
+                                      <AlertCircle className="h-4 w-4" /> Desativar
+                                    </span>
+                                  </TableActionButton>
+                                )}
+                              </TableActions>
                             </TableCell>
                           </TableRow>
                         ))
@@ -278,6 +294,39 @@ export default function ProdutosPage() {
               )}
             </CardContent>
           </Card>
+          {!produtosLoading && !produtosError && (
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Exibindo {displayedProdutos.length} de {produtosFiltrados.length} produtos
+              </div>
+              {pageCount > 1 && (
+                <Pagination aria-label="Pagination">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: pageCount }).map((_, i) => (
+                      <PaginationItem key={i}>
+                        <PaginationLink
+                          onClick={() => setPage(i + 1)}
+                          isActive={page === i + 1}
+                        >
+                          {i + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </div>
+          )}
         </div>
       </DashboardLayout>
     </ProtectedRoute>

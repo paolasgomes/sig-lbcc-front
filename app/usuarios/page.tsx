@@ -23,9 +23,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import TableActions, {
+  TableActionLink,
+  TableActionButton,
+} from "@/components/ui/table-actions";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { TableLoading } from "@/components/ui/table-state";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
 import { useUsuarios } from "@/hooks/use-usuarios";
 import { PerfilUsuario } from "@/types";
 
@@ -68,6 +81,14 @@ export default function UsuariosPage() {
   }, [usuarios, busca, filtroPerfil]);
 
   const temFiltroAtivo = busca.trim().length > 0 || filtroPerfil !== "todos";
+
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const total = usuariosFiltrados.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const displayedUsuarios = usuariosFiltrados.slice(startIndex, endIndex);
 
   const handleDelete = async (usuarioId: string, usuarioNome: string) => {
     const confirmar = window.confirm(`Excluir o usuário ${usuarioNome}?`);
@@ -161,10 +182,7 @@ export default function UsuariosPage() {
         <Card>
           <CardContent className="p-0">
             {usuariosLoading ? (
-              <div className="flex min-h-64 items-center justify-center gap-3 py-12 text-muted-foreground">
-                <Spinner className="h-5 w-5" />
-                <span>Carregando usuários...</span>
-              </div>
+              <TableLoading message="Carregando usuários..." />
             ) : usuariosFiltrados.length === 0 ? (
               <Empty className="py-12">
                 <EmptyTitle>
@@ -190,7 +208,7 @@ export default function UsuariosPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {usuariosFiltrados.map((usuario) => (
+                  {displayedUsuarios.map((usuario) => (
                     <TableRow key={usuario.id}>
                       <TableCell className="font-medium">{usuario.nome}</TableCell>
                       <TableCell>{usuario.email}</TableCell>
@@ -209,28 +227,27 @@ export default function UsuariosPage() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link href={`/usuarios/${usuario.id}`}>
-                              <Eye className="h-4 w-4" />
-                              <span className="sr-only">Visualizar</span>
-                            </Link>
-                          </Button>
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link href={`/usuarios/${usuario.id}/editar`}>
-                              <Edit className="h-4 w-4" />
-                              <span className="sr-only">Editar</span>
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => void handleDelete(usuario.id, usuario.nome)}
-                            disabled={deletingId === usuario.id}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Excluir</span>
-                          </Button>
+                        <div className="flex items-center justify-end">
+                          <TableActions>
+                            <TableActionLink href={`/usuarios/${usuario.id}`}>
+                              <span className="flex items-center gap-2">
+                                <Eye className="h-4 w-4" /> Visualizar
+                              </span>
+                            </TableActionLink>
+                            <TableActionLink href={`/usuarios/${usuario.id}/editar`}>
+                              <span className="flex items-center gap-2">
+                                <Edit className="h-4 w-4" /> Editar
+                              </span>
+                            </TableActionLink>
+                            <TableActionButton
+                              variant="destructive"
+                              onSelect={() => void handleDelete(usuario.id, usuario.nome)}
+                            >
+                              <span className="flex items-center gap-2">
+                                <Trash2 className="h-4 w-4" /> Excluir
+                              </span>
+                            </TableActionButton>
+                          </TableActions>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -242,8 +259,36 @@ export default function UsuariosPage() {
         </Card>
 
         {!usuariosLoading && !usuariosError && (
-          <div className="text-sm text-muted-foreground">
-            Exibindo {usuariosFiltrados.length} de {usuarios.length} usuários
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Exibindo {displayedUsuarios.length} de {usuariosFiltrados.length} usuários
+            </div>
+            {pageCount > 1 && (
+              <Pagination aria-label="Pagination">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: pageCount }).map((_, i) => (
+                    <PaginationItem key={i}>
+                      <PaginationLink
+                        onClick={() => setPage(i + 1)}
+                        isActive={page === i + 1}
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
           </div>
         )}
       </div>

@@ -74,6 +74,7 @@ import {
   atualizarArea as atualizarAreaApi,
   inativarArea as inativarAreaApi,
 } from "../services/areas-service";
+import { getQueryClient } from "@/lib/react-query";
 
 function formatApiDate(date?: string | null) {
   return date ?? "";
@@ -154,6 +155,8 @@ function mapEstadoCivilToApiEstadoCivil(estadoCivil?: EstadoCivil) {
 
   return "Solteiro";
 }
+
+const queryClient = getQueryClient();
 
 function mapApiStatusToStatusPaciente(status?: string | null): StatusPaciente {
   if (!status) {
@@ -894,6 +897,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
 
     setProdutos((prev) => [...prev, produtoCompleto]);
+    await queryClient.invalidateQueries({ queryKey: ["produtos"] });
 
     return produtoCompleto;
   }, []);
@@ -921,6 +925,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       };
 
       setProdutos((prev) => prev.map((p) => (p.id === id ? produtoCompleto : p)));
+      await queryClient.invalidateQueries({ queryKey: ["produtos"] });
 
       return produtoCompleto;
     },
@@ -940,6 +945,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           : produto,
       ),
     );
+    await queryClient.invalidateQueries({ queryKey: ["produtos"] });
   }, []);
 
   // Cotações

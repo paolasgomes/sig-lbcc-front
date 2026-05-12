@@ -22,6 +22,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import TableActions, { TableActionButton } from '@/components/ui/table-actions'
+import { TableLoading } from '@/components/ui/table-state'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from '@/components/ui/pagination'
 import {
   Dialog,
   DialogContent,
@@ -81,6 +91,13 @@ export default function AreasPage() {
         area.descricao.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   }, [areas, searchTerm]);
+
+  const [page, setPage] = useState(1)
+  const pageSize = 10
+  const total = filteredAreas.length
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
+  const startIndex = (page - 1) * pageSize
+  const displayedAreas = filteredAreas.slice(startIndex, startIndex + pageSize)
 
   const resetForm = () => {
     setEditingArea(null);
@@ -294,19 +311,7 @@ export default function AreasPage() {
 
               <div className="rounded-md border">
                 {areasLoading ? (
-                  <div className="space-y-3 p-4">
-                    {Array.from({ length: 4 }).map((_, index) => (
-                      <div
-                        key={index}
-                        className="grid grid-cols-[1.3fr_2fr_0.7fr_0.5fr] gap-4"
-                      >
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-10 justify-self-end" />
-                      </div>
-                    ))}
-                  </div>
+                  <TableLoading message="Carregando áreas..." />
                 ) : (
                   <Table>
                     <TableHeader>
@@ -318,14 +323,14 @@ export default function AreasPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredAreas.length === 0 ? (
+                      {displayedAreas.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={4} className="h-24 text-center">
                             Nenhuma area encontrada.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredAreas.map((area) => (
+                        displayedAreas.map((area) => (
                           <TableRow key={area.id}>
                             <TableCell className="font-medium">{area.nome}</TableCell>
                             <TableCell className="max-w-xs truncate">
@@ -337,29 +342,21 @@ export default function AreasPage() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    <span className="sr-only">Acoes</span>
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => handleOpenDialog(area)}
-                                  >
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Editar
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => void handleDelete(area.id)}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Excluir
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              <TableActions>
+                                <TableActionButton onSelect={() => handleOpenDialog(area)}>
+                                  <span className="flex items-center gap-2">
+                                    <Pencil className="h-4 w-4" /> Editar
+                                  </span>
+                                </TableActionButton>
+                                <TableActionButton
+                                  variant="destructive"
+                                  onSelect={() => void handleDelete(area.id)}
+                                >
+                                  <span className="flex items-center gap-2">
+                                    <Trash2 className="h-4 w-4" /> Excluir
+                                  </span>
+                                </TableActionButton>
+                              </TableActions>
                             </TableCell>
                           </TableRow>
                         ))
@@ -368,6 +365,32 @@ export default function AreasPage() {
                   </Table>
                 )}
               </div>
+              {!areasLoading && !areasError && (
+                <div className="flex items-center justify-between mt-2">
+                  <div className="text-sm text-muted-foreground">
+                    Exibindo {displayedAreas.length} de {filteredAreas.length} áreas
+                  </div>
+                  {pageCount > 1 && (
+                    <Pagination aria-label="Pagination">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious onClick={() => setPage((p) => Math.max(1, p - 1))} />
+                        </PaginationItem>
+                        {Array.from({ length: pageCount }).map((_, i) => (
+                          <PaginationItem key={i}>
+                            <PaginationLink onClick={() => setPage(i + 1)} isActive={page === i + 1}>
+                              {i + 1}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext onClick={() => setPage((p) => Math.min(pageCount, p + 1))} />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
