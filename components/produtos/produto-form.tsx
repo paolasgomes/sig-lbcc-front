@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,6 +104,13 @@ export function ProdutoForm({ produto, modo = "criar" }: ProdutoFormProps) {
               </select>
             </Field>
           </FieldGroup>
+
+          {error && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertTitle>Não foi possível salvar o produto</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
           <div className="flex justify-end gap-4 mt-4">
             <Button variant="outline" type="button" onClick={() => router.back()}>

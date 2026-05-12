@@ -1,11 +1,6 @@
-import axios from "axios";
 import { api } from "./api";
 import type { Documento } from "@/types";
-
-interface ApiErrorResponse {
-  error?: string;
-  message?: string;
-}
+import { getFriendlyApiError } from "@/lib/api-errors";
 
 interface ApiDocumentoDTO {
   id: string;
@@ -87,15 +82,7 @@ export interface PacienteCreateInput {
 export type PacienteUpdateInput = Partial<PacienteCreateInput>;
 
 function getErrorMessage(error: unknown, fallback: string) {
-  if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    return error.response?.data?.error || error.response?.data?.message || fallback;
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallback;
+  return getFriendlyApiError(error, fallback);
 }
 
 function formatFileSize(sizeInBytes: number) {

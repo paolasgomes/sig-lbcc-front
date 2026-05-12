@@ -22,15 +22,31 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import PageHeader from "@/components/layout/page-header";
+import TableActions, { TableActionLink } from "@/components/ui/table-actions";
 import { StatusBadge } from "@/components/shared/status-badge";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
 import { Empty } from "@/components/ui/empty";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
-import { useData } from "@/contexts/data-context";
+import { TableLoading } from "@/components/ui/table-state";
+import { usePacientes } from "@/hooks/use-pacientes";
 import { StatusPaciente } from "@/types";
 
 export default function PacientesPage() {
-  const { pacientes, pacientesLoading, pacientesError, refreshPacientes } = useData();
+  const {
+    pacientes,
+    isLoading: pacientesLoading,
+    error: pacientesError,
+    refetch: refreshPacientes,
+  } = usePacientes();
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
 
@@ -38,7 +54,7 @@ export default function PacientesPage() {
     return pacientes.filter((paciente) => {
       const matchBusca =
         paciente.nomeCompleto.toLowerCase().includes(busca.toLowerCase()) ||
-        paciente.cpf.includes(busca);
+        paciente.cpf?.includes(busca);
 
       const matchStatus = filtroStatus === "todos" || paciente.status === filtroStatus;
 
@@ -48,23 +64,29 @@ export default function PacientesPage() {
 
   const temFiltroAtivo = busca.trim().length > 0 || filtroStatus !== "todos";
 
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const total = pacientesFiltrados.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const displayedPacientes = pacientesFiltrados.slice(startIndex, endIndex);
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Pacientes</h1>
-            <p className="text-muted-foreground">
-              Gerencie os pacientes cadastrados no sistema
-            </p>
-          </div>
-          <Button asChild>
-            <Link href="/pacientes/novo">
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Paciente
-            </Link>
-          </Button>
-        </div>
+        <PageHeader
+          title="Pacientes"
+          description="Gerencie os pacientes cadastrados no sistema"
+          actions={
+            <Button asChild>
+              <Link href="/pacientes/novo">
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Paciente
+              </Link>
+            </Button>
+          }
+        />
 
         {pacientesError && (
           <Alert variant="destructive">
@@ -114,10 +136,7 @@ export default function PacientesPage() {
         <Card>
           <CardContent className="p-0">
             {pacientesLoading ? (
-              <div className="flex min-h-64 items-center justify-center gap-3 py-12 text-muted-foreground">
-                <Spinner className="h-5 w-5" />
-                <span>Carregando pacientes...</span>
-              </div>
+              <TableLoading message="Carregando pacientes..." />
             ) : pacientesFiltrados.length === 0 ? (
               <Empty
                 title={
@@ -145,7 +164,7 @@ export default function PacientesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pacientesFiltrados.map((paciente) => (
+                  {displayedPacientes.map((paciente) => (
                     <TableRow key={paciente.id}>
                       <TableCell className="font-medium">
                         {paciente.nomeCompleto}
@@ -159,19 +178,19 @@ export default function PacientesPage() {
                         <StatusBadge status={paciente.status} />
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link href={`/pacientes/${paciente.id}`}>
-                              <Eye className="h-4 w-4" />
-                              <span className="sr-only">Visualizar</span>
-                            </Link>
-                          </Button>
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link href={`/pacientes/${paciente.id}/editar`}>
-                              <Edit className="h-4 w-4" />
-                              <span className="sr-only">Editar</span>
-                            </Link>
-                          </Button>
+                        <div className="flex items-center justify-end">
+                          <TableActions>
+                            <TableActionLink href={`/pacientes/${paciente.id}`}>
+                              <span className="flex items-center gap-2">
+                                <Eye className="h-4 w-4" /> Visualizar
+                              </span>
+                            </TableActionLink>
+                            <TableActionLink href={`/pacientes/${paciente.id}/editar`}>
+                              <span className="flex items-center gap-2">
+                                <Edit className="h-4 w-4" /> Editar
+                              </span>
+                            </TableActionLink>
+                          </TableActions>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -183,8 +202,37 @@ export default function PacientesPage() {
         </Card>
 
         {!pacientesLoading && !pacientesError && (
-          <div className="text-sm text-muted-foreground">
-            Exibindo {pacientesFiltrados.length} de {pacientes.length} pacientes
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Exibindo {displayedPacientes.length} de {pacientesFiltrados.length}{" "}
+              pacientes
+            </div>
+            {pageCount > 1 && (
+              <Pagination aria-label="Pagination">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: pageCount }).map((_, i) => (
+                    <PaginationItem key={i}>
+                      <PaginationLink
+                        onClick={() => setPage(i + 1)}
+                        isActive={page === i + 1}
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
           </div>
         )}
       </div>

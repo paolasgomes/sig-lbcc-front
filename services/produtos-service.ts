@@ -1,11 +1,6 @@
-import axios from "axios";
 import { api } from "./api";
 import type { Produto } from "@/types";
-
-interface ApiErrorResponse {
-  error?: string;
-  message?: string;
-}
+import { getFriendlyApiError } from "@/lib/api-errors";
 
 export interface ApiProdutoDTO {
   id: string;
@@ -27,15 +22,7 @@ export interface ProdutoCreateInput {
 export type ProdutoUpdateInput = Partial<ProdutoCreateInput>;
 
 function getErrorMessage(error: unknown, fallback: string) {
-  if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    return error.response?.data?.error || error.response?.data?.message || fallback;
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallback;
+  return getFriendlyApiError(error, fallback);
 }
 
 export function mapApiProdutoToProduto(apiProduto: ApiProdutoDTO): Produto {
@@ -97,10 +84,9 @@ export async function atualizarProduto(id: string, dados: ProdutoUpdateInput) {
 
 export async function desativarProduto(id: string) {
   try {
-    const response = await api.put<ApiProdutoDTO>(`/produtos/${id}`, { ativo: false });
-    return response.data;
+    await api.delete(`/produtos/${id}`);
   } catch (error) {
-    throw new Error(getErrorMessage(error, "Erro ao desativar produto."));
+    throw new Error(getFriendlyApiError(error, "Erro ao excluir produto."));
   }
 }
 //

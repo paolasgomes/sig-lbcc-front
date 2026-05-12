@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { useData } from "@/contexts/data-context";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import {
   Card,
@@ -42,6 +43,7 @@ import Link from "next/link";
 export default function FornecedoresPage() {
   const { fornecedores, deleteFornecedor } = useData();
   const [searchTerm, setSearchTerm] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const filteredFornecedores = fornecedores.filter(
     (fornecedor) =>
@@ -52,7 +54,17 @@ export default function FornecedoresPage() {
 
   const handleDelete = (id: string) => {
     if (confirm("Tem certeza que deseja excluir este fornecedor?")) {
-      deleteFornecedor(id);
+      setDeleteError(null);
+
+      try {
+        deleteFornecedor(id);
+      } catch (error) {
+        setDeleteError(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível excluir o fornecedor.",
+        );
+      }
     }
   };
 
@@ -97,6 +109,12 @@ export default function FornecedoresPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {deleteError && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertTitle>Não foi possível excluir o fornecedor</AlertTitle>
+                  <AlertDescription>{deleteError}</AlertDescription>
+                </Alert>
+              )}
               <div className="mb-4">
                 <div className="relative max-w-sm">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

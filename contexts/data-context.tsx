@@ -10,6 +10,13 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import {
+  formatCep,
+  formatCpf,
+  formatPhone,
+  onlyDigits,
+  toDateInputValue,
+} from "@/lib/formatters";
+import {
   AreaCreateInput,
   AreaUpdateInput,
   UsuarioDTO,
@@ -74,9 +81,10 @@ import {
   atualizarArea as atualizarAreaApi,
   inativarArea as inativarAreaApi,
 } from "../services/areas-service";
+import { getQueryClient } from "@/lib/react-query";
 
 function formatApiDate(date?: string | null) {
-  return date ?? "";
+  return toDateInputValue(date);
 }
 
 function mapApiSexoToSexo(sexo?: string | null): Sexo {
@@ -155,6 +163,8 @@ function mapEstadoCivilToApiEstadoCivil(estadoCivil?: EstadoCivil) {
   return "Solteiro";
 }
 
+const queryClient = getQueryClient();
+
 function mapApiStatusToStatusPaciente(status?: string | null): StatusPaciente {
   if (!status) {
     return StatusPaciente.ATIVO;
@@ -194,7 +204,7 @@ function mapApiPacienteToPaciente(apiPaciente: ApiPacienteDTO): Paciente {
     id: apiPaciente.id ?? apiPaciente.id_origem ?? "",
     nome: apiPaciente.nome ?? "",
     nomeCompleto: apiPaciente.nome ?? "",
-    cpf: apiPaciente.cpf,
+    cpf: formatCpf(apiPaciente.cpf),
     rg: apiPaciente.rg ?? "",
     dataNascimento: formatApiDate(apiPaciente.data_nascimento),
     sexo: mapApiSexoToSexo(apiPaciente.sexo),
@@ -209,9 +219,9 @@ function mapApiPacienteToPaciente(apiPaciente: ApiPacienteDTO): Paciente {
       bairro: apiPaciente.bairro ?? "",
       cidade: apiPaciente.cidade ?? "",
       estado: apiPaciente.estado ?? "",
-      cep: apiPaciente.cep ?? "",
+      cep: formatCep(apiPaciente.cep ?? ""),
     },
-    telefone: apiPaciente.celular ?? apiPaciente.telefone ?? "",
+    telefone: formatPhone(apiPaciente.celular ?? apiPaciente.telefone ?? ""),
     nomePai: "",
     nomeMae: "",
     numeroSUS: apiPaciente.id_origem ?? "",
@@ -233,21 +243,21 @@ function mapPacienteToApiPayload(
 ): PacienteCreateInput {
   return {
     nome: paciente.nomeCompleto ?? paciente.nome ?? "",
-    cpf: paciente.cpf ?? "",
+    cpf: onlyDigits(paciente.cpf ?? "", 11),
     rg: paciente.rg,
     data_nascimento: paciente.dataNascimento ?? "",
     sexo: mapSexoToApiSexo(paciente.sexo),
     estado_civil: mapEstadoCivilToApiEstadoCivil(paciente.estadoCivil),
     profissao: paciente.profissao,
-    telefone: paciente.telefone,
-    celular: paciente.telefone,
+    telefone: onlyDigits(paciente.telefone ?? "", 11),
+    celular: onlyDigits(paciente.telefone ?? "", 11),
     endereco: paciente.endereco?.logradouro,
     numero: paciente.endereco?.numero,
     complemento: paciente.endereco?.complemento,
     bairro: paciente.endereco?.bairro,
     cidade: paciente.endereco?.cidade,
     estado: paciente.endereco?.estado,
-    cep: paciente.endereco?.cep,
+    cep: onlyDigits(paciente.endereco?.cep ?? "", 8),
     diagnostico: paciente.diagnosticoOncologico ?? paciente.diagnostico,
     hospital_tratamento: paciente.setor,
     medico_responsavel: paciente.medicoResponsavel,
@@ -720,18 +730,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const deletePaciente = useCallback(async (id: string) => {
     await inativarPaciente(id);
-    setPacientes((prev) =>
-      prev.map((paciente) =>
-        paciente.id === id
-          ? {
-              ...paciente,
-              status: StatusPaciente.ENCERRADO,
-              atualizadoEm: new Date().toISOString(),
-            }
-          : paciente,
-      ),
-    );
-    // Recarrega a lista do servidor após inativação
+    setPacientes((prev) => prev.filter((paciente) => paciente.id !== id));
     void refreshPacientes();
   }, []);
 
@@ -808,19 +807,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [areas],
   );
 
-  const deleteArea = useCallback(async (id: string) => {
-    await inativarAreaApi(id);
-    setAreas((prev) =>
-      prev.map((area) =>
-        area.id === id
-          ? {
-              ...area,
-              ativa: false,
-            }
-          : area,
-      ),
-    );
-  }, []);
+  const deleteArea = useCallback(
+    async (id: string) => {
+      const areaEmUso =
+        cotacoes.some((cotacao) => cotacao.areaAtendimentoId === id) ||
+        atendimentos.some(
+          (atendimento) =>
+            atendimento.areaId === id || atendimento.areaAtendimentoId === id,
+        );
+
+      if (areaEmUso) {
+        throw new Error(
+          "Esta área não pode ser excluída porque já está sendo usada em outro cadastro.",
+        );
+      }
+
+      await inativarAreaApi(id);
+      setAreas((prev) => prev.filter((area) => area.id !== id));
+    },
+    [atendimentos, cotacoes],
+  );
 
   // Fornecedores
   const getFornecedorById = useCallback(
@@ -848,9 +854,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setFornecedores((prev) => prev.map((f) => (f.id === id ? { ...f, ...dados } : f)));
   }, []);
 
-  const deleteFornecedor = useCallback((id: string) => {
-    setFornecedores((prev) => prev.filter((f) => f.id !== id));
-  }, []);
+  const deleteFornecedor = useCallback(
+    (id: string) => {
+      const fornecedorEmUso =
+        cotacoes.some((cotacao) => cotacao.fornecedorId === id) ||
+        produtos.some((produto) => produto.fornecedorId === id);
+
+      if (fornecedorEmUso) {
+        throw new Error(
+          "Este fornecedor não pode ser excluído porque já está sendo usado em outro cadastro.",
+        );
+      }
+
+      setFornecedores((prev) => prev.filter((f) => f.id !== id));
+    },
+    [cotacoes, produtos],
+  );
 
   // Produtos
 
@@ -894,6 +913,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
 
     setProdutos((prev) => [...prev, produtoCompleto]);
+    await queryClient.invalidateQueries({ queryKey: ["produtos"] });
 
     return produtoCompleto;
   }, []);
@@ -921,6 +941,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       };
 
       setProdutos((prev) => prev.map((p) => (p.id === id ? produtoCompleto : p)));
+      await queryClient.invalidateQueries({ queryKey: ["produtos"] });
 
       return produtoCompleto;
     },
@@ -940,6 +961,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           : produto,
       ),
     );
+    await queryClient.invalidateQueries({ queryKey: ["produtos"] });
   }, []);
 
   // Cotações
