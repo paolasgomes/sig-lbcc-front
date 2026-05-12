@@ -48,6 +48,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Loader2,
   Plus,
@@ -69,6 +70,7 @@ export default function ProdutosPage() {
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const produtosFiltrados = useMemo(() => {
     return produtos.filter((produto) => {
@@ -96,13 +98,16 @@ export default function ProdutosPage() {
   const startIndex = (page - 1) * pageSize;
   const displayedProdutos = produtosFiltrados.slice(startIndex, startIndex + pageSize);
 
-  const handleDesativar = async (id: string) => {
-    if (!confirm("Tem certeza que deseja desativar este produto?")) return;
+  const handleExcluir = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este produto?")) return;
     setDeactivatingId(id);
+    setDeleteError(null);
     try {
       await desativarProduto(id);
     } catch (error) {
-      console.error("Erro ao desativar produto:", error);
+      setDeleteError(
+        error instanceof Error ? error.message : "Não foi possível excluir o produto.",
+      );
     } finally {
       setDeactivatingId(null);
     }
@@ -207,6 +212,12 @@ export default function ProdutosPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {deleteError && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertTitle>Não foi possível excluir o produto</AlertTitle>
+                  <AlertDescription>{deleteError}</AlertDescription>
+                </Alert>
+              )}
               {produtosLoading ? (
                 <TableLoading message="Carregando produtos..." />
               ) : (
@@ -276,10 +287,10 @@ export default function ProdutosPage() {
                                 {produto.ativo && (
                                   <TableActionButton
                                     variant="destructive"
-                                    onSelect={() => handleDesativar(produto.id)}
+                                    onSelect={() => handleExcluir(produto.id)}
                                   >
                                     <span className="flex items-center gap-2">
-                                      <AlertCircle className="h-4 w-4" /> Desativar
+                                      <AlertCircle className="h-4 w-4" /> Excluir
                                     </span>
                                   </TableActionButton>
                                 )}

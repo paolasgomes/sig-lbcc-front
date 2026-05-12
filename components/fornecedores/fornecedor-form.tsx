@@ -1,37 +1,71 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useData } from "@/contexts/data-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { FieldGroup, Field, FieldLabel } from "@/components/ui/field"
-import { ArrowLeft, Save } from "lucide-react"
-import Link from "next/link"
-import type { Fornecedor } from "@/types"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useData } from "@/contexts/data-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
+import { ArrowLeft, Save } from "lucide-react";
+import Link from "next/link";
+import type { Fornecedor } from "@/types";
+import { formatCep, formatCnpj, formatPhone } from "@/lib/formatters";
 
 interface FornecedorFormProps {
-  fornecedor?: Fornecedor
-  isEditing?: boolean
+  fornecedor?: Fornecedor;
+  isEditing?: boolean;
 }
 
 const UF_OPTIONS = [
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
-  "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
-  "RS", "RO", "RR", "SC", "SP", "SE", "TO"
-]
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+];
 
 export function FornecedorForm({ fornecedor, isEditing }: FornecedorFormProps) {
-  const router = useRouter()
-  const { addFornecedor, updateFornecedor } = useData()
+  const router = useRouter();
+  const { addFornecedor, updateFornecedor } = useData();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     razaoSocial: fornecedor?.razaoSocial || "",
     nomeFantasia: fornecedor?.nomeFantasia || "",
-    cnpj: fornecedor?.cnpj || "",
+    cnpj: fornecedor?.cnpj ? formatCnpj(fornecedor.cnpj) : "",
     inscricaoEstadual: fornecedor?.inscricaoEstadual || "",
-    telefone: fornecedor?.telefone || "",
+    telefone: fornecedor?.telefone ? formatPhone(fornecedor.telefone) : "",
     email: fornecedor?.email || "",
     endereco: fornecedor?.endereco || "",
     numero: fornecedor?.numero || "",
@@ -39,27 +73,39 @@ export function FornecedorForm({ fornecedor, isEditing }: FornecedorFormProps) {
     bairro: fornecedor?.bairro || "",
     cidade: fornecedor?.cidade || "",
     uf: fornecedor?.uf || "MS",
-    cep: fornecedor?.cep || "",
+    cep: fornecedor?.cep ? formatCep(fornecedor.cep) : "",
     contato: fornecedor?.contato || "",
-    telefoneContato: fornecedor?.telefoneContato || "",
-    ativo: fornecedor?.ativo ?? true
-  })
+    telefoneContato: fornecedor?.telefoneContato
+      ? formatPhone(fornecedor.telefoneContato)
+      : "",
+    ativo: fornecedor?.ativo ?? true,
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (isEditing && fornecedor) {
-      updateFornecedor(fornecedor.id, formData)
-    } else {
-      addFornecedor(formData)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      if (isEditing && fornecedor) {
+        await Promise.resolve(updateFornecedor(fornecedor.id, formData));
+      } else {
+        await Promise.resolve(addFornecedor(formData));
+      }
+
+      router.push("/fornecedores");
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "Erro ao salvar fornecedor.",
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    router.push("/fornecedores")
-  }
+  };
 
   const handleChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -108,8 +154,10 @@ export function FornecedorForm({ fornecedor, isEditing }: FornecedorFormProps) {
               <FieldLabel>CNPJ *</FieldLabel>
               <Input
                 value={formData.cnpj}
-                onChange={(e) => handleChange("cnpj", e.target.value.replace(/\D/g, "").slice(0, 14))}
-                placeholder="00000000000000"
+                onChange={(e) => handleChange("cnpj", formatCnpj(e.target.value))}
+                inputMode="numeric"
+                maxLength={18}
+                placeholder="00.000.000/0000-00"
                 required
               />
             </Field>
@@ -135,8 +183,10 @@ export function FornecedorForm({ fornecedor, isEditing }: FornecedorFormProps) {
               <FieldLabel>Telefone *</FieldLabel>
               <Input
                 value={formData.telefone}
-                onChange={(e) => handleChange("telefone", e.target.value.replace(/\D/g, "").slice(0, 11))}
-                placeholder="00000000000"
+                onChange={(e) => handleChange("telefone", formatPhone(e.target.value))}
+                inputMode="tel"
+                maxLength={15}
+                placeholder="(00) 00000-0000"
                 required
               />
             </Field>
@@ -160,7 +210,11 @@ export function FornecedorForm({ fornecedor, isEditing }: FornecedorFormProps) {
               <FieldLabel>Telefone do Contato</FieldLabel>
               <Input
                 value={formData.telefoneContato}
-                onChange={(e) => handleChange("telefoneContato", e.target.value.replace(/\D/g, "").slice(0, 11))}
+                onChange={(e) =>
+                  handleChange("telefoneContato", formatPhone(e.target.value))
+                }
+                inputMode="tel"
+                maxLength={15}
               />
             </Field>
           </FieldGroup>
@@ -178,8 +232,10 @@ export function FornecedorForm({ fornecedor, isEditing }: FornecedorFormProps) {
               <FieldLabel>CEP *</FieldLabel>
               <Input
                 value={formData.cep}
-                onChange={(e) => handleChange("cep", e.target.value.replace(/\D/g, "").slice(0, 8))}
-                placeholder="00000000"
+                onChange={(e) => handleChange("cep", formatCep(e.target.value))}
+                inputMode="numeric"
+                maxLength={9}
+                placeholder="00000-000"
                 required
               />
             </Field>
@@ -230,8 +286,10 @@ export function FornecedorForm({ fornecedor, isEditing }: FornecedorFormProps) {
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 required
               >
-                {UF_OPTIONS.map(uf => (
-                  <option key={uf} value={uf}>{uf}</option>
+                {UF_OPTIONS.map((uf) => (
+                  <option key={uf} value={uf}>
+                    {uf}
+                  </option>
                 ))}
               </select>
             </Field>
@@ -252,20 +310,33 @@ export function FornecedorForm({ fornecedor, isEditing }: FornecedorFormProps) {
               onChange={(e) => handleChange("ativo", e.target.checked)}
               className="h-4 w-4 rounded border-border"
             />
-            <FieldLabel htmlFor="ativo" className="mb-0">Fornecedor ativo</FieldLabel>
+            <FieldLabel htmlFor="ativo" className="mb-0">
+              Fornecedor ativo
+            </FieldLabel>
           </Field>
         </CardContent>
       </Card>
+
+      {submitError && (
+        <Alert variant="destructive">
+          <AlertTitle>Não foi possível salvar o fornecedor</AlertTitle>
+          <AlertDescription>{submitError}</AlertDescription>
+        </Alert>
+      )}
 
       <div className="flex justify-end gap-4">
         <Button type="button" variant="outline" asChild>
           <Link href="/fornecedores">Cancelar</Link>
         </Button>
-        <Button type="submit">
+        <Button type="submit" disabled={isSubmitting}>
           <Save className="mr-2 h-4 w-4" />
-          {isEditing ? "Salvar Alteracoes" : "Cadastrar Fornecedor"}
+          {isSubmitting
+            ? "Salvando..."
+            : isEditing
+              ? "Salvar Alteracoes"
+              : "Cadastrar Fornecedor"}
         </Button>
       </div>
     </form>
-  )
+  );
 }

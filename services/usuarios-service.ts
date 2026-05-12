@@ -1,22 +1,9 @@
-import axios from "axios";
 import { api } from "./api";
 import { UsuarioCreateInput, UsuarioDTO, UsuarioUpdateInput } from "@/types";
-
-interface ApiErrorResponse {
-  error?: string;
-  message?: string;
-}
+import { getFriendlyApiError } from "@/lib/api-errors";
 
 function getErrorMessage(error: unknown, fallback: string) {
-  if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    return error.response?.data?.error || error.response?.data?.message || fallback;
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallback;
+  return getFriendlyApiError(error, fallback);
 }
 
 export async function listarUsuarios() {

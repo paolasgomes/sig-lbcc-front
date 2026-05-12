@@ -3,9 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { listarPacientes, ApiPacienteDTO } from "@/services/pacientes-service";
 import { Paciente, Sexo, EstadoCivil, StatusPaciente } from "@/types";
+import { formatCep, formatCpf, formatPhone, toDateInputValue } from "@/lib/formatters";
 
 function formatApiDate(date?: string | null) {
-  return date ?? "";
+  return toDateInputValue(date);
 }
 
 function mapApiSexoToSexo(sexo?: string | null): Sexo {
@@ -41,7 +42,7 @@ function mapApiPacienteToPaciente(apiPaciente: ApiPacienteDTO): Paciente {
     id: apiPaciente.id ?? apiPaciente.id_origem ?? "",
     nome: apiPaciente.nome ?? "",
     nomeCompleto: apiPaciente.nome ?? "",
-    cpf: apiPaciente.cpf,
+    cpf: formatCpf(apiPaciente.cpf),
     rg: apiPaciente.rg ?? "",
     dataNascimento: formatApiDate(apiPaciente.data_nascimento),
     sexo: mapApiSexoToSexo(apiPaciente.sexo),
@@ -56,9 +57,9 @@ function mapApiPacienteToPaciente(apiPaciente: ApiPacienteDTO): Paciente {
       bairro: apiPaciente.bairro ?? "",
       cidade: apiPaciente.cidade ?? "",
       estado: apiPaciente.estado ?? "",
-      cep: apiPaciente.cep ?? "",
+      cep: formatCep(apiPaciente.cep ?? ""),
     },
-    telefone: apiPaciente.celular ?? apiPaciente.telefone ?? "",
+    telefone: formatPhone(apiPaciente.celular ?? apiPaciente.telefone ?? ""),
     nomePai: "",
     nomeMae: "",
     numeroSUS: apiPaciente.id_origem ?? "",

@@ -17,6 +17,7 @@ import {
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
 import { useData } from "@/contexts/data-context";
 import { useAuth } from "@/contexts/auth-context";
+import { formatCep, formatCpf, formatPhone, toDateInputValue } from "@/lib/formatters";
 import { Paciente, StatusPaciente, Sexo, EstadoCivil, TipoEvento } from "@/types";
 
 interface PacienteFormProps {
@@ -47,18 +48,18 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
 
   const [formData, setFormData] = useState({
     nomeCompleto: paciente?.nomeCompleto || "",
-    cpf: paciente?.cpf || "",
+    cpf: paciente?.cpf ? formatCpf(paciente.cpf) : "",
     rg: paciente?.rg || "",
-    dataNascimento: paciente?.dataNascimento || "",
+    dataNascimento: toDateInputValue(paciente?.dataNascimento),
     sexo: paciente?.sexo || Sexo.MASCULINO,
     estadoCivil: paciente?.estadoCivil || EstadoCivil.SOLTEIRO,
     profissao: paciente?.profissao || "",
-    telefone: paciente?.telefone || "",
+    telefone: paciente?.telefone ? formatPhone(paciente.telefone) : "",
     numeroSUS: paciente?.numeroSUS || "",
     diagnosticoOncologico: paciente?.diagnosticoOncologico || "",
     setor: paciente?.setor || "",
     areaTratamento: paciente?.areaTratamento || "",
-    dataInicioTratamento: paciente?.dataInicioTratamento || "",
+    dataInicioTratamento: toDateInputValue(paciente?.dataInicioTratamento),
     medicoResponsavel: paciente?.medicoResponsavel || "",
     endereco: {
       logradouro: paciente?.endereco.logradouro || "",
@@ -67,7 +68,7 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
       bairro: paciente?.endereco.bairro || "",
       cidade: paciente?.endereco.cidade || "Bataguassu",
       estado: paciente?.endereco.estado || "MS",
-      cep: paciente?.endereco.cep || "",
+      cep: paciente?.endereco.cep ? formatCep(paciente.endereco.cep) : "",
     },
   });
 
@@ -153,7 +154,9 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
                 <Input
                   id="cpf"
                   value={formData.cpf}
-                  onChange={(e) => handleChange("cpf", e.target.value)}
+                  onChange={(e) => handleChange("cpf", formatCpf(e.target.value))}
+                  inputMode="numeric"
+                  maxLength={14}
                   placeholder="000.000.000-00"
                   required
                 />
@@ -231,7 +234,9 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
                 <Input
                   id="telefone"
                   value={formData.telefone}
-                  onChange={(e) => handleChange("telefone", e.target.value)}
+                  onChange={(e) => handleChange("telefone", formatPhone(e.target.value))}
+                  inputMode="tel"
+                  maxLength={15}
                   placeholder="(00) 00000-0000"
                   required
                 />
@@ -319,7 +324,11 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
                 <Input
                   id="cep"
                   value={formData.endereco.cep}
-                  onChange={(e) => handleChange("endereco.cep", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("endereco.cep", formatCep(e.target.value))
+                  }
+                  inputMode="numeric"
+                  maxLength={9}
                   placeholder="00000-000"
                 />
               </Field>

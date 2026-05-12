@@ -22,8 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import TableActions, { TableActionButton } from '@/components/ui/table-actions'
-import { TableLoading } from '@/components/ui/table-state'
+import TableActions, { TableActionButton } from "@/components/ui/table-actions";
+import { TableLoading } from "@/components/ui/table-state";
 import {
   Pagination,
   PaginationContent,
@@ -31,7 +31,7 @@ import {
   PaginationLink,
   PaginationPrevious,
   PaginationNext,
-} from '@/components/ui/pagination'
+} from "@/components/ui/pagination";
 import {
   Dialog,
   DialogContent,
@@ -92,12 +92,12 @@ export default function AreasPage() {
     );
   }, [areas, searchTerm]);
 
-  const [page, setPage] = useState(1)
-  const pageSize = 10
-  const total = filteredAreas.length
-  const pageCount = Math.max(1, Math.ceil(total / pageSize))
-  const startIndex = (page - 1) * pageSize
-  const displayedAreas = filteredAreas.slice(startIndex, startIndex + pageSize)
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const total = filteredAreas.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const startIndex = (page - 1) * pageSize;
+  const displayedAreas = filteredAreas.slice(startIndex, startIndex + pageSize);
 
   const resetForm = () => {
     setEditingArea(null);
@@ -150,15 +150,15 @@ export default function AreasPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir esta area?")) {
+    if (confirm("Tem certeza que deseja excluir esta área?")) {
       setSubmitError(null);
       setSubmitMessage(null);
 
       try {
         await deleteArea(id);
-        setSubmitMessage("Área inativada com sucesso.");
+        setSubmitMessage("Área excluída com sucesso.");
       } catch (error) {
-        setSubmitError(error instanceof Error ? error.message : "Erro ao inativar área.");
+        setSubmitError(error instanceof Error ? error.message : "Erro ao excluir área.");
       }
     }
   };
@@ -343,7 +343,9 @@ export default function AreasPage() {
                             </TableCell>
                             <TableCell>
                               <TableActions>
-                                <TableActionButton onSelect={() => handleOpenDialog(area)}>
+                                <TableActionButton
+                                  onSelect={() => handleOpenDialog(area)}
+                                >
                                   <span className="flex items-center gap-2">
                                     <Pencil className="h-4 w-4" /> Editar
                                   </span>
@@ -374,17 +376,24 @@ export default function AreasPage() {
                     <Pagination aria-label="Pagination">
                       <PaginationContent>
                         <PaginationItem>
-                          <PaginationPrevious onClick={() => setPage((p) => Math.max(1, p - 1))} />
+                          <PaginationPrevious
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                          />
                         </PaginationItem>
                         {Array.from({ length: pageCount }).map((_, i) => (
                           <PaginationItem key={i}>
-                            <PaginationLink onClick={() => setPage(i + 1)} isActive={page === i + 1}>
+                            <PaginationLink
+                              onClick={() => setPage(i + 1)}
+                              isActive={page === i + 1}
+                            >
                               {i + 1}
                             </PaginationLink>
                           </PaginationItem>
                         ))}
                         <PaginationItem>
-                          <PaginationNext onClick={() => setPage((p) => Math.min(pageCount, p + 1))} />
+                          <PaginationNext
+                            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                          />
                         </PaginationItem>
                       </PaginationContent>
                     </Pagination>
