@@ -17,7 +17,14 @@ import {
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
 import { useData } from "@/contexts/data-context";
 import { useAuth } from "@/contexts/auth-context";
-import { formatCep, formatCpf, formatPhone, toDateInputValue } from "@/lib/formatters";
+import {
+  formatCep,
+  formatCpf,
+  formatPhone,
+  toDateInputValue,
+  onlyDigits,
+} from "@/lib/formatters";
+import { fetchCepData } from "@/services/cep-service";
 import { Paciente, StatusPaciente, Sexo, EstadoCivil, TipoEvento } from "@/types";
 
 interface PacienteFormProps {
@@ -45,6 +52,8 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
   const { usuario } = useAuth();
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     nomeCompleto: paciente?.nomeCompleto || "",
@@ -81,6 +90,45 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
       }));
     } else {
       setFormData((prev) => ({ ...prev, [field]: value }));
+    }
+  };
+
+  const lookupCep = async (rawCep: string) => {
+    setCepError(null);
+    setCepLoading(true);
+
+    try {
+      const clean = rawCep.replace(/\D/g, "");
+
+      // Only trigger when 8 digits
+      if (clean.length !== 8) {
+        setCepLoading(false);
+        return;
+      }
+
+      const data = await fetchCepData(clean);
+
+      if (!data) {
+        setCepError("CEP não encontrado.");
+        setCepLoading(false);
+        return;
+      }
+
+      // Preenche os campos de endereço retornados
+      setFormData((prev) => ({
+        ...prev,
+        endereco: {
+          ...prev.endereco,
+          estado: data.estado || prev.endereco.estado,
+          cidade: data.cidade || prev.endereco.cidade,
+          bairro: data.bairro || prev.endereco.bairro,
+          logradouro: data.logradouro || prev.endereco.logradouro,
+        },
+      }));
+    } catch (error) {
+      setCepError(error instanceof Error ? error.message : "Erro ao buscar CEP.");
+    } finally {
+      setCepLoading(false);
     }
   };
 
@@ -137,6 +185,16 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
           <CardTitle>Dados Pessoais</CardTitle>
         </CardHeader>
         <CardContent>
+          {cepLoading && (
+            <div className="mb-4 text-sm text-slate-600">
+              Buscando endereço por CEP...
+            </div>
+          )}
+
+          {cepError && (
+            <div className="mb-4 text-sm text-destructive-foreground">{cepError}</div>
+          )}
+
           <FieldGroup>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field className="sm:col-span-2">
@@ -264,6 +322,29 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
         <CardContent>
           <FieldGroup>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Field>
+                <FieldLabel htmlFor="cep">CEP</FieldLabel>
+                <Input
+                  id="cep"
+                  value={formData.endereco.cep}
+                  onChange={(e) => {
+                    const formatted = formatCep(e.target.value);
+                    handleChange("endereco.cep", formatted);
+
+                    const clean = onlyDigits(formatted);
+                    if (clean.length === 8) {
+                      void lookupCep(clean);
+                    } else {
+                      // limpa erro se deixou de ter 8 dígitos
+                      setCepError(null);
+                    }
+                  }}
+                  inputMode="numeric"
+                  maxLength={9}
+                  placeholder="00000-000"
+                />
+              </Field>
+
               <Field className="sm:col-span-2">
                 <FieldLabel htmlFor="logradouro">Logradouro</FieldLabel>
                 <Input
@@ -314,22 +395,13 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
                 <Input
                   id="estado"
                   value={formData.endereco.estado}
-                  onChange={(e) => handleChange("endereco.estado", e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value.toUpperCase().slice(0, 2);
+                    // Ao alterar o estado manualmente, limpa a cidade
+                    handleChange("endereco.estado", v);
+                    handleChange("endereco.cidade", "");
+                  }}
                   maxLength={2}
-                />
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="cep">CEP</FieldLabel>
-                <Input
-                  id="cep"
-                  value={formData.endereco.cep}
-                  onChange={(e) =>
-                    handleChange("endereco.cep", formatCep(e.target.value))
-                  }
-                  inputMode="numeric"
-                  maxLength={9}
-                  placeholder="00000-000"
                 />
               </Field>
             </div>
