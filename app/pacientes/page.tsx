@@ -26,11 +26,16 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Empty } from "@/components/ui/empty";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
-import { useData } from "@/contexts/data-context";
+import { usePacientes } from "@/hooks/use-pacientes";
 import { StatusPaciente } from "@/types";
 
 export default function PacientesPage() {
-  const { pacientes, pacientesLoading, pacientesError, refreshPacientes } = useData();
+  const {
+    pacientes,
+    isLoading: pacientesLoading,
+    error: pacientesError,
+    refetch: refreshPacientes,
+  } = usePacientes();
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
 

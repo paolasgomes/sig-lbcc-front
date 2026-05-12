@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { QueryProvider } from "@/components/providers/query-provider";
 import { AuthProvider } from "@/contexts/auth-context";
 import { DataProvider } from "@/contexts/data-context";
 import "../styles/globals.css";
@@ -30,9 +31,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="bg-background">
       <body className="font-sans antialiased">
-        <AuthProvider>
-          <DataProvider>{children}</DataProvider>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <DataProvider>{children}</DataProvider>
+          </AuthProvider>
+        </QueryProvider>
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>
