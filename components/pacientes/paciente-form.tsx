@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
 import { useData } from "@/contexts/data-context";
 import { useAuth } from "@/contexts/auth-context";
@@ -26,6 +35,7 @@ import {
 } from "@/lib/formatters";
 import { fetchCepData } from "@/services/cep-service";
 import { Paciente, StatusPaciente, Sexo, EstadoCivil, TipoEvento } from "@/types";
+import { Check, ChevronsUpDown } from "lucide-react";
 
 interface PacienteFormProps {
   paciente?: Paciente;
@@ -54,6 +64,20 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
+
+  const [estadoOptions, setEstadoOptions] = useState<
+    Array<{ id: number; value: string; label: string }>
+  >([]);
+  const [estadosLoading, setEstadosLoading] = useState(false);
+  const [estadoQuery, setEstadoQuery] = useState("");
+  const [estadoOpen, setEstadoOpen] = useState(false);
+
+  const [cidadeOptionsMap, setCidadeOptionsMap] = useState<
+    Record<string, Array<{ value: string; label: string }>>
+  >({});
+  const [cidadesLoading, setCidadesLoading] = useState(false);
+  const [cidadeQuery, setCidadeQuery] = useState("");
+  const [cidadeOpen, setCidadeOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     nomeCompleto: paciente?.nomeCompleto || "",
@@ -125,12 +149,86 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
           logradouro: data.logradouro || prev.endereco.logradouro,
         },
       }));
+
+      // Se o CEP trouxe um estado, prefetch cidades para esse estado
+      if (data.estado) {
+        void (async () => {
+          try {
+            const estados =
+              estadoOptions.length === 0 ? await fetchEstados() : estadoOptions;
+            const found = estados.find((s: any) => s.value === data.estado);
+            if (found) await fetchCidadesForEstado(found.id, found.value);
+          } catch {
+            // ignore
+          }
+        })();
+      }
     } catch (error) {
       setCepError(error instanceof Error ? error.message : "Erro ao buscar CEP.");
     } finally {
       setCepLoading(false);
     }
   };
+
+  // Busca de estados (IBGE) e cidades por estado (IBGE)
+  const fetchEstados = async () => {
+    if (estadoOptions.length > 0) return estadoOptions;
+    setEstadosLoading(true);
+    try {
+      const res = await fetch(
+        "https://servicodados.ibge.gov.br/api/v1/localidades/estados",
+      );
+      if (!res.ok) throw new Error("Erro ao buscar estados");
+      const data = await res.json();
+      const mapped = data
+        .map((s: any) => ({ id: s.id, value: s.sigla, label: `${s.nome} (${s.sigla})` }))
+        .sort((a: any, b: any) => a.label.localeCompare(b.label));
+      setEstadoOptions(mapped);
+      return mapped;
+    } catch (err) {
+      // falha silenciosa
+      return [];
+    } finally {
+      setEstadosLoading(false);
+    }
+  };
+
+  const fetchCidadesForEstado = async (estadoId: number, uf: string) => {
+    if (cidadeOptionsMap[uf]) return;
+    setCidadesLoading(true);
+    try {
+      const res = await fetch(
+        `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${estadoId}/municipios`,
+      );
+      if (!res.ok) throw new Error("Erro ao buscar cidades");
+      const data = await res.json();
+      const mapped = data.map((c: any) => ({ value: c.nome, label: c.nome }));
+      setCidadeOptionsMap((prev) => ({ ...prev, [uf]: mapped }));
+    } catch (err) {
+      // ignore
+    } finally {
+      setCidadesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!formData.endereco.estado) return;
+
+    setCidadeQuery("");
+
+    void (async () => {
+      try {
+        let found = estadoOptions.find((s) => s.value === formData.endereco.estado);
+        if (!found) {
+          const estados = await fetchEstados();
+          found = estados.find((s: any) => s.value === formData.endereco.estado);
+        }
+        if (found) await fetchCidadesForEstado(found.id, found.value);
+      } catch {
+        // ignore
+      }
+    })();
+  }, [formData.endereco.estado]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,6 +274,19 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
       setLoading(false);
     }
   };
+
+  const filteredEstadoOptions = estadoOptions.filter((s) => {
+    const q = estadoQuery.trim().toLowerCase();
+    if (!q) return true;
+    return s.label.toLowerCase().includes(q) || s.value.toLowerCase().includes(q);
+  });
+
+  const cidadesForEstado = cidadeOptionsMap[formData.endereco.estado] || [];
+  const filteredCidadeOptions = cidadesForEstado.filter((c) => {
+    const q = cidadeQuery.trim().toLowerCase();
+    if (!q) return true;
+    return c.label.toLowerCase().includes(q);
+  });
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -382,27 +493,170 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="cidade">Cidade</FieldLabel>
-                <Input
-                  id="cidade"
-                  value={formData.endereco.cidade}
-                  onChange={(e) => handleChange("endereco.cidade", e.target.value)}
-                />
+                <FieldLabel htmlFor="estado">Estado</FieldLabel>
+                <Popover open={estadoOpen} onOpenChange={setEstadoOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="estado"
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={estadoOpen}
+                      onClick={() => void fetchEstados()}
+                      className="w-full justify-between"
+                    >
+                      <span className="truncate">
+                        {estadoOptions.find((s) => s.value === formData.endereco.estado)
+                          ?.label ||
+                          formData.endereco.estado ||
+                          "Selecione um estado"}
+                      </span>
+                      <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[--radix-popover-trigger-width] p-0"
+                    align="start"
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder="Buscar estado por nome ou UF"
+                        value={estadoQuery}
+                        onValueChange={setEstadoQuery}
+                      />
+                      <CommandList>
+                        {estadosLoading ? (
+                          <div className="p-3 text-sm text-muted-foreground">
+                            Carregando estados...
+                          </div>
+                        ) : (
+                          <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
+                        )}
+                        {!estadosLoading && (
+                          <CommandGroup>
+                            {filteredEstadoOptions.map((opt) => (
+                              <CommandItem
+                                key={opt.value}
+                                value={opt.label}
+                                onSelect={async () => {
+                                  handleChange("endereco.estado", opt.value);
+                                  // Ao alterar o estado, limpa a cidade
+                                  handleChange("endereco.cidade", "");
+                                  setCidadeQuery("");
+                                  setEstadoOpen(false);
+                                  let found = estadoOptions.find(
+                                    (s) => s.value === opt.value,
+                                  );
+                                  if (!found) {
+                                    const estados = await fetchEstados();
+                                    found = estados.find(
+                                      (s: any) => s.value === opt.value,
+                                    );
+                                  }
+                                  if (found)
+                                    await fetchCidadesForEstado(found.id, found.value);
+                                }}
+                              >
+                                <Check
+                                  className={
+                                    formData.endereco.estado === opt.value
+                                      ? "mr-2 size-4 opacity-100"
+                                      : "mr-2 size-4 opacity-0"
+                                  }
+                                />
+                                {opt.label}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="estado">Estado</FieldLabel>
-                <Input
-                  id="estado"
-                  value={formData.endereco.estado}
-                  onChange={(e) => {
-                    const v = e.target.value.toUpperCase().slice(0, 2);
-                    // Ao alterar o estado manualmente, limpa a cidade
-                    handleChange("endereco.estado", v);
-                    handleChange("endereco.cidade", "");
-                  }}
-                  maxLength={2}
-                />
+                <FieldLabel htmlFor="cidade">Cidade</FieldLabel>
+                <Popover open={cidadeOpen} onOpenChange={setCidadeOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="cidade"
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={cidadeOpen}
+                      disabled={!formData.endereco.estado}
+                      onClick={() => {
+                        if (!formData.endereco.estado) return;
+                        const estadoSelecionado = estadoOptions.find(
+                          (s) => s.value === formData.endereco.estado,
+                        );
+                        if (estadoSelecionado) {
+                          void fetchCidadesForEstado(
+                            estadoSelecionado.id,
+                            estadoSelecionado.value,
+                          );
+                        }
+                      }}
+                      className="w-full justify-between"
+                    >
+                      <span className="truncate">
+                        {formData.endereco.cidade || "Selecione uma cidade"}
+                      </span>
+                      <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[--radix-popover-trigger-width] p-0"
+                    align="start"
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder={
+                          formData.endereco.estado
+                            ? "Buscar cidade..."
+                            : "Selecione um estado primeiro"
+                        }
+                        value={cidadeQuery}
+                        onValueChange={setCidadeQuery}
+                        disabled={!formData.endereco.estado}
+                      />
+                      <CommandList>
+                        {cidadesLoading ? (
+                          <div className="p-3 text-sm text-muted-foreground">
+                            Carregando cidades...
+                          </div>
+                        ) : (
+                          <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
+                        )}
+                        {!cidadesLoading && (
+                          <CommandGroup>
+                            {filteredCidadeOptions.map((opt) => (
+                              <CommandItem
+                                key={opt.value}
+                                value={opt.label}
+                                onSelect={() => {
+                                  handleChange("endereco.cidade", opt.value);
+                                  setCidadeOpen(false);
+                                  setCidadeQuery("");
+                                }}
+                              >
+                                <Check
+                                  className={
+                                    formData.endereco.cidade === opt.value
+                                      ? "mr-2 size-4 opacity-100"
+                                      : "mr-2 size-4 opacity-0"
+                                  }
+                                />
+                                {opt.label}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </Field>
             </div>
           </FieldGroup>
