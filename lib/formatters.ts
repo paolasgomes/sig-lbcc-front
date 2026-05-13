@@ -1,4 +1,6 @@
-export function onlyDigits(value: string, maxLength?: number) {
+export function onlyDigits(value?: string | null, maxLength?: number) {
+  if (!value) return "";
+
   const digits = value.replace(/\D/g, "");
 
   return typeof maxLength === "number" ? digits.slice(0, maxLength) : digits;

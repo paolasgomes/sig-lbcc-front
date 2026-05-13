@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/command";
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
 import { useData } from "@/contexts/data-context";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { criarPaciente, atualizarPaciente } from "@/services/pacientes-service";
 import { useAuth } from "@/contexts/auth-context";
 import {
   formatCep,
@@ -58,7 +60,23 @@ const estadoCivilOptions = [
 
 export function PacienteForm({ paciente, modo }: PacienteFormProps) {
   const router = useRouter();
-  const { addPaciente, updatePaciente, addHistorico } = useData();
+  const { addHistorico } = useData();
+
+  const criarPacienteMutation = useMutation({
+    mutationFn: criarPaciente,
+    onSuccess: (id) => {
+      router.replace(`/pacientes/${id}`);
+    },
+  });
+
+  const atualizarPacienteMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: any }) =>
+      atualizarPaciente(id, payload),
+    onSuccess: (data) => {
+      const { id } = data;
+      router.replace(`/pacientes/${id}`);
+    },
+  });
   const { usuario } = useAuth();
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -238,24 +256,54 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
     try {
       const agora = new Date().toISOString();
 
+      // Constrói payload para a API a partir do form
+      const payload = {
+        nome: formData.nomeCompleto,
+        cpf: onlyDigits(formData.cpf || "", 11),
+        rg: formData.rg || undefined,
+        data_nascimento: formData.dataNascimento || undefined,
+        sexo:
+          formData.sexo === Sexo.MASCULINO
+            ? "M"
+            : formData.sexo === Sexo.FEMININO
+              ? "F"
+              : "O",
+        estado_civil: formData.estadoCivil || undefined,
+        profissao: formData.profissao || undefined,
+        telefone: onlyDigits(formData.telefone || "", 11) || undefined,
+        celular: onlyDigits(formData.telefone || "", 11) || undefined,
+        endereco: formData.endereco.logradouro || undefined,
+        numero: formData.endereco.numero || undefined,
+        complemento: formData.endereco.complemento || undefined,
+        bairro: formData.endereco.bairro || undefined,
+        cidade: formData.endereco.cidade || undefined,
+        estado: formData.endereco.estado || undefined,
+        cep: onlyDigits(formData.endereco.cep || "", 8) || undefined,
+        diagnostico: formData.diagnosticoOncologico || undefined,
+        hospital_tratamento: formData.setor || undefined,
+        medico_responsavel: formData.medicoResponsavel || undefined,
+        data_inicio_tratamento: formData.dataInicioTratamento || undefined,
+        status: "ativo",
+        id_origem: formData.numeroSUS || undefined,
+      } as any;
+
       if (modo === "criar") {
-        const novoPaciente = await addPaciente({
-          ...formData,
-          status: StatusPaciente.ATIVO,
-        });
+        const novoApi = await criarPacienteMutation.mutateAsync(payload);
+
+        const novoId = (novoApi as any)?.id ?? (novoApi as any)?.id_origem;
 
         addHistorico({
           id: `hist-${Date.now()}`,
-          pacienteId: novoPaciente.id,
+          pacienteId: novoId,
           dataHora: agora,
           tipoEvento: TipoEvento.CADASTRO,
           descricao: "Paciente cadastrado no sistema",
           usuarioResponsavel: usuario?.nome || "Sistema",
         });
 
-        router.push(`/pacientes/${novoPaciente.id}`);
+        router.push(`/pacientes/${novoId}`);
       } else if (paciente) {
-        await updatePaciente(paciente.id, formData);
+        await atualizarPacienteMutation.mutateAsync({ id: paciente.id, payload });
 
         addHistorico({
           id: `hist-${Date.now()}`,
