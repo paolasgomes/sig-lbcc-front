@@ -1,10 +1,16 @@
-'use client'
+"use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { FileText, Plus, Upload } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FileText, Plus, Upload } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -13,11 +19,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { Empty } from '@/components/ui/empty'
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import { Spinner } from '@/components/ui/spinner'
+} from "@/components/ui/dialog";
+import { Empty } from "@/components/ui/empty";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
   TableBody,
@@ -25,211 +31,209 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { useToast } from '@/hooks/use-toast'
-import { useAuth } from '@/contexts/auth-context'
-import { useData } from '@/contexts/data-context'
-import { listarDocumentosPaciente, uploadDocumento } from '@/services/pacientes-service'
-import { TipoEvento, type Documento } from '@/types'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+} from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth-context";
+import { useData } from "@/contexts/data-context";
+import { listarDocumentosPaciente, uploadDocumento } from "@/services/pacientes-service";
+import { TipoEvento, type Documento } from "@/types";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 
 interface PacienteDocumentosProps {
-  pacienteId: string
+  pacienteId: string;
 }
 
-const MAX_FILE_SIZE = 4 * 1024 * 1024
-const ACCEPTED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.doc', '.docx']
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
+const ACCEPTED_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx"];
 const ACCEPTED_MIME_TYPES = [
-  'application/pdf',
-  'image/png',
-  'image/jpeg',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-]
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
 const ACCEPT_ATTRIBUTE =
-  '.pdf,.png,.jpg,.jpeg,.doc,.docx,application/pdf,image/png,image/jpeg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ".pdf,.png,.jpg,.jpeg,.doc,.docx,application/pdf,image/png,image/jpeg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 function formatFileSize(sizeInBytes: number) {
   if (sizeInBytes < 1024) {
-    return `${sizeInBytes} B`
+    return `${sizeInBytes} B`;
   }
 
   if (sizeInBytes < 1024 * 1024) {
-    return `${(sizeInBytes / 1024).toFixed(0)} KB`
+    return `${(sizeInBytes / 1024).toFixed(0)} KB`;
   }
 
-  return `${(sizeInBytes / (1024 * 1024)).toFixed(1)} MB`
+  return `${(sizeInBytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function PacienteDocumentos({ pacienteId }: PacienteDocumentosProps) {
-  const { addHistorico } = useData()
-  const { usuario } = useAuth()
-  const { toast } = useToast()
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [documentos, setDocumentos] = useState<Documento[]>([])
-  const [isFetching, setIsFetching] = useState(true)
-  const [fetchError, setFetchError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [tipoDocumento, setTipoDocumento] = useState('')
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [documentos, setDocumentos] = useState<Documento[]>([]);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [tipoDocumento, setTipoDocumento] = useState("");
 
   const formatDate = (dateStr: string) => {
     try {
-      return format(new Date(dateStr), 'dd/MM/yyyy', { locale: ptBR })
+      return format(new Date(dateStr), "dd/MM/yyyy", { locale: ptBR });
     } catch {
-      return dateStr
+      return dateStr;
     }
-  }
+  };
 
   const clearFileInput = () => {
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+      fileInputRef.current.value = "";
     }
-  }
+  };
 
   const resetForm = useCallback(() => {
-    setSelectedFile(null)
-    setTipoDocumento('')
-    clearFileInput()
-  }, [])
+    setSelectedFile(null);
+    setTipoDocumento("");
+    clearFileInput();
+  }, []);
 
-  const carregarDocumentos = useCallback(async () => {
-    setIsFetching(true)
-    setFetchError(null)
-
-    try {
-      const documentosCarregados = await listarDocumentosPaciente(pacienteId)
-      setDocumentos(documentosCarregados)
-    } catch (error) {
-      setFetchError(
-        error instanceof Error ? error.message : 'Erro ao carregar documentos do paciente.',
-      )
-    } finally {
-      setIsFetching(false)
-    }
-  }, [pacienteId])
+  const {
+    data: documentosCarregados,
+    isLoading: isFetchingDocuments,
+    isSuccess,
+    isError,
+    error: fetchDocumentsError,
+  } = useQuery({
+    queryKey: ["documentos", pacienteId],
+    queryFn: () => listarDocumentosPaciente(pacienteId),
+  });
 
   useEffect(() => {
-    void carregarDocumentos()
-  }, [carregarDocumentos])
+    if (isSuccess && documentosCarregados) {
+      setDocumentos(documentosCarregados);
+      setFetchError(null);
+    }
+  }, [isSuccess]);
+
+  useEffect(() => {
+    if (isError) {
+      setFetchError(`Erro ao carregar documentos do paciente. ${fetchDocumentsError}`);
+    }
+  }, [isError]);
 
   const validarArquivo = (file: File) => {
     if (file.size > MAX_FILE_SIZE) {
       toast({
-        variant: 'destructive',
-        title: 'Arquivo muito grande',
-        description: 'O arquivo deve ter no máximo 4 MB.',
-      })
+        variant: "destructive",
+        title: "Arquivo muito grande",
+        description: "O arquivo deve ter no máximo 4 MB.",
+      });
 
-      return false
+      return false;
     }
 
-    const nomeArquivo = file.name.toLowerCase()
+    const nomeArquivo = file.name.toLowerCase();
     const tipoAceito =
       ACCEPTED_MIME_TYPES.includes(file.type) ||
-      ACCEPTED_EXTENSIONS.some((extensao) => nomeArquivo.endsWith(extensao))
+      ACCEPTED_EXTENSIONS.some((extensao) => nomeArquivo.endsWith(extensao));
 
     if (!tipoAceito) {
       toast({
-        variant: 'destructive',
-        title: 'Tipo de arquivo inválido',
-        description: 'Envie um PDF, imagem ou documento Word compatível.',
-      })
+        variant: "destructive",
+        title: "Tipo de arquivo inválido",
+        description: "Envie um PDF, imagem ou documento Word compatível.",
+      });
 
-      return false
+      return false;
     }
 
-    return true
-  }
+    return true;
+  };
 
   const handleDialogOpenChange = (open: boolean) => {
-    setDialogOpen(open)
+    setDialogOpen(open);
 
     if (!open) {
-      resetForm()
+      resetForm();
     }
-  }
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+    const file = event.target.files?.[0];
 
     if (!file) {
-      setSelectedFile(null)
-      return
+      setSelectedFile(null);
+      return;
     }
 
     if (!validarArquivo(file)) {
-      setSelectedFile(null)
-      event.target.value = ''
-      return
+      setSelectedFile(null);
+      event.target.value = "";
+      return;
     }
 
-    setSelectedFile(file)
-  }
+    setSelectedFile(file);
+  };
 
   const handleCancelarUpload = () => {
-    resetForm()
-    setDialogOpen(false)
-  }
+    resetForm();
+    setDialogOpen(false);
+  };
+
+  const { mutate: uploadDocumentoMutation, isPending: isUploading } = useMutation({
+    mutationFn: uploadDocumento,
+    onSuccess: async (data) => {
+      const documentoTemporario: Documento = {
+        id: data.id,
+        pacienteId,
+        nomeArquivo: selectedFile?.name ?? "",
+        tipo: tipoDocumento.trim(),
+        dataUpload: new Date().toISOString(),
+        tamanho: formatFileSize(selectedFile?.size || 0),
+        url: data.url,
+      };
+
+      setDocumentos((current) => [documentoTemporario, ...current]);
+      queryClient.invalidateQueries({ queryKey: ["documentos", pacienteId] });
+      resetForm();
+
+      setDialogOpen(false);
+
+      toast({
+        title: "Documento anexado",
+        description: `${selectedFile?.name} foi enviado com sucesso.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Erro ao anexar documento",
+        description:
+          error instanceof Error ? error.message : "Não foi possível enviar o documento.",
+      });
+    },
+  });
 
   const handleUploadDocumento = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+    event.preventDefault();
 
-    if (!selectedFile || !tipoDocumento.trim() || isLoading) {
-      return
+    if (!selectedFile || !tipoDocumento.trim() || isUploading) {
+      return;
     }
 
     if (!validarArquivo(selectedFile)) {
-      return
+      return;
     }
 
-    setIsLoading(true)
-
-    try {
-      await uploadDocumento(pacienteId, selectedFile, tipoDocumento.trim())
-
-      const documentoTemporario: Documento = {
-        id: `doc-${Date.now()}`,
-        pacienteId,
-        nomeArquivo: selectedFile.name,
-        tipo: tipoDocumento.trim(),
-        dataUpload: new Date().toISOString(),
-        tamanho: formatFileSize(selectedFile.size),
-      }
-
-      setDocumentos((current) => [documentoTemporario, ...current])
-
-      addHistorico({
-        id: `hist-${Date.now()}`,
-        pacienteId,
-        dataHora: new Date().toISOString(),
-        tipoEvento: TipoEvento.DOCUMENTO,
-        descricao: `Documento "${selectedFile.name}" anexado`,
-        usuarioResponsavel: usuario?.nome || 'Sistema',
-      })
-
-      await carregarDocumentos()
-
-      toast({
-        title: 'Documento anexado',
-        description: `${selectedFile.name} foi enviado com sucesso.`,
-      })
-
-      setDialogOpen(false)
-      resetForm()
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao anexar documento',
-        description:
-          error instanceof Error ? error.message : 'Não foi possível enviar o documento.',
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    uploadDocumentoMutation({
+      pacienteId,
+      file: selectedFile,
+      tipo: tipoDocumento.trim(),
+    });
+  };
 
   return (
     <Card>
@@ -265,7 +269,7 @@ export function PacienteDocumentos({ pacienteId }: PacienteDocumentosProps) {
                     type="file"
                     accept={ACCEPT_ATTRIBUTE}
                     onChange={handleFileChange}
-                    disabled={isLoading}
+                    disabled={isUploading}
                   />
                   <p className="mt-1 text-sm text-muted-foreground">
                     PDF, imagem ou documento Word, até 4 MB.
@@ -284,7 +288,7 @@ export function PacienteDocumentos({ pacienteId }: PacienteDocumentosProps) {
                     value={tipoDocumento}
                     onChange={(event) => setTipoDocumento(event.target.value)}
                     placeholder="Ex: Laudo Médico"
-                    disabled={isLoading}
+                    disabled={isUploading}
                   />
                 </Field>
               </FieldGroup>
@@ -293,8 +297,15 @@ export function PacienteDocumentos({ pacienteId }: PacienteDocumentosProps) {
                 <Button variant="outline" type="button" onClick={handleCancelarUpload}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={!selectedFile || !tipoDocumento.trim() || isLoading}>
-                  {isLoading ? <Spinner className="mr-2 h-4 w-4" /> : <Upload className="mr-2 h-4 w-4" />}
+                <Button
+                  type="submit"
+                  disabled={!selectedFile || !tipoDocumento.trim() || isUploading}
+                >
+                  {isUploading ? (
+                    <Spinner className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Upload className="mr-2 h-4 w-4" />
+                  )}
                   Anexar
                 </Button>
               </DialogFooter>
@@ -311,7 +322,7 @@ export function PacienteDocumentos({ pacienteId }: PacienteDocumentosProps) {
           </Alert>
         )}
 
-        {isFetching && documentos.length === 0 ? (
+        {isFetchingDocuments && documentos.length === 0 ? (
           <div className="flex min-h-40 items-center justify-center gap-3 text-muted-foreground">
             <Spinner className="h-5 w-5" />
             <span>Carregando documentos...</span>
@@ -335,10 +346,22 @@ export function PacienteDocumentos({ pacienteId }: PacienteDocumentosProps) {
               {documentos.map((doc) => (
                 <TableRow key={doc.id}>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{doc.nomeArquivo}</span>
-                    </div>
+                    {doc.url ? (
+                      <Link
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-primary hover:underline"
+                      >
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{doc.nomeArquivo}</span>
+                      </Link>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{doc.nomeArquivo}</span>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>{doc.tipo}</TableCell>
                   <TableCell>{formatDate(doc.dataUpload)}</TableCell>
@@ -350,5 +373,5 @@ export function PacienteDocumentos({ pacienteId }: PacienteDocumentosProps) {
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -271,6 +271,7 @@ export interface Documento {
   tipo: string;
   dataUpload: string;
   tamanho: string;
+  url: string;
 }
 
 // Types para formulários
