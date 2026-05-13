@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Plus, Search, Eye, Edit, Filter } from "lucide-react";
+import { Plus, Search, Eye, Edit, Filter, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/table";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import PageHeader from "@/components/layout/page-header";
-import TableActions, { TableActionLink } from "@/components/ui/table-actions";
+import TableActions, { TableActionButton, TableActionLink } from "@/components/ui/table-actions";
 import { StatusBadge } from "@/components/shared/status-badge";
 import {
   Pagination,
@@ -38,7 +38,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { TableLoading } from "@/components/ui/table-state";
 import { usePacientes } from "@/hooks/use-pacientes";
-import { StatusPaciente } from "@/types";
+import { StatusPaciente, type Paciente } from "@/types";
+import { ExcluirPaciente } from "@/components/pacientes/excluir-paciente";
 
 export default function PacientesPage() {
   const {
@@ -49,6 +50,7 @@ export default function PacientesPage() {
   } = usePacientes();
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
+  const [pacienteParaExcluir, setPacienteParaExcluir] = useState<Paciente | null>(null);
 
   const pacientesFiltrados = useMemo(() => {
     return pacientes.filter((paciente) => {
@@ -71,6 +73,10 @@ export default function PacientesPage() {
   const startIndex = (page - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const displayedPacientes = pacientesFiltrados.slice(startIndex, endIndex);
+
+  const handleExcluir = (paciente: Paciente) => {
+    setPacienteParaExcluir(paciente);
+  };
 
   return (
     <DashboardLayout>
@@ -190,6 +196,14 @@ export default function PacientesPage() {
                                 <Edit className="h-4 w-4" /> Editar
                               </span>
                             </TableActionLink>
+                            <TableActionButton
+                              variant="destructive"
+                              onSelect={() => handleExcluir(paciente)}
+                            >
+                              <span className="flex items-center gap-2">
+                                <AlertCircle className="h-4 w-4" /> Excluir
+                              </span>
+                            </TableActionButton>
                           </TableActions>
                         </div>
                       </TableCell>
@@ -200,6 +214,19 @@ export default function PacientesPage() {
             )}
           </CardContent>
         </Card>
+
+        {pacienteParaExcluir && (
+          <ExcluirPaciente
+            pacienteId={pacienteParaExcluir.id}
+            pacienteNome={pacienteParaExcluir.nomeCompleto}
+            open={Boolean(pacienteParaExcluir)}
+            onOpenChange={(open) => {
+              if (!open) {
+                setPacienteParaExcluir(null);
+              }
+            }}
+          />
+        )}
 
         {!pacientesLoading && !pacientesError && (
           <div className="flex items-center justify-between">

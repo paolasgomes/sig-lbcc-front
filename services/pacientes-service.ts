@@ -112,6 +112,7 @@ function mapApiDocumentoToDocumento(
       typeof documento.tamanho === "number"
         ? formatFileSize(documento.tamanho)
         : documento.tamanho || (fallbackFile ? formatFileSize(fallbackFile.size) : ""),
+    url: documento.url || "",
   };
 }
 
@@ -192,13 +193,23 @@ export async function inativarPaciente(id: string) {
   }
 }
 
-export async function uploadDocumento(pacienteId: string, file: File, tipo: string) {
+export async function uploadDocumento({
+  pacienteId,
+  file,
+  tipo,
+}: {
+  pacienteId: string;
+  file: File;
+  tipo: string;
+}) {
   try {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("tipo", tipo);
 
-    await api.post(`/pacientes/${pacienteId}/documentos`, formData);
+    const response = await api.post(`/pacientes/${pacienteId}/documentos`, formData);
+
+    return response.data;
   } catch (error) {
     throw new Error(getErrorMessage(error, "Erro ao enviar documento."));
   }
