@@ -22,7 +22,7 @@ export function useProdutos() {
 
   async function desativarProduto(id: string) {
     await desativarProdutoApi(id);
-    await queryClient.invalidateQueries(["produtos"]);
+    await queryClient.invalidateQueries({ queryKey: ["produtos"] });
   }
 
   return {

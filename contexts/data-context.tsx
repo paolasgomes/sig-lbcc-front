@@ -487,6 +487,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const addUsuario = useCallback(async (dados: UsuarioCreateInput) => {
     const usuarioCriado = await criarUsuario(dados);
     setUsuarios((prev) => [...prev, usuarioCriado]);
+    await queryClient.invalidateQueries({ queryKey: ["usuarios"] });
 
     return usuarioCriado;
   }, []);
@@ -511,6 +512,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       };
 
       setUsuarios((prev) => prev.map((u) => (u.id === id ? usuarioCompleto : u)));
+      try {
+        await queryClient.invalidateQueries({ queryKey: ["usuarios"] });
+      } catch {
+        // ignore
+      }
 
       return usuarioCompleto;
     },
@@ -520,6 +526,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const deleteUsuario = useCallback(async (id: string) => {
     await excluirUsuario(id);
     setUsuarios((prev) => prev.filter((u) => u.id !== id));
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["usuarios"] });
+    } catch {
+      // ignore
+    }
   }, []);
 
   // Estatísticas

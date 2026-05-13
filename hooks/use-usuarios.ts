@@ -18,7 +18,7 @@ export function useUsuarios() {
 
   async function deleteUsuario(id: string) {
     await excluirUsuario(id);
-    await queryClient.invalidateQueries(["usuarios"]);
+    await queryClient.invalidateQueries({ queryKey: ["usuarios"] });
   }
 
   return {
