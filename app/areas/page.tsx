@@ -61,6 +61,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { AreaAtendimento } from "@/types";
+import { StatusBadge } from "@/components/shared/status-badge";
 
 export default function AreasPage() {
   const {
@@ -337,9 +338,7 @@ export default function AreasPage() {
                               {area.descricao}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={area.ativa ? "default" : "secondary"}>
-                                {area.ativa ? "Ativa" : "Inativa"}
-                              </Badge>
+                              <StatusBadge status={area.ativa ? "ativo" : "inativo"} />
                             </TableCell>
                             <TableCell>
                               <TableActions>
