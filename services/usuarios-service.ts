@@ -53,3 +53,11 @@ export async function excluirUsuario(id: string) {
     throw new Error(getErrorMessage(error, "Erro ao excluir usuário."));
   }
 }
+
+export async function inativarUsuario(id: string) {
+  try {
+    await api.patch(`usuarios/${id}/status`);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Erro ao inativar usuário."));
+  }
+}

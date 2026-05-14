@@ -18,7 +18,12 @@ type TableActionsProps = {
   trigger?: React.ReactNode;
 };
 
-export function TableActions({ children, align = "end", trigger }: TableActionsProps) {
+export function TableActions({
+  children,
+  align = "end",
+  trigger,
+  disabled,
+}: TableActionsProps) {
   return (
     <DropdownMenu>
       {trigger ? (
@@ -56,14 +61,20 @@ export function TableActionButton({
   children,
   variant = "default",
   inset,
+  disabled = false,
+  title,
 }: {
   onSelect?: () => void;
   children: React.ReactNode;
   variant?: "default" | "destructive";
   inset?: boolean;
+  disabled?: boolean;
+  title?: string;
 }) {
   return (
     <DropdownMenuItem
+      disabled={disabled}
+      title={title}
       onSelect={(e) => {
         e.preventDefault();
         if (onSelect) onSelect();
