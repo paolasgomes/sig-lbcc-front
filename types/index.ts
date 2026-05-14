@@ -10,6 +10,7 @@ export interface UsuarioDTO {
   nome: string;
   email: string;
   perfil: PerfilUsuario;
+  usuarioTemVinculos?: boolean;
   ativo: boolean;
   created_at: string;
   updated_at: string;

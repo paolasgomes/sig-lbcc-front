@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Plus, Eye, Edit, Filter, Search, Trash2 } from "lucide-react";
+import { Plus, Eye, Edit, Filter, Search, Trash2, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/pagination";
 import { useUsuarios } from "@/hooks/use-usuarios";
 import { PerfilUsuario } from "@/types";
+import { useMutation } from "@tanstack/react-query";
 
 const PERFIL_LABEL: Record<PerfilUsuario, string> = {
   [PerfilUsuario.OPERADOR]: "Operador",
@@ -55,6 +56,7 @@ export default function UsuariosPage() {
     error: usuariosError,
     refetch: refreshUsuarios,
     deleteUsuario,
+    inactiveUsuario,
   } = useUsuarios();
   const [busca, setBusca] = useState("");
   const [filtroPerfil, setFiltroPerfil] = useState<string>("todos");
@@ -104,6 +106,27 @@ export default function UsuariosPage() {
       await deleteUsuario(usuarioId);
     } catch (error) {
       setDeleteError(error instanceof Error ? error.message : "Erro ao excluir usuário.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleInactive = async (usuarioId: string, usuarioNome: string) => {
+    const confirmar = window.confirm(`Inativar o usuário ${usuarioNome}?`);
+
+    if (!confirmar) {
+      return;
+    }
+
+    setDeleteError(null);
+    setDeletingId(usuarioId);
+
+    try {
+      await inactiveUsuario(usuarioId);
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error ? error.message : "Erro ao inativar usuário.",
+      );
     } finally {
       setDeletingId(null);
     }
@@ -208,50 +231,72 @@ export default function UsuariosPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayedUsuarios.map((usuario) => (
-                    <TableRow key={usuario.id}>
-                      <TableCell className="font-medium">{usuario.nome}</TableCell>
-                      <TableCell>{usuario.email}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{PERFIL_LABEL[usuario.perfil]}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={
-                            usuario.ativo
-                              ? "text-success font-medium"
-                              : "text-muted-foreground font-medium"
-                          }
-                        >
-                          {usuario.ativo ? "Ativo" : "Inativo"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end">
-                          <TableActions>
-                            <TableActionLink href={`/usuarios/${usuario.id}`}>
-                              <span className="flex items-center gap-2">
-                                <Eye className="h-4 w-4" /> Visualizar
-                              </span>
-                            </TableActionLink>
-                            <TableActionLink href={`/usuarios/${usuario.id}/editar`}>
-                              <span className="flex items-center gap-2">
-                                <Edit className="h-4 w-4" /> Editar
-                              </span>
-                            </TableActionLink>
-                            <TableActionButton
-                              variant="destructive"
-                              onSelect={() => void handleDelete(usuario.id, usuario.nome)}
-                            >
-                              <span className="flex items-center gap-2">
-                                <Trash2 className="h-4 w-4" /> Excluir
-                              </span>
-                            </TableActionButton>
-                          </TableActions>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {displayedUsuarios.map((usuario) => {
+                    const hasVinculos = usuario.usuarioTemVinculos ?? false;
+
+                    return (
+                      <TableRow key={usuario.id}>
+                        <TableCell className="font-medium">{usuario.nome}</TableCell>
+                        <TableCell>{usuario.email}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{PERFIL_LABEL[usuario.perfil]}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={
+                              usuario.ativo
+                                ? "text-success font-medium"
+                                : "text-muted-foreground font-medium"
+                            }
+                          >
+                            {usuario.ativo ? "Ativo" : "Inativo"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end">
+                            <TableActions>
+                              <TableActionLink href={`/usuarios/${usuario.id}`}>
+                                <span className="flex items-center gap-2">
+                                  <Eye className="h-4 w-4" /> Visualizar
+                                </span>
+                              </TableActionLink>
+                              <TableActionLink href={`/usuarios/${usuario.id}/editar`}>
+                                <span className="flex items-center gap-2">
+                                  <Edit className="h-4 w-4" /> Editar
+                                </span>
+                              </TableActionLink>
+                              <TableActionButton
+                                variant="default"
+                                onSelect={() =>
+                                  void handleInactive(usuario.id, usuario.nome)
+                                }
+                              >
+                                <span className="flex items-center gap-2">
+                                  <Ban className="h-4 w-4" /> Inativar
+                                </span>
+                              </TableActionButton>
+                              <TableActionButton
+                                variant="destructive"
+                                onSelect={() =>
+                                  void handleDelete(usuario.id, usuario.nome)
+                                }
+                                title={
+                                  hasVinculos
+                                    ? "Não é possível excluir este usuário devido a vínculos existentes."
+                                    : undefined
+                                }
+                                disabled={hasVinculos || deletingId === usuario.id}
+                              >
+                                <span className="flex items-center gap-2">
+                                  <Trash2 className="h-4 w-4" /> Excluir
+                                </span>
+                              </TableActionButton>
+                            </TableActions>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
