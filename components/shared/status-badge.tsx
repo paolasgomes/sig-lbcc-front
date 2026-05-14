@@ -34,6 +34,10 @@ const statusConfig: Record<string, { label: string; className: string }> = {
     label: "Expirada",
     className: "bg-destructive/15 text-destructive border-destructive/30",
   },
+  inativo: {
+    label: "Inativo",
+    className: "bg-muted text-muted-foreground border-border",
+  },
   agendado: {
     label: "Agendado",
     className: "bg-info/15 text-info border-info/30",

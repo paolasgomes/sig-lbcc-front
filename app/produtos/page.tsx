@@ -59,6 +59,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { StatusBadge } from "@/components/shared/status-badge";
 
 export default function ProdutosPage() {
   const {
@@ -253,9 +254,7 @@ export default function ProdutosPage() {
                             </TableCell>
                             <TableCell>{produto.unidade}</TableCell>
                             <TableCell>
-                              <Badge variant={produto.ativo ? "default" : "secondary"}>
-                                {produto.ativo ? "Ativo" : "Inativo"}
-                              </Badge>
+                              <StatusBadge status={produto.ativo ? "ativo" : "inativo"} />
                             </TableCell>
                             <TableCell>
                               <TableActions

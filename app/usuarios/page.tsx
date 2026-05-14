@@ -42,6 +42,7 @@ import {
 import { useUsuarios } from "@/hooks/use-usuarios";
 import { PerfilUsuario } from "@/types";
 import { useMutation } from "@tanstack/react-query";
+import { StatusBadge } from "@/components/shared/status-badge";
 
 const PERFIL_LABEL: Record<PerfilUsuario, string> = {
   [PerfilUsuario.OPERADOR]: "Operador",
@@ -242,15 +243,7 @@ export default function UsuariosPage() {
                           <Badge variant="outline">{PERFIL_LABEL[usuario.perfil]}</Badge>
                         </TableCell>
                         <TableCell>
-                          <span
-                            className={
-                              usuario.ativo
-                                ? "text-success font-medium"
-                                : "text-muted-foreground font-medium"
-                            }
-                          >
-                            {usuario.ativo ? "Ativo" : "Inativo"}
-                          </span>
+                          <StatusBadge status={usuario.ativo ? "ativo" : "inativo"} />
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end">
