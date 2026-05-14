@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { Plus, Search, Eye, Edit, Filter, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,10 @@ import {
 } from "@/components/ui/table";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import PageHeader from "@/components/layout/page-header";
-import TableActions, { TableActionButton, TableActionLink } from "@/components/ui/table-actions";
+import TableActions, {
+  TableActionButton,
+  TableActionLink,
+} from "@/components/ui/table-actions";
 import { StatusBadge } from "@/components/shared/status-badge";
 import {
   Pagination,
@@ -73,6 +76,12 @@ export default function PacientesPage() {
   const startIndex = (page - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const displayedPacientes = pacientesFiltrados.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    if (page > pageCount) {
+      setPage(pageCount);
+    }
+  }, [page, pageCount]);
 
   const handleExcluir = (paciente: Paciente) => {
     setPacienteParaExcluir(paciente);
