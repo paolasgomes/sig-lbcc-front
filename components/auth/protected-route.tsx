@@ -26,7 +26,11 @@ export function ProtectedRoute({
       router.push("/login");
     }
 
-    if (!isLoading && usuario && !usuarioTemAcessoAoModulo(usuario, { perfisPermitidos, allowedRoles })) {
+    if (
+      !isLoading &&
+      usuario &&
+      !usuarioTemAcessoAoModulo(usuario, { perfisPermitidos, allowedRoles })
+    ) {
       router.push("/403");
     }
   }, [usuario, isLoading, router, perfisPermitidos, allowedRoles]);

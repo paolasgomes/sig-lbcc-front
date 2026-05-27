@@ -63,9 +63,9 @@ export function usuarioTemAcessoAoModulo(
 
   const atendeRoles =
     !regras.allowedRoles ||
-    regras.allowedRoles.map(normalizeAccessValue).includes(
-      normalizeAccessValue(usuario.role ?? perfilToLegacyRole(usuario.perfil)),
-    );
+    regras.allowedRoles
+      .map(normalizeAccessValue)
+      .includes(normalizeAccessValue(usuario.role ?? perfilToLegacyRole(usuario.perfil)));
 
   return atendePerfis && atendeRoles;
 }
