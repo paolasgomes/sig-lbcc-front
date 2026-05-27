@@ -43,6 +43,7 @@ import { useUsuarios } from "@/hooks/use-usuarios";
 import { PerfilUsuario } from "@/types";
 import { useMutation } from "@tanstack/react-query";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { PERFIS_GESTAO_BASE } from "@/lib/access-control";
 
 const PERFIL_LABEL: Record<PerfilUsuario, string> = {
   [PerfilUsuario.OPERADOR]: "Operador",
@@ -134,7 +135,7 @@ export default function UsuariosPage() {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout perfisPermitidos={PERFIS_GESTAO_BASE}>
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

@@ -11,6 +11,7 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { PacienteForm } from "@/components/pacientes/paciente-form";
 import { useData } from "@/contexts/data-context";
 import { Paciente } from "@/types";
+import { PERFIS_DASHBOARD_PACIENTES } from "@/lib/access-control";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -53,7 +54,7 @@ export default function EditarPacientePage({ params }: PageProps) {
 
   if (isLoading && !paciente) {
     return (
-      <DashboardLayout>
+      <DashboardLayout perfisPermitidos={PERFIS_DASHBOARD_PACIENTES}>
         <div className="flex min-h-80 items-center justify-center gap-3 text-muted-foreground">
           <Spinner className="h-5 w-5" />
           <span>Carregando paciente...</span>
@@ -64,7 +65,7 @@ export default function EditarPacientePage({ params }: PageProps) {
 
   if (loadError && !paciente) {
     return (
-      <DashboardLayout>
+      <DashboardLayout perfisPermitidos={PERFIS_DASHBOARD_PACIENTES}>
         <Alert variant="destructive">
           <AlertTitle>Não foi possível carregar o paciente</AlertTitle>
           <AlertDescription>{loadError}</AlertDescription>
@@ -78,7 +79,7 @@ export default function EditarPacientePage({ params }: PageProps) {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout perfisPermitidos={PERFIS_DASHBOARD_PACIENTES}>
       <div className="flex flex-col gap-6">
         {loadError && (
           <Alert variant="destructive">

@@ -23,6 +23,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { useData } from "@/contexts/data-context";
 import { PerfilUsuario } from "@/types";
+import { PERFIS_GESTAO_BASE } from "@/lib/access-control";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -87,7 +88,7 @@ export default function UsuarioDetalhePage({ params }: PageProps) {
 
   if (usuariosLoading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout perfisPermitidos={PERFIS_GESTAO_BASE}>
         <div className="flex min-h-[60vh] items-center justify-center gap-3 text-muted-foreground">
           <Spinner className="h-5 w-5" />
           <span>Carregando usuário...</span>
@@ -98,7 +99,7 @@ export default function UsuarioDetalhePage({ params }: PageProps) {
 
   if (usuariosError) {
     return (
-      <DashboardLayout>
+      <DashboardLayout perfisPermitidos={PERFIS_GESTAO_BASE}>
         <div className="flex flex-col gap-6">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
@@ -131,7 +132,7 @@ export default function UsuarioDetalhePage({ params }: PageProps) {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout perfisPermitidos={PERFIS_GESTAO_BASE}>
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">

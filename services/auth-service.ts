@@ -2,7 +2,7 @@ import axios from "axios";
 import { api, TOKEN_STORAGE_KEY } from "./api";
 import { UsuarioDTO } from "@/types";
 
-interface LoginResponse {
+export interface LoginResponse {
   access_token: string;
   user: UsuarioDTO;
 }
@@ -44,7 +44,7 @@ export function removeToken() {
   document.cookie = `${TOKEN_STORAGE_KEY}=; path=/; max-age=0; SameSite=Strict`;
 }
 
-export async function login(email: string, senha: string) {
+export async function login(email: string, senha: string): Promise<LoginResponse> {
   try {
     const response = await api.post<LoginResponse>("/auth/login", {
       email,
@@ -57,7 +57,7 @@ export async function login(email: string, senha: string) {
 
     saveToken(response.data.access_token);
 
-    return response.data.access_token;
+    return response.data;
   } catch (error) {
     if (axios.isAxiosError<ApiErrorResponse>(error)) {
       const mensagemErro = error.response?.data?.error || error.response?.data?.message;

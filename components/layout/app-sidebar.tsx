@@ -15,6 +15,13 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { PerfilUsuario } from "@/types";
+import {
+  ROLES_ATENDIMENTOS_E_COTACOES,
+  ROLES_GESTAO_COMPLETA,
+  PERFIS_DASHBOARD_PACIENTES,
+  PERFIS_GESTAO_BASE,
+  usuarioTemAcessoAoModulo,
+} from "@/lib/access-control";
 import Image from "next/image";
 import Logo from "@/public/lbcc-logo.svg";
 
@@ -23,53 +30,76 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   perfilMinimo?: PerfilUsuario[];
+  allowedRoles?: string[];
 }
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Pacientes", href: "/pacientes", icon: Users },
-  // { label: "Atendimentos", href: "/atendimentos", icon: ClipboardList },
+  {
+    label: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+    perfilMinimo: PERFIS_DASHBOARD_PACIENTES,
+  },
+  {
+    label: "Pacientes",
+    href: "/pacientes",
+    icon: Users,
+    perfilMinimo: PERFIS_DASHBOARD_PACIENTES,
+  },
+  {
+    label: "Atendimentos",
+    href: "/atendimentos",
+    icon: ClipboardList,
+    allowedRoles: ROLES_ATENDIMENTOS_E_COTACOES,
+  },
   {
     label: "Usuários",
     href: "/usuarios",
     icon: Users,
-    perfilMinimo: [PerfilUsuario.OPERADOR, PerfilUsuario.GESTOR],
+    perfilMinimo: PERFIS_GESTAO_BASE,
   },
-  // {
-  //   label: "Cotações",
-  //   href: "/cotacoes",
-  //   icon: FileText,
-  //   perfilMinimo: [PerfilUsuario.OPERADOR, PerfilUsuario.GESTOR],
-  // },
+  {
+    label: "Cotações",
+    href: "/cotacoes",
+    icon: FileText,
+    allowedRoles: ROLES_ATENDIMENTOS_E_COTACOES,
+  },
   {
     label: "Áreas",
     href: "/areas",
     icon: MapPin,
-    perfilMinimo: [PerfilUsuario.OPERADOR, PerfilUsuario.GESTOR],
+    perfilMinimo: PERFIS_GESTAO_BASE,
   },
-  // {
-  //   label: "Fornecedores",
-  //   href: "/fornecedores",
-  //   icon: Truck,
-  //   perfilMinimo: [PerfilUsuario.OPERADOR, PerfilUsuario.GESTOR],
-  // },
+  {
+    label: "Fornecedores",
+    href: "/fornecedores",
+    icon: Truck,
+    allowedRoles: ROLES_GESTAO_COMPLETA,
+  },
   {
     label: "Produtos",
     href: "/produtos",
     icon: Package,
-    perfilMinimo: [PerfilUsuario.OPERADOR, PerfilUsuario.GESTOR],
+    perfilMinimo: PERFIS_GESTAO_BASE,
   },
-  // { label: "Relatórios", href: "/relatorios", icon: BarChart3 },
+  {
+    label: "Relatórios",
+    href: "/relatorios",
+    icon: BarChart3,
+    allowedRoles: ROLES_GESTAO_COMPLETA,
+  },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { usuario } = useAuth();
 
-  const filteredItems = navItems.filter((item) => {
-    if (!item.perfilMinimo) return true;
-    return usuario && item.perfilMinimo.includes(usuario.perfil);
-  });
+  const filteredItems = navItems.filter((item) =>
+    usuarioTemAcessoAoModulo(usuario, {
+      perfisPermitidos: item.perfilMinimo,
+      allowedRoles: item.allowedRoles,
+    }),
+  );
 
   return (
     <aside className="flex h-screen w-64 flex-col bg-sidebar text-sidebar-foreground">

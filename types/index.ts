@@ -10,6 +10,7 @@ export interface UsuarioDTO {
   nome: string;
   email: string;
   perfil: PerfilUsuario;
+  role?: string;
   usuarioTemVinculos?: boolean;
   ativo: boolean;
   created_at: string;
@@ -79,6 +80,7 @@ export interface Usuario {
   email: string;
   senha?: string;
   perfil: PerfilUsuario;
+  role?: string;
   ativo: boolean;
 }
 

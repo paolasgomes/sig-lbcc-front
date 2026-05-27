@@ -6,7 +6,9 @@ import {
   getStoredToken,
   login as loginService,
   removeToken,
+  type LoginResponse,
 } from "@/services/auth-service";
+import { mapLegacyRoleToPerfil } from "@/lib/access-control";
 
 interface AuthContextType {
   usuario: Usuario | null;
@@ -43,17 +45,7 @@ function mapPerfil(value: unknown): PerfilUsuario {
     return PerfilUsuario.OPERADOR;
   }
 
-  const normalizedValue = value.toLowerCase();
-
-  if (normalizedValue.includes("gestor")) {
-    return PerfilUsuario.GESTOR;
-  }
-
-  if (normalizedValue.includes("prefeitura")) {
-    return PerfilUsuario.PREFEITURA;
-  }
-
-  return PerfilUsuario.OPERADOR;
+  return mapLegacyRoleToPerfil(value);
 }
 
 function buildUsuarioFromToken(token: string): Usuario | null {
@@ -89,6 +81,12 @@ function buildUsuarioFromToken(token: string): Usuario | null {
           : nome;
 
   const perfil = mapPerfil(payload.perfil ?? payload.role);
+  const role =
+    typeof payload.role === "string"
+      ? payload.role
+      : typeof payload.perfil === "string"
+        ? payload.perfil
+        : undefined;
 
   return {
     id,
@@ -96,7 +94,22 @@ function buildUsuarioFromToken(token: string): Usuario | null {
     email,
     senha: "",
     perfil,
+    role,
     ativo: true,
+  };
+}
+
+function buildUsuarioFromLoginResponse(loginResponse: LoginResponse): Usuario {
+  const { user } = loginResponse;
+
+  return {
+    id: user.id,
+    nome: user.nome,
+    email: user.email,
+    senha: "",
+    perfil: user.perfil,
+    role: user.role ?? user.perfil,
+    ativo: user.ativo,
   };
 }
 
@@ -134,8 +147,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, senha: string): Promise<void> => {
-    const token = await loginService(email, senha);
-    const usuarioLogado = buildUsuarioFromToken(token);
+    const loginResponse = await loginService(email, senha);
+    const usuarioLogado = buildUsuarioFromLoginResponse(loginResponse);
 
     setUsuario(
       usuarioLogado ?? {
@@ -144,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email,
         senha: "",
         perfil: PerfilUsuario.OPERADOR,
+        role: "operador",
         ativo: true,
       },
     );

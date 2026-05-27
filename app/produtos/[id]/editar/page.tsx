@@ -3,11 +3,11 @@
 import { use, useState, useEffect } from "react";
 import { notFound } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { ProtectedRoute } from "@/components/auth/protected-route";
 import { ProdutoForm } from "@/components/produtos/produto-form";
 import { useData } from "@/contexts/data-context";
 import { obterProduto, mapApiProdutoToProduto } from "@/services/produtos-service";
 import type { Produto } from "@/types";
+import { PERFIS_GESTAO_BASE } from "@/lib/access-control";
 
 interface EditarProdutoPageProps {
   params: Promise<{ id: string }>;
@@ -40,11 +40,9 @@ export default function EditarProdutoPage({ params }: EditarProdutoPageProps) {
 
   if (loading) {
     return (
-      <ProtectedRoute allowedRoles={["admin", "gestor"]}>
-        <DashboardLayout>
-          <div>Carregando...</div>
-        </DashboardLayout>
-      </ProtectedRoute>
+      <DashboardLayout perfisPermitidos={PERFIS_GESTAO_BASE}>
+        <div>Carregando...</div>
+      </DashboardLayout>
     );
   }
 
@@ -53,10 +51,8 @@ export default function EditarProdutoPage({ params }: EditarProdutoPageProps) {
   }
 
   return (
-    <ProtectedRoute allowedRoles={["admin", "gestor"]}>
-      <DashboardLayout>
-        <ProdutoForm produto={produtoCarregado} modo="editar" />
-      </DashboardLayout>
-    </ProtectedRoute>
+    <DashboardLayout perfisPermitidos={PERFIS_GESTAO_BASE}>
+      <ProdutoForm produto={produtoCarregado} modo="editar" />
+    </DashboardLayout>
   );
 }

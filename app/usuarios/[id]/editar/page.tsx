@@ -12,6 +12,7 @@ import { UsuarioForm } from "@/components/usuarios/usuario-form";
 import { useData } from "@/contexts/data-context";
 import { obterUsuario } from "@/services/usuarios-service";
 import { UsuarioDTO } from "@/types";
+import { PERFIS_GESTAO_BASE } from "@/lib/access-control";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -69,7 +70,7 @@ export default function EditarUsuarioPage({ params }: PageProps) {
 
   if (usuariosLoading || usuarioFallbackLoading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout perfisPermitidos={PERFIS_GESTAO_BASE}>
         <div className="flex min-h-[60vh] items-center justify-center gap-3 text-muted-foreground">
           <Spinner className="h-5 w-5" />
           <span>Carregando usuário...</span>
@@ -80,7 +81,7 @@ export default function EditarUsuarioPage({ params }: PageProps) {
 
   if (usuariosError || usuarioFallbackError) {
     return (
-      <DashboardLayout>
+      <DashboardLayout perfisPermitidos={PERFIS_GESTAO_BASE}>
         <div className="flex flex-col gap-6">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
@@ -113,7 +114,7 @@ export default function EditarUsuarioPage({ params }: PageProps) {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout perfisPermitidos={PERFIS_GESTAO_BASE}>
       <div className="flex flex-col gap-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
