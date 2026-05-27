@@ -61,7 +61,7 @@ export function ExcluirPaciente({
     try {
       await deletePacienteMutation.mutateAsync();
       setOpen(false);
-      router.push("/pacientes");
+      queryClient.invalidateQueries({ queryKey: ["pacientes"] });
     } catch (error) {
       setDeleteError(
         error instanceof Error ? error.message : "Erro ao excluir paciente.",

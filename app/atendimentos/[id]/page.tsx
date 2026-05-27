@@ -68,7 +68,7 @@ export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageP
     atendimento.status !== "concluido" && atendimento.status !== "cancelado";
 
   return (
-    <ProtectedRoute allowedRoles={["admin", "gestor", "atendente"]}>
+    <ProtectedRoute allowedRoles={["admin", "gestor"]}>
       <DashboardLayout>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

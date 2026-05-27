@@ -43,6 +43,7 @@ import { TableLoading } from "@/components/ui/table-state";
 import { usePacientes } from "@/hooks/use-pacientes";
 import { StatusPaciente, type Paciente } from "@/types";
 import { ExcluirPaciente } from "@/components/pacientes/excluir-paciente";
+import { PERFIS_DASHBOARD_PACIENTES } from "@/lib/access-control";
 
 export default function PacientesPage() {
   const {
@@ -88,7 +89,7 @@ export default function PacientesPage() {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout perfisPermitidos={PERFIS_DASHBOARD_PACIENTES}>
       <div className="flex flex-col gap-6">
         <PageHeader
           title="Pacientes"

@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { useData } from '@/contexts/data-context'
 import { useAuth } from '@/contexts/auth-context'
+import { PERFIS_DASHBOARD_PACIENTES } from '@/lib/access-control'
 
 export default function DashboardPage() {
   const { getStats } = useData()
@@ -88,7 +89,7 @@ export default function DashboardPage() {
   ]
 
   return (
-    <DashboardLayout>
+    <DashboardLayout perfisPermitidos={PERFIS_DASHBOARD_PACIENTES}>
       <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>

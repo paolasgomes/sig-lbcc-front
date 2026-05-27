@@ -5,25 +5,12 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { PerfilUsuario } from "@/types";
 import { Spinner } from "@/components/ui/spinner";
+import { usuarioTemAcessoAoModulo } from "@/lib/access-control";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   perfisPermitidos?: (PerfilUsuario | string)[];
   allowedRoles?: string[];
-}
-
-function mapLegacyRoleToPerfil(role: string): PerfilUsuario {
-  const normalizedRole = role.toLowerCase();
-
-  if (normalizedRole === "gestor") {
-    return PerfilUsuario.GESTOR;
-  }
-
-  if (normalizedRole === "prefeitura") {
-    return PerfilUsuario.PREFEITURA;
-  }
-
-  return PerfilUsuario.OPERADOR;
 }
 
 export function ProtectedRoute({
@@ -33,9 +20,6 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { usuario, isLoading } = useAuth();
   const router = useRouter();
-  const perfisEfetivos =
-    perfisPermitidos?.map((perfil) => mapLegacyRoleToPerfil(String(perfil))) ??
-    allowedRoles?.map((role) => mapLegacyRoleToPerfil(role));
 
   useEffect(() => {
     if (!isLoading && !usuario) {
@@ -45,12 +29,11 @@ export function ProtectedRoute({
     if (
       !isLoading &&
       usuario &&
-      perfisEfetivos &&
-      !perfisEfetivos.includes(usuario.perfil)
+      !usuarioTemAcessoAoModulo(usuario, { perfisPermitidos, allowedRoles })
     ) {
       router.push("/403");
     }
-  }, [usuario, isLoading, router, perfisEfetivos]);
+  }, [usuario, isLoading, router, perfisPermitidos, allowedRoles]);
 
   if (isLoading) {
     return (
@@ -67,7 +50,7 @@ export function ProtectedRoute({
     return null;
   }
 
-  if (perfisEfetivos && !perfisEfetivos.includes(usuario.perfil)) {
+  if (!usuarioTemAcessoAoModulo(usuario, { perfisPermitidos, allowedRoles })) {
     return null;
   }
 

@@ -2,14 +2,12 @@
 
 import { ProdutoForm } from "@/components/produtos/produto-form";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { ProtectedRoute } from "@/components/auth/protected-route";
+import { PERFIS_GESTAO_BASE } from "@/lib/access-control";
 
 export default function NovoProdutoPage() {
   return (
-    <ProtectedRoute allowedRoles={["admin", "gestor"]}>
-      <DashboardLayout>
-        <ProdutoForm modo="criar" />
-      </DashboardLayout>
-    </ProtectedRoute>
+    <DashboardLayout perfisPermitidos={PERFIS_GESTAO_BASE}>
+      <ProdutoForm modo="criar" />
+    </DashboardLayout>
   );
 }
