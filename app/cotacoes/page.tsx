@@ -1,19 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { ProtectedRoute } from "@/components/auth/protected-route";
-import { useCotacoes } from "@/hooks/use-cotacoes";
-import { usePacientes } from "@/hooks/use-pacientes";
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import {
+  Plus,
+  Eye,
+  Edit,
+  Search,
+  Trash2,
+  Ban,
+  CheckCircle,
+  AlertTriangle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -22,190 +31,356 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import TableActions, {
+  TableActionLink,
+  TableActionButton,
+} from "@/components/ui/table-actions";
+import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import { TableLoading } from "@/components/ui/table-state";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
+import { ROLES_ATENDIMENTOS_E_COTACOES } from "@/lib/access-control";
+import { useCotacoes, CotacaoVinculosError } from "@/hooks/use-cotacoes";
+import { useUsuario } from "@/hooks/use-usuario";
+import { isCotacaoVencida, formatCotacaoNumero } from "@/lib/cotacoes-utils";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { Plus, Search, MoreHorizontal, Eye, Pencil, FileText } from "lucide-react";
-import Link from "next/link";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+type FiltroAtivo = "todas" | "ativas" | "inativas";
+
 export default function CotacoesPage() {
-  const { cotacoes } = useCotacoes();
-  const { pacientes } = usePacientes();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("todos");
+  const {
+    cotacoes,
+    isLoading,
+    error,
+    refetch,
+    alternarStatus,
+    excluirCotacao,
+    isTogglingStatus,
+    isDeleting,
+  } = useCotacoes("todas");
+  const { isGestor } = useUsuario();
 
-  const calcularValorTotal = (
-    itens: Array<{ quantidade: number; valorUnitario: number }>,
-  ) => {
-    return itens.reduce((total, item) => total + item.quantidade * item.valorUnitario, 0);
+  const [busca, setBusca] = useState("");
+  const [filtroAtivo, setFiltroAtivo] = useState<FiltroAtivo>("todas");
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  const cotacoesFiltradas = useMemo(() => {
+    return cotacoes.filter((cotacao) => {
+      const matchAtivo =
+        filtroAtivo === "todas" ||
+        (filtroAtivo === "ativas" && cotacao.ativo) ||
+        (filtroAtivo === "inativas" && !cotacao.ativo);
+
+      const termo = busca.toLowerCase();
+      const matchBusca =
+        !termo ||
+        cotacao.descricao.toLowerCase().includes(termo) ||
+        (cotacao.pacienteNome?.toLowerCase().includes(termo) ?? false) ||
+        (cotacao.numero?.toLowerCase().includes(termo) ?? false) ||
+        cotacao.id.toLowerCase().includes(termo) ||
+        cotacao.id.slice(0, 8).toUpperCase().includes(termo.toUpperCase());
+
+      return matchAtivo && matchBusca;
+    });
+  }, [cotacoes, busca, filtroAtivo]);
+
+  const total = cotacoesFiltradas.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const startIndex = (page - 1) * pageSize;
+  const displayedCotacoes = cotacoesFiltradas.slice(startIndex, startIndex + pageSize);
+
+  const handleToggleStatus = async (id: string, ativo: boolean, descricao: string) => {
+    const acao = ativo ? "inativar" : "ativar";
+    if (!window.confirm(`Deseja ${acao} a cotação "${descricao}"?`)) return;
+
+    setActionError(null);
+    try {
+      await alternarStatus(id);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : `Erro ao ${acao} cotação.`);
+    }
   };
 
-  const filteredCotacoes = cotacoes.filter((cotacao) => {
-    const paciente = pacientes.find((p) => p.id === cotacao.pacienteId);
-    const matchesSearch =
-      (paciente?.nomeCompleto?.toLowerCase().includes(searchTerm.toLowerCase()) ??
-        false) ||
-      cotacao.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "todos" || cotacao.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const handleDelete = async (id: string, descricao: string) => {
+    if (!window.confirm(`Excluir a cotação "${descricao}"? Esta ação não pode ser desfeita.`))
+      return;
 
-  const getPacienteNome = (pacienteId: string) => {
-    const paciente = pacientes.find((p) => p.id === pacienteId);
-    return paciente?.nomeCompleto || "Paciente nao encontrado";
+    setActionError(null);
+    try {
+      await excluirCotacao(id);
+    } catch (err) {
+      if (err instanceof CotacaoVinculosError) {
+        const { propostas, itens } = err.relacionamentos;
+        setActionError(
+          `Não é possível excluir: ${propostas} proposta(s), ${itens} item(ns) vinculados.`,
+        );
+      } else {
+        setActionError(err instanceof Error ? err.message : "Erro ao excluir cotação.");
+      }
+    }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      pendente: "Pendente",
-      valida: "Valida",
-      expirada: "Expirada",
-    };
-    return labels[status] || status;
+  const formatDate = (dateStr: string) => {
+    try {
+      return format(new Date(dateStr), "dd/MM/yyyy", { locale: ptBR });
+    } catch {
+      return dateStr;
+    }
   };
 
   return (
-    <ProtectedRoute allowedRoles={["admin", "gestor", "atendente"]}>
-      <DashboardLayout>
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Cotacoes</h1>
-              <p className="text-muted-foreground">
-                Gerencie as cotacoes de produtos e servicos
-              </p>
-            </div>
+    <DashboardLayout allowedRoles={ROLES_ATENDIMENTOS_E_COTACOES}>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Cotações</h1>
+            <p className="text-muted-foreground">
+              Gerencie as cotações de produtos e serviços
+            </p>
+          </div>
+          {isGestor && (
             <Button asChild>
               <Link href="/cotacoes/nova">
                 <Plus className="mr-2 h-4 w-4" />
-                Nova Cotacao
+                Nova Cotação
               </Link>
             </Button>
-          </div>
+          )}
+        </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Lista de Cotacoes
-              </CardTitle>
-              <CardDescription>
-                {cotacoes.length} cotacao(oes) cadastrada(s)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por paciente ou numero..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="flex h-9 w-full sm:w-48 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="todos">Todos os status</option>
-                  <option value="pendente">Pendente</option>
-                  <option value="valida">Valida</option>
-                  <option value="expirada">Expirada</option>
-                </select>
+        {error && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Erro ao carregar cotações</AlertTitle>
+            <AlertDescription className="flex items-center gap-4">
+              <span>{error}</span>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                Tentar novamente
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {actionError && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Erro na operação</AlertTitle>
+            <AlertDescription>{actionError}</AlertDescription>
+          </Alert>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Lista de Cotações</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por descrição, paciente ou número..."
+                  value={busca}
+                  onChange={(e) => {
+                    setBusca(e.target.value);
+                    setPage(1);
+                  }}
+                  className="pl-9"
+                />
               </div>
+              <Select
+                value={filtroAtivo}
+                onValueChange={(v) => {
+                  setFiltroAtivo(v as FiltroAtivo);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas</SelectItem>
+                  <SelectItem value="ativas">Ativas</SelectItem>
+                  <SelectItem value="inativas">Inativas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
+            {isLoading ? (
+              <TableLoading message="Carregando cotações..." />
+            ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Número</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Paciente</TableHead>
+                    <TableHead>Validade</TableHead>
+                    <TableHead className="text-center">Itens</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-[100px]">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayedCotacoes.length === 0 ? (
                     <TableRow>
-                      <TableHead>Numero</TableHead>
-                      <TableHead>Paciente</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Itens</TableHead>
-                      <TableHead className="text-right">Valor Total</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="w-[70px]">Acoes</TableHead>
+                      <TableCell colSpan={7}>
+                        <Empty>
+                          <EmptyTitle>Nenhuma cotação encontrada</EmptyTitle>
+                          <EmptyDescription>
+                            {busca || filtroAtivo !== "todas"
+                              ? "Tente ajustar os filtros de busca."
+                              : isGestor
+                                ? "Crie a primeira cotação para começar."
+                                : "Não há cotações cadastradas."}
+                          </EmptyDescription>
+                          {isGestor && !busca && filtroAtivo === "todas" && (
+                            <Button asChild className="mt-4">
+                              <Link href="/cotacoes/nova">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Nova Cotação
+                              </Link>
+                            </Button>
+                          )}
+                        </Empty>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCotacoes.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center">
-                          Nenhuma cotacao encontrada.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredCotacoes.map((cotacao) => (
+                  ) : (
+                    displayedCotacoes.map((cotacao) => {
+                      const vencida =
+                        cotacao.ativo && isCotacaoVencida(cotacao.dataValidade);
+
+                      return (
                         <TableRow key={cotacao.id}>
                           <TableCell className="font-mono text-sm">
-                            {cotacao.id.slice(0, 8).toUpperCase()}
+                            {formatCotacaoNumero(cotacao)}
                           </TableCell>
-                          <TableCell className="font-medium">
-                            {getPacienteNome(cotacao.pacienteId)}
+                          <TableCell className="max-w-[200px] truncate font-medium">
+                            {cotacao.descricao}
+                          </TableCell>
+                          <TableCell>{cotacao.pacienteNome ?? "-"}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              {formatDate(cotacao.dataValidade)}
+                              {vencida && (
+                                <AlertTriangle className="h-4 w-4 text-destructive" />
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {cotacao.itens.length}
                           </TableCell>
                           <TableCell>
-                            {format(new Date(cotacao.dataSolicitacao), "dd/MM/yyyy", {
-                              locale: ptBR,
-                            })}
-                          </TableCell>
-                          <TableCell>{cotacao.itens.length} item(ns)</TableCell>
-                          <TableCell className="text-right font-mono">
-                            {formatCurrency(calcularValorTotal(cotacao.itens))}
+                            <StatusBadge
+                              status={cotacao.ativo ? "ativo" : "inativo"}
+                            />
                           </TableCell>
                           <TableCell>
-                            <StatusBadge status={cotacao.status} type="cotacao" />
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Acoes</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem asChild>
-                                  <Link href={`/cotacoes/${cotacao.id}`}>
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    Visualizar
-                                  </Link>
-                                </DropdownMenuItem>
-                                {cotacao.status === "pendente" && (
-                                  <DropdownMenuItem asChild>
-                                    <Link href={`/cotacoes/${cotacao.id}/editar`}>
-                                      <Pencil className="mr-2 h-4 w-4" />
-                                      Editar
-                                    </Link>
-                                  </DropdownMenuItem>
+                            <div className="flex items-center justify-end">
+                              <TableActions>
+                                <TableActionLink href={`/cotacoes/${cotacao.id}`}>
+                                  <span className="flex items-center gap-2">
+                                    <Eye className="h-4 w-4" /> Visualizar
+                                  </span>
+                                </TableActionLink>
+                                {isGestor && (
+                                  <>
+                                    <TableActionLink
+                                      href={`/cotacoes/${cotacao.id}/editar`}
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        <Edit className="h-4 w-4" /> Editar
+                                      </span>
+                                    </TableActionLink>
+                                    <TableActionButton
+                                      onSelect={() =>
+                                        void handleToggleStatus(
+                                          cotacao.id,
+                                          cotacao.ativo,
+                                          cotacao.descricao,
+                                        )
+                                      }
+                                      disabled={isTogglingStatus}
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        {cotacao.ativo ? (
+                                          <Ban className="h-4 w-4" />
+                                        ) : (
+                                          <CheckCircle className="h-4 w-4" />
+                                        )}
+                                        {cotacao.ativo ? "Inativar" : "Ativar"}
+                                      </span>
+                                    </TableActionButton>
+                                    <TableActionButton
+                                      variant="destructive"
+                                      onSelect={() =>
+                                        void handleDelete(
+                                          cotacao.id,
+                                          cotacao.descricao,
+                                        )
+                                      }
+                                      disabled={isDeleting}
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        <Trash2 className="h-4 w-4" /> Excluir
+                                      </span>
+                                    </TableActionButton>
+                                  </>
                                 )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                              </TableActions>
+                            </div>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardLayout>
-    </ProtectedRoute>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            )}
+
+            {!isLoading && total > pageSize && (
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      aria-disabled={page === 1}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: pageCount }, (_, i) => i + 1).map((p) => (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        isActive={p === page}
+                        onClick={() => setPage(p)}
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                      aria-disabled={page === pageCount}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
   );
 }
