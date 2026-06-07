@@ -24,7 +24,6 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
-import { useData } from "@/contexts/data-context";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { criarPaciente, atualizarPaciente } from "@/services/pacientes-service";
 import { useAuth } from "@/contexts/auth-context";
@@ -36,7 +35,7 @@ import {
   onlyDigits,
 } from "@/lib/formatters";
 import { fetchCepData } from "@/services/cep-service";
-import { Paciente, StatusPaciente, Sexo, EstadoCivil, TipoEvento } from "@/types";
+import { Paciente, StatusPaciente, Sexo, EstadoCivil } from "@/types";
 import { Check, ChevronsUpDown } from "lucide-react";
 
 interface PacienteFormProps {
@@ -60,7 +59,6 @@ const estadoCivilOptions = [
 
 export function PacienteForm({ paciente, modo }: PacienteFormProps) {
   const router = useRouter();
-  const { addHistorico } = useData();
 
   const criarPacienteMutation = useMutation({
     mutationFn: criarPaciente,
@@ -254,8 +252,6 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
     setSubmitError(null);
 
     try {
-      const agora = new Date().toISOString();
-
       // Constrói payload para a API a partir do form
       const payload = {
         nome: formData.nomeCompleto,
@@ -292,27 +288,9 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
 
         const novoId = (novoApi as any)?.id ?? (novoApi as any)?.id_origem;
 
-        addHistorico({
-          id: `hist-${Date.now()}`,
-          pacienteId: novoId,
-          dataHora: agora,
-          tipoEvento: TipoEvento.CADASTRO,
-          descricao: "Paciente cadastrado no sistema",
-          usuarioResponsavel: usuario?.nome || "Sistema",
-        });
-
         router.push(`/pacientes/${novoId}`);
       } else if (paciente) {
         await atualizarPacienteMutation.mutateAsync({ id: paciente.id, payload });
-
-        addHistorico({
-          id: `hist-${Date.now()}`,
-          pacienteId: paciente.id,
-          dataHora: agora,
-          tipoEvento: TipoEvento.ATUALIZACAO,
-          descricao: "Dados do paciente atualizados",
-          usuarioResponsavel: usuario?.nome || "Sistema",
-        });
 
         router.push(`/pacientes/${paciente.id}`);
       }
