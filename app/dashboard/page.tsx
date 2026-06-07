@@ -22,7 +22,7 @@ import { PERFIS_DASHBOARD_PACIENTES } from '@/lib/access-control'
 
 export default function DashboardPage() {
   const { getStats } = useData()
-  const { podeVisualizarValores } = useAuth()
+  const { podeVisualizarValores, podeCriarCotacao } = useAuth()
   const stats = getStats()
   const { cotacoes } = useCotacoes('todas')
   const totalCotacoes = cotacoes.length
@@ -91,7 +91,7 @@ export default function DashboardPage() {
   const quickLinks = [
     { label: 'Novo Paciente', href: '/pacientes/novo' },
     { label: 'Novo Atendimento', href: '/atendimentos/novo' },
-    { label: 'Nova Cotação', href: '/cotacoes/nova', hidden: !podeVisualizarValores() },
+    { label: 'Nova Cotação', href: '/cotacoes/nova', hidden: !podeCriarCotacao() },
     { label: 'Relatórios', href: '/relatorios' }
   ]
 

@@ -4,11 +4,17 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { Usuario, PerfilUsuario } from "@/types";
 import {
   getStoredToken,
+  getStoredUser,
   login as loginService,
   removeToken,
-  type LoginResponse,
+  removeStoredUser,
+  saveStoredUser,
 } from "@/services/auth-service";
-import { mapLegacyRoleToPerfil } from "@/lib/access-control";
+import {
+  buildUsuarioFromLoginResponse,
+  buildUsuarioFromStoredProfile,
+  buildUsuarioFromToken,
+} from "@/lib/auth-user";
 
 interface AuthContextType {
   usuario: Usuario | null;
@@ -24,93 +30,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function parseJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const [, payload] = token.split(".");
-    if (!payload) {
-      return null;
-    }
-
-    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const decodedPayload = atob(normalizedPayload);
-
-    return JSON.parse(decodedPayload);
-  } catch {
-    return null;
-  }
-}
-
-function mapPerfil(value: unknown): PerfilUsuario {
-  if (typeof value !== "string") {
-    return PerfilUsuario.OPERADOR;
-  }
-
-  return mapLegacyRoleToPerfil(value);
-}
-
-function buildUsuarioFromToken(token: string): Usuario | null {
-  const payload = parseJwtPayload(token);
-
-  if (!payload) {
+function restoreUsuarioFromSession(): Usuario | null {
+  const token = getStoredToken();
+  if (!token) {
     return null;
   }
 
-  const email =
-    typeof payload.email === "string"
-      ? payload.email
-      : typeof payload.username === "string"
-        ? payload.username
-        : "";
+  const storedUser = getStoredUser();
+  if (storedUser) {
+    return buildUsuarioFromStoredProfile(storedUser);
+  }
 
-  const nome =
-    typeof payload.nome === "string"
-      ? payload.nome
-      : typeof payload.name === "string"
-        ? payload.name
-        : email
-          ? email.split("@")[0]
-          : "Usuário";
-
-  const id =
-    typeof payload.sub === "string"
-      ? payload.sub
-      : typeof payload.id === "string"
-        ? payload.id
-        : typeof payload.userId === "string"
-          ? payload.userId
-          : nome;
-
-  const perfil = mapPerfil(payload.perfil ?? payload.role);
-  const role =
-    typeof payload.role === "string"
-      ? payload.role
-      : typeof payload.perfil === "string"
-        ? payload.perfil
-        : undefined;
-
-  return {
-    id,
-    nome,
-    email,
-    senha: "",
-    perfil,
-    role,
-    ativo: true,
-  };
-}
-
-function buildUsuarioFromLoginResponse(loginResponse: LoginResponse): Usuario {
-  const { user } = loginResponse;
-
-  return {
-    id: user.id,
-    nome: user.nome,
-    email: user.email,
-    senha: "",
-    perfil: user.perfil,
-    role: user.role ?? user.perfil,
-    ativo: user.ativo,
-  };
+  return buildUsuarioFromToken(token);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -118,16 +49,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = getStoredToken();
+    const usuarioRecuperado = restoreUsuarioFromSession();
 
-    if (token) {
-      const usuarioRecuperado = buildUsuarioFromToken(token);
-
-      if (usuarioRecuperado) {
-        setUsuario(usuarioRecuperado);
-      } else {
-        removeToken();
-      }
+    if (usuarioRecuperado) {
+      setUsuario(usuarioRecuperado);
+    } else if (getStoredToken()) {
+      removeToken();
+      removeStoredUser();
     }
 
     setIsLoading(false);
@@ -137,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handleUnauthorized = () => {
       setUsuario(null);
       removeToken();
+      removeStoredUser();
     };
 
     window.addEventListener("auth:unauthorized", handleUnauthorized);
@@ -150,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const loginResponse = await loginService(email, senha);
     const usuarioLogado = buildUsuarioFromLoginResponse(loginResponse);
 
+    saveStoredUser(loginResponse.user);
     setUsuario(
       usuarioLogado ?? {
         id: email,
@@ -166,9 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUsuario(null);
     removeToken();
+    removeStoredUser();
   };
 
-  // Funções de permissão baseadas no perfil
   const podeVisualizarValores = () => {
     return (
       usuario?.perfil === PerfilUsuario.OPERADOR ||
@@ -184,10 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const podeCriarCotacao = () => {
-    return (
-      usuario?.perfil === PerfilUsuario.OPERADOR ||
-      usuario?.perfil === PerfilUsuario.GESTOR
-    );
+    return usuario?.perfil === PerfilUsuario.GESTOR;
   };
 
   const podeEditarCadastrosBase = () => {
