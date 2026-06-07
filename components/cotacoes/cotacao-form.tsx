@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useData } from "@/contexts/data-context";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Save, Plus, Trash2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,140 +23,134 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
-import { ArrowLeft, Save, Plus, Trash2, Send, FileText } from "lucide-react";
-import Link from "next/link";
-import type { Cotacao, ItemCotacao, StatusCotacao } from "@/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { usePacientes } from "@/hooks/use-pacientes";
+import { useAreas } from "@/hooks/use-areas";
+import { useCotacoes } from "@/hooks/use-cotacoes";
+import type { Cotacao } from "@/types";
 
 interface CotacaoFormProps {
   cotacao?: Cotacao;
   isEditing?: boolean;
 }
 
-type CotacaoItemForm = {
-  produtoId: string;
+type ItemFormRow = {
+  id?: string;
+  descricao: string;
   quantidade: number;
-  precoUnitario: number;
-  fornecedorId?: string;
-  observacao?: string;
+  unidade: string;
 };
+
+const UNIDADES = ["UN", "CX", "FR", "ML", "MG", "KG", "PC"];
 
 export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
   const router = useRouter();
-  const { pacientes, produtos, fornecedores, addCotacao, updateCotacao } = useData();
+  const searchParams = useSearchParams();
+  const pacienteIdFromUrl = searchParams.get("pacienteId");
 
-  const [pacienteId, setPacienteId] = useState(cotacao?.pacienteId || "");
-  const [observacoes, setObservacoes] = useState(cotacao?.observacoes || "");
-  const [itens, setItens] = useState<CotacaoItemForm[]>(
-    cotacao?.itens.map((i) => ({
-      produtoId: i.produtoId || "",
-      quantidade: i.quantidade,
-      precoUnitario: i.precoUnitario ?? i.valorUnitario,
-      fornecedorId: i.fornecedorId,
-      observacao: i.observacao,
-    })) || [],
+  const { pacientes } = usePacientes();
+  const { areas } = useAreas();
+  const { criarCotacao, atualizarCotacao, isCreating, isUpdating } = useCotacoes();
+
+  const [pacienteId, setPacienteId] = useState(
+    cotacao?.pacienteId || pacienteIdFromUrl || "",
   );
+  const [areaId, setAreaId] = useState(cotacao?.areaId || "");
+  const [descricao, setDescricao] = useState(cotacao?.descricao || "");
+  const [dataValidade, setDataValidade] = useState(cotacao?.dataValidade || "");
+  const [observacoes, setObservacoes] = useState(cotacao?.observacoes || "");
+  const [itens, setItens] = useState<ItemFormRow[]>(
+    cotacao?.itens.map((i) => ({
+      id: i.id,
+      descricao: i.descricao,
+      quantidade: i.quantidade,
+      unidade: i.unidade,
+    })) || [{ descricao: "", quantidade: 1, unidade: "UN" }],
+  );
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [novoItem, setNovoItem] = useState({
-    produtoId: "",
-    quantidade: 1,
-    fornecedorId: "",
-    observacao: "",
-  });
+  const pacientesAtivos = pacientes.filter((p) => p.status === "ativo");
+  const areasAtivas = areas.filter((a) => a.ativo !== false);
 
-  const calcularTotal = () => {
-    return itens.reduce((total, item) => total + item.precoUnitario * item.quantidade, 0);
+  const handleAddRow = () => {
+    setItens([...itens, { descricao: "", quantidade: 1, unidade: "UN" }]);
   };
 
-  const handleAddItem = () => {
-    if (!novoItem.produtoId || novoItem.quantidade <= 0) return;
-
-    const produto = produtos.find((p) => p.id === novoItem.produtoId);
-    if (!produto) return;
-
-    const itemToAdd: CotacaoItemForm = {
-      produtoId: novoItem.produtoId,
-      quantidade: novoItem.quantidade,
-      precoUnitario: produto.precoReferencia || 0,
-      fornecedorId: novoItem.fornecedorId || undefined,
-      observacao: novoItem.observacao || undefined,
-    };
-
-    setItens([...itens, itemToAdd]);
-    setNovoItem({ produtoId: "", quantidade: 1, fornecedorId: "", observacao: "" });
-  };
-
-  const handleRemoveItem = (index: number) => {
+  const handleRemoveRow = (index: number) => {
+    if (itens.length <= 1) return;
     setItens(itens.filter((_, i) => i !== index));
   };
 
-  const handleUpdateItemPrice = (index: number, price: number) => {
-    const newItens = [...itens];
-    newItens[index].precoUnitario = price;
-    setItens(newItens);
+  const handleItemChange = (
+    index: number,
+    field: keyof ItemFormRow,
+    value: string | number,
+  ) => {
+    const updated = [...itens];
+    updated[index] = { ...updated[index], [field]: value };
+    setItens(updated);
   };
 
-  const handleSubmit = (enviar: boolean = false) => {
-    if (!pacienteId || itens.length === 0) {
-      alert("Selecione um paciente e adicione pelo menos um item.");
+  const validate = (): string | null => {
+    if (!pacienteId) return "Selecione um paciente.";
+    if (!areaId) return "Selecione uma área.";
+    if (!descricao.trim()) return "Informe a descrição.";
+    if (!dataValidade) return "Informe a data de validade.";
+    if (itens.length === 0) return "Adicione pelo menos um item.";
+
+    for (let i = 0; i < itens.length; i++) {
+      const item = itens[i];
+      if (!item.descricao.trim()) return `Item ${i + 1}: informe a descrição.`;
+      if (item.quantidade <= 0) return `Item ${i + 1}: quantidade deve ser maior que zero.`;
+      if (!item.unidade.trim()) return `Item ${i + 1}: informe a unidade.`;
+    }
+
+    return null;
+  };
+
+  const handleSubmit = async () => {
+    const validationError = validate();
+    if (validationError) {
+      setSubmitError(validationError);
       return;
     }
 
-    const cotacaoData = {
+    setSubmitError(null);
+
+    const payload = {
+      descricao: descricao.trim(),
       pacienteId,
-      itens: itens.map((item, index) => {
-        const produto = produtos.find((p) => p.id === item.produtoId);
-        return {
-          id: `item-${Date.now()}-${index}`,
-          produtoId: item.produtoId,
-          fornecedorId: item.fornecedorId,
-          observacao: item.observacao,
-          descricao: produto?.descricao || produto?.nome || "Item",
-          unidade: produto?.unidade || produto?.unidadeMedida || "UN",
-          quantidade: item.quantidade,
-          precoUnitario: item.precoUnitario,
-          valorUnitario: item.precoUnitario,
-        };
-      }) as ItemCotacao[],
-      valorTotal: calcularTotal(),
-      observacoes,
-      status: (enviar ? "enviada" : "rascunho") as StatusCotacao | "enviada" | "rascunho",
+      areaId,
+      dataValidade,
+      observacoes: observacoes.trim(),
+      itens: itens.map(({ id, descricao: desc, quantidade, unidade }) => ({
+        ...(id ? { id } : {}),
+        descricao: desc.trim(),
+        quantidade,
+        unidade: unidade.trim(),
+      })),
     };
 
-    if (isEditing && cotacao) {
-      updateCotacao(cotacao.id, cotacaoData);
-    } else {
-      addCotacao(cotacaoData);
+    try {
+      if (isEditing && cotacao) {
+        await atualizarCotacao({ id: cotacao.id, dados: payload });
+        router.push(`/cotacoes/${cotacao.id}`);
+      } else {
+        const criada = await criarCotacao(payload);
+        router.push(`/cotacoes/${criada.id}`);
+      }
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Erro ao salvar cotação.");
     }
-
-    router.push("/cotacoes");
   };
 
-  const getProdutoNome = (produtoId: string) => {
-    const produto = produtos.find((p) => p.id === produtoId);
-    return produto?.nome || "Produto nao encontrado";
-  };
-
-  const getProdutoUnidade = (produtoId: string) => {
-    const produto = produtos.find((p) => p.id === produtoId);
-    return produto?.unidade || "";
-  };
-
-  const getFornecedorNome = (fornecedorId?: string) => {
-    if (!fornecedorId) return "-";
-    const fornecedor = fornecedores.find((f) => f.id === fornecedorId);
-    return fornecedor?.nomeFantasia || "-";
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-
-  const pacientesAtivos = pacientes.filter((p) => p.status === "ativo");
-  const produtosAtivos = produtos.filter((p) => p.ativo);
-  const fornecedoresAtivos = fornecedores.filter((f) => f.ativo);
+  const isSubmitting = isCreating || isUpdating;
 
   return (
     <div className="flex flex-col gap-6">
@@ -167,45 +162,79 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            {isEditing ? "Editar Cotacao" : "Nova Cotacao"}
+            {isEditing ? "Editar Cotação" : "Nova Cotação"}
           </h1>
           <p className="text-muted-foreground">
             {isEditing
-              ? "Atualize os itens e informacoes da cotacao"
-              : "Crie uma nova cotacao de produtos e servicos"}
+              ? "Atualize os itens e informações da cotação"
+              : "Crie uma nova cotação de produtos e serviços"}
           </p>
         </div>
       </div>
 
+      {submitError && (
+        <p className="text-sm text-destructive">{submitError}</p>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Dados da Cotacao</CardTitle>
-          <CardDescription>Selecione o paciente e adicione observacoes</CardDescription>
+          <CardTitle>Dados da Cotação</CardTitle>
+          <CardDescription>Informações gerais da cotação</CardDescription>
         </CardHeader>
         <CardContent>
           <FieldGroup className="grid gap-4 sm:grid-cols-2">
             <Field>
               <FieldLabel>Paciente *</FieldLabel>
-              <select
-                value={pacienteId}
-                onChange={(e) => setPacienteId(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                required
-              >
-                <option value="">Selecione um paciente...</option>
-                {pacientesAtivos.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome}
-                  </option>
-                ))}
-              </select>
+              <Select value={pacienteId} onValueChange={setPacienteId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um paciente..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {pacientesAtivos.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.nome ?? p.nomeCompleto}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel>Área *</FieldLabel>
+              <Select value={areaId} onValueChange={setAreaId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma área..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {areasAtivas.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
             <Field className="sm:col-span-2">
-              <FieldLabel>Observacoes</FieldLabel>
+              <FieldLabel>Descrição *</FieldLabel>
+              <Input
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                placeholder="Descrição da cotação..."
+              />
+            </Field>
+            <Field>
+              <FieldLabel>Data de Validade *</FieldLabel>
+              <Input
+                type="date"
+                value={dataValidade}
+                onChange={(e) => setDataValidade(e.target.value)}
+              />
+            </Field>
+            <Field className="sm:col-span-2">
+              <FieldLabel>Observações</FieldLabel>
               <Textarea
                 value={observacoes}
                 onChange={(e) => setObservacoes(e.target.value)}
-                placeholder="Observacoes gerais sobre a cotacao..."
+                placeholder="Observações gerais sobre a cotação..."
                 rows={2}
               />
             </Field>
@@ -214,165 +243,90 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Adicionar Item</CardTitle>
-          <CardDescription>
-            Selecione produtos e quantidades para a cotacao
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Itens da Cotação
+            </CardTitle>
+            <CardDescription>{itens.length} item(ns)</CardDescription>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={handleAddRow}>
+            <Plus className="mr-2 h-4 w-4" />
+            Adicionar Item
+          </Button>
         </CardHeader>
         <CardContent>
-          <FieldGroup className="grid gap-4 sm:grid-cols-12">
-            <Field className="sm:col-span-4">
-              <FieldLabel>Produto</FieldLabel>
-              <select
-                value={novoItem.produtoId}
-                onChange={(e) => setNovoItem({ ...novoItem, produtoId: e.target.value })}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="">Selecione...</option>
-                {produtosAtivos.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome} ({p.unidade})
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field className="sm:col-span-2">
-              <FieldLabel>Quantidade</FieldLabel>
-              <Input
-                type="number"
-                min="1"
-                value={novoItem.quantidade}
-                onChange={(e) =>
-                  setNovoItem({ ...novoItem, quantidade: parseInt(e.target.value) || 1 })
-                }
-              />
-            </Field>
-            <Field className="sm:col-span-3">
-              <FieldLabel>Fornecedor</FieldLabel>
-              <select
-                value={novoItem.fornecedorId}
-                onChange={(e) =>
-                  setNovoItem({ ...novoItem, fornecedorId: e.target.value })
-                }
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="">Selecione...</option>
-                {fornecedoresAtivos.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.nomeFantasia}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field className="sm:col-span-2">
-              <FieldLabel>Obs.</FieldLabel>
-              <Input
-                value={novoItem.observacao}
-                onChange={(e) => setNovoItem({ ...novoItem, observacao: e.target.value })}
-                placeholder="Opcional"
-              />
-            </Field>
-            <div className="sm:col-span-1 flex items-end">
-              <Button
-                type="button"
-                onClick={handleAddItem}
-                disabled={!novoItem.produtoId}
-                size="icon"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </FieldGroup>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Itens da Cotacao
-          </CardTitle>
-          <CardDescription>{itens.length} item(ns) adicionado(s)</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {itens.length === 0 ? (
-            <div className="flex h-24 items-center justify-center rounded-md border border-dashed">
-              <p className="text-sm text-muted-foreground">
-                Nenhum item adicionado. Use o formulario acima para adicionar itens.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Produto</TableHead>
-                    <TableHead className="text-center">Qtd</TableHead>
-                    <TableHead>Fornecedor</TableHead>
-                    <TableHead className="text-right">Preco Unit.</TableHead>
-                    <TableHead className="text-right">Subtotal</TableHead>
-                    <TableHead className="w-12.5"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {itens.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{getProdutoNome(item.produtoId)}</p>
-                          {item.observacao && (
-                            <p className="text-xs text-muted-foreground">
-                              {item.observacao}
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {item.quantidade} {getProdutoUnidade(item.produtoId)}
-                      </TableCell>
-                      <TableCell>{getFornecedorNome(item.fornecedorId)}</TableCell>
-                      <TableCell className="text-right">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={item.precoUnitario}
-                          onChange={(e) =>
-                            handleUpdateItemPrice(index, parseFloat(e.target.value) || 0)
-                          }
-                          className="w-28 text-right"
-                        />
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatCurrency(item.precoUnitario * item.quantidade)}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveItem(index)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow className="bg-muted/50">
-                    <TableCell colSpan={4} className="text-right font-semibold">
-                      Total:
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Descrição *</TableHead>
+                  <TableHead className="w-28">Quantidade *</TableHead>
+                  <TableHead className="w-32">Unidade *</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {itens.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <Input
+                        value={item.descricao}
+                        onChange={(e) =>
+                          handleItemChange(index, "descricao", e.target.value)
+                        }
+                        placeholder="Descrição do item"
+                      />
                     </TableCell>
-                    <TableCell className="text-right font-mono font-bold text-lg">
-                      {formatCurrency(calcularTotal())}
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantidade}
+                        onChange={(e) =>
+                          handleItemChange(
+                            index,
+                            "quantidade",
+                            parseInt(e.target.value) || 0,
+                          )
+                        }
+                      />
                     </TableCell>
-                    <TableCell></TableCell>
+                    <TableCell>
+                      <Select
+                        value={item.unidade}
+                        onValueChange={(v) => handleItemChange(index, "unidade", v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {UNIDADES.map((u) => (
+                            <SelectItem key={u} value={u}>
+                              {u}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveRow(index)}
+                        disabled={itens.length <= 1}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -380,22 +334,9 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
         <Button type="button" variant="outline" asChild>
           <Link href="/cotacoes">Cancelar</Link>
         </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => handleSubmit(false)}
-          disabled={itens.length === 0 || !pacienteId}
-        >
+        <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
           <Save className="mr-2 h-4 w-4" />
-          Salvar Rascunho
-        </Button>
-        <Button
-          type="button"
-          onClick={() => handleSubmit(true)}
-          disabled={itens.length === 0 || !pacienteId}
-        >
-          <Send className="mr-2 h-4 w-4" />
-          Enviar Cotacao
+          {isSubmitting ? "Salvando..." : "Salvar"}
         </Button>
       </div>
     </div>
