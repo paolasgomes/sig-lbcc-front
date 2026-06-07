@@ -7,7 +7,6 @@ import {
   Eye,
   Edit,
   Search,
-  Trash2,
   Ban,
   CheckCircle,
   AlertTriangle,
@@ -47,12 +46,10 @@ import {
   PaginationNext,
 } from "@/components/ui/pagination";
 import { ROLES_ATENDIMENTOS_E_COTACOES } from "@/lib/access-control";
-import { useCotacoes, CotacaoVinculosError } from "@/hooks/use-cotacoes";
+import { useCotacoes } from "@/hooks/use-cotacoes";
 import { useUsuario } from "@/hooks/use-usuario";
-import { isCotacaoVencida, formatCotacaoNumero } from "@/lib/cotacoes-utils";
+import { isCotacaoVencida, formatCotacaoNumero, formatDateOnly } from "@/lib/cotacoes-utils";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 type FiltroAtivo = "todas" | "ativas" | "inativas";
 
@@ -63,9 +60,7 @@ export default function CotacoesPage() {
     error,
     refetch,
     alternarStatus,
-    excluirCotacao,
     isTogglingStatus,
-    isDeleting,
   } = useCotacoes("todas");
   const { isGestor } = useUsuario();
 
@@ -109,33 +104,6 @@ export default function CotacoesPage() {
       await alternarStatus(id);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : `Erro ao ${acao} cotação.`);
-    }
-  };
-
-  const handleDelete = async (id: string, descricao: string) => {
-    if (!window.confirm(`Excluir a cotação "${descricao}"? Esta ação não pode ser desfeita.`))
-      return;
-
-    setActionError(null);
-    try {
-      await excluirCotacao(id);
-    } catch (err) {
-      if (err instanceof CotacaoVinculosError) {
-        const { propostas, itens } = err.relacionamentos;
-        setActionError(
-          `Não é possível excluir: ${propostas} proposta(s), ${itens} item(ns) vinculados.`,
-        );
-      } else {
-        setActionError(err instanceof Error ? err.message : "Erro ao excluir cotação.");
-      }
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    try {
-      return format(new Date(dateStr), "dd/MM/yyyy", { locale: ptBR });
-    } catch {
-      return dateStr;
     }
   };
 
@@ -272,7 +240,7 @@ export default function CotacoesPage() {
                           <TableCell>{cotacao.pacienteNome ?? "-"}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              {formatDate(cotacao.dataValidade)}
+                              {formatDateOnly(cotacao.dataValidade)}
                               {vencida && (
                                 <AlertTriangle className="h-4 w-4 text-destructive" />
                               )}
@@ -320,20 +288,6 @@ export default function CotacoesPage() {
                                           <CheckCircle className="h-4 w-4" />
                                         )}
                                         {cotacao.ativo ? "Inativar" : "Ativar"}
-                                      </span>
-                                    </TableActionButton>
-                                    <TableActionButton
-                                      variant="destructive"
-                                      onSelect={() =>
-                                        void handleDelete(
-                                          cotacao.id,
-                                          cotacao.descricao,
-                                        )
-                                      }
-                                      disabled={isDeleting}
-                                    >
-                                      <span className="flex items-center gap-2">
-                                        <Trash2 className="h-4 w-4" /> Excluir
                                       </span>
                                     </TableActionButton>
                                   </>

@@ -1,3 +1,6 @@
+import { format, isValid, parse } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
 function toDateOnly(value: string): string {
   return value.slice(0, 10);
 }
@@ -11,6 +14,16 @@ function todayDateOnly(): string {
 
 export function isCotacaoVencida(dataValidade: string): boolean {
   return toDateOnly(dataValidade) < todayDateOnly();
+}
+
+export function formatDateOnly(value: string): string {
+  const parsed = parse(toDateOnly(value), "yyyy-MM-dd", new Date());
+
+  if (!isValid(parsed)) {
+    return value;
+  }
+
+  return format(parsed, "dd/MM/yyyy", { locale: ptBR });
 }
 
 export function formatCotacaoNumero(cotacao: { numero?: string | null; id: string }): string {

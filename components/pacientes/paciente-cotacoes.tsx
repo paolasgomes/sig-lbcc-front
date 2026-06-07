@@ -22,9 +22,7 @@ import { Empty } from "@/components/ui/empty";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useCotacoes } from "@/hooks/use-cotacoes";
 import { useUsuario } from "@/hooks/use-usuario";
-import { isCotacaoVencida } from "@/lib/cotacoes-utils";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { isCotacaoVencida, formatDateOnly } from "@/lib/cotacoes-utils";
 
 interface PacienteCotacoesProps {
   pacienteId: string;
@@ -39,14 +37,6 @@ export function PacienteCotacoes({ pacienteId }: PacienteCotacoesProps) {
     .sort(
       (a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime(),
     );
-
-  const formatDate = (dateStr: string) => {
-    try {
-      return format(new Date(dateStr), "dd/MM/yyyy", { locale: ptBR });
-    } catch {
-      return dateStr;
-    }
-  };
 
   return (
     <Card>
@@ -97,7 +87,7 @@ export function PacienteCotacoes({ pacienteId }: PacienteCotacoesProps) {
                     <TableCell>{cotacao.areaNome ?? "-"}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {formatDate(cotacao.dataValidade)}
+                        {formatDateOnly(cotacao.dataValidade)}
                         {vencida && (
                           <AlertTriangle className="h-4 w-4 text-destructive" />
                         )}

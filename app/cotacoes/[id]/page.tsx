@@ -4,10 +4,10 @@ import { use, useState } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { useCotacao, CotacaoVinculosError } from "@/hooks/use-cotacoes";
+import { useCotacao } from "@/hooks/use-cotacoes";
 import { useUsuario } from "@/hooks/use-usuario";
 import { ROLES_ATENDIMENTOS_E_COTACOES } from "@/lib/access-control";
-import { isCotacaoVencida, formatCotacaoNumero } from "@/lib/cotacoes-utils";
+import { isCotacaoVencida, formatCotacaoNumero, formatDateOnly } from "@/lib/cotacoes-utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -42,7 +42,6 @@ import {
   ArrowLeft,
   Pencil,
   FileText,
-  Trash2,
   Ban,
   CheckCircle,
   AlertTriangle,
@@ -61,9 +60,7 @@ export default function CotacaoDetailPage({ params }: CotacaoDetailPageProps) {
     isLoading,
     error,
     alternarStatus,
-    excluirCotacao,
     isTogglingStatus,
-    isDeleting,
   } = useCotacao(id);
   const { isGestor } = useUsuario();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -84,14 +81,6 @@ export default function CotacaoDetailPage({ params }: CotacaoDetailPageProps) {
 
   const vencida = cotacao.ativo && isCotacaoVencida(cotacao.dataValidade);
 
-  const formatDate = (dateStr: string) => {
-    try {
-      return format(new Date(dateStr), "dd/MM/yyyy", { locale: ptBR });
-    } catch {
-      return dateStr;
-    }
-  };
-
   const formatDateTime = (dateStr: string) => {
     try {
       return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: ptBR });
@@ -108,23 +97,6 @@ export default function CotacaoDetailPage({ params }: CotacaoDetailPageProps) {
       setActionError(
         err instanceof Error ? err.message : "Erro ao alterar status da cotação.",
       );
-    }
-  };
-
-  const handleDelete = async () => {
-    setActionError(null);
-    try {
-      await excluirCotacao();
-      window.location.href = "/cotacoes";
-    } catch (err) {
-      if (err instanceof CotacaoVinculosError) {
-        const { propostas, itens } = err.relacionamentos;
-        setActionError(
-          `Não é possível excluir: ${propostas} proposta(s), ${itens} item(ns) vinculados.`,
-        );
-      } else {
-        setActionError(err instanceof Error ? err.message : "Erro ao excluir cotação.");
-      }
     }
   };
 
@@ -193,33 +165,6 @@ export default function CotacaoDetailPage({ params }: CotacaoDetailPageProps) {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" disabled={isDeleting}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Excluir
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Excluir cotação?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta ação não pode ser desfeita. A cotação será removida
-                      permanentemente.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDelete}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      Excluir
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
             </div>
           )}
         </div>
@@ -250,7 +195,7 @@ export default function CotacaoDetailPage({ params }: CotacaoDetailPageProps) {
             <div>
               <p className="text-sm text-muted-foreground">Validade</p>
               <div className="flex items-center gap-1 font-medium">
-                {formatDate(cotacao.dataValidade)}
+                {formatDateOnly(cotacao.dataValidade)}
                 {vencida && (
                   <AlertTriangle className="h-4 w-4 text-destructive" />
                 )}
