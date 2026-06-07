@@ -5,6 +5,9 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { useData } from "@/contexts/data-context";
 import { useCotacoes } from "@/hooks/use-cotacoes";
+import { useAtendimentos } from "@/hooks/use-atendimentos";
+import { getTipoAtendimentoLabel } from "@/lib/atendimentos-utils";
+import { TIPOS_ATENDIMENTO } from "@/types";
 import { isCotacaoVencida } from "@/lib/cotacoes-utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,7 +63,8 @@ const COLORS = [
 ];
 
 export default function RelatoriosPage() {
-  const { pacientes, atendimentos, areas } = useData();
+  const { pacientes } = useData();
+  const { atendimentos } = useAtendimentos();
   const { cotacoes } = useCotacoes("todas");
   const [periodoInicio, setPeriodoInicio] = useState(
     format(startOfMonth(new Date()), "yyyy-MM-dd"),
@@ -99,7 +103,9 @@ export default function RelatoriosPage() {
     });
   };
 
-  const atendimentosFiltrados = filtrarPorPeriodo(atendimentos);
+  const atendimentosFiltrados = filtrarPorPeriodo(
+    atendimentos.map((a) => ({ ...a, data: a.dataAtendimento })),
+  );
   const cotacoesFiltradas = filtrarPorPeriodo(cotacoes);
 
   // Estatisticas de pacientes por status
@@ -112,33 +118,11 @@ export default function RelatoriosPage() {
     },
   ].filter((item) => item.value > 0);
 
-  // Atendimentos por area
-  const atendimentosPorArea = areas
-    .map((area) => ({
-      name: area.nome,
-      atendimentos: atendimentosFiltrados.filter((a) => a.areaId === area.id).length,
-    }))
-    .filter((item) => item.atendimentos > 0);
-
-  // Atendimentos por status
-  const atendimentosPorStatus = [
-    {
-      name: "Agendados",
-      value: atendimentosFiltrados.filter((a) => a.status === "agendado").length,
-    },
-    {
-      name: "Em Andamento",
-      value: atendimentosFiltrados.filter((a) => a.status === "em_andamento").length,
-    },
-    {
-      name: "Concluidos",
-      value: atendimentosFiltrados.filter((a) => a.status === "concluido").length,
-    },
-    {
-      name: "Cancelados",
-      value: atendimentosFiltrados.filter((a) => a.status === "cancelado").length,
-    },
-  ].filter((item) => item.value > 0);
+  // Atendimentos por tipo
+  const atendimentosPorTipo = TIPOS_ATENDIMENTO.map((tipo) => ({
+    name: getTipoAtendimentoLabel(tipo),
+    value: atendimentosFiltrados.filter((a) => a.tipo === tipo).length,
+  })).filter((item) => item.value > 0);
 
   const cotacoesPorStatus = [
     {
@@ -231,8 +215,7 @@ export default function RelatoriosPage() {
               <CardContent>
                 <div className="text-2xl font-bold">{atendimentosFiltrados.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  {atendimentosFiltrados.filter((a) => a.status === "concluido").length}{" "}
-                  concluidos
+                  no período selecionado
                 </p>
               </CardContent>
             </Card>
@@ -270,38 +253,16 @@ export default function RelatoriosPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5" />
-                  Atendimentos por Area
+                  Atendimentos por Área
                 </CardTitle>
                 <CardDescription>
-                  Distribuicao de atendimentos por area de servico
+                  Distribuição de atendimentos por área de serviço
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {atendimentosPorArea.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={atendimentosPorArea}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="name" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "var(--radius)",
-                        }}
-                      />
-                      <Bar
-                        dataKey="atendimentos"
-                        fill="hsl(var(--chart-1))"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex h-75 items-center justify-center text-muted-foreground">
-                    Nenhum atendimento no periodo selecionado.
-                  </div>
-                )}
+                <div className="flex h-75 items-center justify-center text-muted-foreground">
+                  Dados por área não disponíveis para atendimentos.
+                </div>
               </CardContent>
             </Card>
 
@@ -354,15 +315,15 @@ export default function RelatoriosPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Atendimentos por Status</CardTitle>
-                <CardDescription>Status dos atendimentos no periodo</CardDescription>
+                <CardTitle>Atendimentos por Tipo</CardTitle>
+                <CardDescription>Tipos de atendimentos no período</CardDescription>
               </CardHeader>
               <CardContent>
-                {atendimentosPorStatus.length > 0 ? (
+                {atendimentosPorTipo.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
-                        data={atendimentosPorStatus}
+                        data={atendimentosPorTipo}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
@@ -373,7 +334,7 @@ export default function RelatoriosPage() {
                         fill="#8884d8"
                         dataKey="value"
                       >
-                        {atendimentosPorStatus.map((entry, index) => (
+                        {atendimentosPorTipo.map((entry, index) => (
                           <Cell
                             key={`cell-${entry.name}`}
                             fill={COLORS[index % COLORS.length]}

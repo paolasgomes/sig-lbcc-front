@@ -36,7 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { useData } from "@/contexts/data-context";
 import { listarDocumentosPaciente, uploadDocumento } from "@/services/pacientes-service";
-import { TipoEvento, type Documento } from "@/types";
+import type { Documento } from "@/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

@@ -1,26 +1,41 @@
 "use client";
 
-import { use } from "react";
-import { notFound } from "next/navigation";
+import { use, useState } from "react";
+import { notFound, useRouter } from "next/navigation";
 import Link from "next/link";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { ProtectedRoute } from "@/components/auth/protected-route";
-import { useData } from "@/contexts/data-context";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatusBadge } from "@/components/shared/status-badge";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   ArrowLeft,
   Pencil,
+  Trash2,
   User,
-  MapPin,
   Calendar,
   FileText,
-  CheckCircle,
-  XCircle,
+  AlertTriangle,
 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { useAtendimento } from "@/hooks/use-atendimentos";
+import { useUsuario } from "@/hooks/use-usuario";
+import { ROLES_ATENDIMENTOS_E_COTACOES } from "@/lib/access-control";
+import {
+  formatDataAtendimento,
+  getTipoAtendimentoLabel,
+} from "@/lib/atendimentos-utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { TableLoading } from "@/components/ui/table-state";
 
 interface AtendimentoDetailPageProps {
   params: Promise<{ id: string }>;
@@ -28,220 +43,183 @@ interface AtendimentoDetailPageProps {
 
 export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageProps) {
   const { id } = use(params);
-  const { atendimentos, pacientes, areas, usuarios, updateAtendimento } = useData();
-  const atendimento = atendimentos.find((a) => a.id === id);
+  const router = useRouter();
+  const { atendimento, isLoading, error, excluirAtendimento, isDeleting } =
+    useAtendimento(id);
+  const { isGestor } = useUsuario();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  if (!atendimento) {
+  if (isLoading) {
+    return (
+      <DashboardLayout allowedRoles={ROLES_ATENDIMENTOS_E_COTACOES}>
+        <TableLoading columns={1} rows={4} />
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !atendimento) {
     notFound();
   }
 
-  const paciente = pacientes.find((p) => p.id === atendimento.pacienteId);
-  const area = areas.find(
-    (a) => a.id === (atendimento.areaId ?? atendimento.areaAtendimentoId),
-  );
-  const responsavel = usuarios.find((u) => u.id === atendimento.responsavelId);
-
-  const handleConcluir = () => {
-    if (confirm("Tem certeza que deseja concluir este atendimento?")) {
-      updateAtendimento(atendimento.id, { status: "concluido" });
+  const formatDateTime = (dateStr: string) => {
+    try {
+      return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: ptBR });
+    } catch {
+      return dateStr;
     }
   };
 
-  const handleCancelar = () => {
-    if (confirm("Tem certeza que deseja cancelar este atendimento?")) {
-      updateAtendimento(atendimento.id, { status: "cancelado" });
+  const handleDelete = async () => {
+    setActionError(null);
+    try {
+      await excluirAtendimento(atendimento.pacienteId);
+      router.push("/atendimentos");
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Erro ao excluir atendimento.",
+      );
+      setShowDeleteDialog(false);
     }
   };
-
-  const getTipoLabel = (tipo?: string) => {
-    const labels: Record<string, string> = {
-      consulta: "Consulta",
-      exame: "Exame",
-      procedimento: "Procedimento",
-      retorno: "Retorno",
-      acompanhamento: "Acompanhamento",
-    };
-    return labels[tipo ?? ""] || tipo || "Nao informado";
-  };
-
-  const canEdit =
-    atendimento.status !== "concluido" && atendimento.status !== "cancelado";
 
   return (
-    <ProtectedRoute allowedRoles={["admin", "gestor"]}>
-      <DashboardLayout>
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/atendimentos">
-                  <ArrowLeft className="h-4 w-4" />
-                </Link>
-              </Button>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold tracking-tight">
-                    Atendimento #{atendimento.id.slice(0, 8).toUpperCase()}
-                  </h1>
-                  <StatusBadge
-                    status={atendimento.status ?? "agendado"}
-                    type="atendimento"
-                  />
-                </div>
-                <p className="text-muted-foreground">
-                  {getTipoLabel(atendimento.tipo ?? atendimento.tipoAtendimento)} -{" "}
-                  {format(
-                    new Date(atendimento.dataHora ?? atendimento.data),
-                    "dd 'de' MMMM 'de' yyyy 'as' HH:mm",
-                    { locale: ptBR },
-                  )}
-                </p>
-              </div>
+    <DashboardLayout allowedRoles={ROLES_ATENDIMENTOS_E_COTACOES}>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/atendimentos">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Atendimento</h1>
+              <p className="text-muted-foreground">
+                {getTipoAtendimentoLabel(atendimento.tipo)} —{" "}
+                {formatDataAtendimento(atendimento.dataAtendimento)}
+              </p>
             </div>
-            {canEdit && (
-              <div className="flex gap-2">
-                <Button variant="outline" asChild>
-                  <Link href={`/atendimentos/${atendimento.id}/editar`}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Editar
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleCancelar}
-                  className="text-destructive"
-                >
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Cancelar
-                </Button>
-                {atendimento.status === "em_andamento" && (
-                  <Button onClick={handleConcluir}>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Concluir
-                  </Button>
-                )}
-              </div>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link href={`/atendimentos/${atendimento.id}/editar`}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </Link>
+            </Button>
+            {isGestor && (
+              <Button
+                variant="outline"
+                className="text-destructive"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={isDeleting}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir
+              </Button>
             )}
           </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Paciente
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {paciente ? (
-                  <div className="flex flex-col gap-1">
-                    <Link
-                      href={`/pacientes/${paciente.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {paciente.nome ?? paciente.nomeCompleto}
-                    </Link>
-                    <p className="text-sm text-muted-foreground">
-                      CPF:{" "}
-                      {paciente.cpf.replace(
-                        /(\d{3})(\d{3})(\d{3})(\d{2})/,
-                        "$1.$2.$3-$4",
-                      )}
-                    </p>
-                    {paciente.telefone && (
-                      <p className="text-sm text-muted-foreground">
-                        Tel: {paciente.telefone}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">Paciente nao encontrado</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Area de Atendimento
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {area ? (
-                  <div className="flex flex-col gap-1">
-                    <p className="font-medium">{area.nome}</p>
-                    <p className="text-sm text-muted-foreground">{area.descricao}</p>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">Area nao encontrada</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Detalhes
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tipo:</span>
-                  <span>
-                    {getTipoLabel(atendimento.tipo ?? atendimento.tipoAtendimento)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Data/Hora:</span>
-                  <span>
-                    {format(
-                      new Date(atendimento.dataHora ?? atendimento.data),
-                      "dd/MM/yyyy HH:mm",
-                    )}
-                  </span>
-                </div>
-                {responsavel && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Responsavel:</span>
-                    <span>{responsavel.nome}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Descricao
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {atendimento.descricao ? (
-                  <p className="whitespace-pre-wrap">{atendimento.descricao}</p>
-                ) : (
-                  <p className="text-muted-foreground">Nenhuma descricao registrada.</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {atendimento.observacoes && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Observacoes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="whitespace-pre-wrap text-muted-foreground">
-                  {atendimento.observacoes}
-                </p>
-              </CardContent>
-            </Card>
-          )}
         </div>
-      </DashboardLayout>
-    </ProtectedRoute>
+
+        {actionError && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Erro na operação</AlertTitle>
+            <AlertDescription>{actionError}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Paciente
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Link
+                href={`/pacientes/${atendimento.pacienteId}`}
+                className="font-medium hover:underline"
+              >
+                {atendimento.pacienteNome ?? atendimento.pacienteId}
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Detalhes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tipo:</span>
+                <span>{getTipoAtendimentoLabel(atendimento.tipo)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Data:</span>
+                <span>{formatDataAtendimento(atendimento.dataAtendimento)}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Descrição
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {atendimento.descricao ? (
+                <p className="whitespace-pre-wrap">{atendimento.descricao}</p>
+              ) : (
+                <p className="text-muted-foreground">Nenhuma descrição registrada.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Metadados</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Criado em</span>
+                <span>{formatDateTime(atendimento.criadoEm)}</span>
+              </div>
+              {atendimento.atualizadoEm && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Atualizado em</span>
+                  <span>{formatDateTime(atendimento.atualizadoEm)}</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir atendimento?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. O registro será removido
+                permanentemente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void handleDelete()}>
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </DashboardLayout>
   );
 }

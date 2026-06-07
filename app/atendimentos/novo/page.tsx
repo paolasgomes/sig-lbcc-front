@@ -1,15 +1,13 @@
-"use client"
+"use client";
 
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { ProtectedRoute } from "@/components/auth/protected-route"
-import { AtendimentoForm } from "@/components/atendimentos/atendimento-form"
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { AtendimentoForm } from "@/components/atendimentos/atendimento-form";
+import { ROLES_ATENDIMENTOS_E_COTACOES } from "@/lib/access-control";
 
 export default function NovoAtendimentoPage() {
   return (
-    <ProtectedRoute allowedRoles={["admin", "gestor", "atendente"]}>
-      <DashboardLayout>
-        <AtendimentoForm />
-      </DashboardLayout>
-    </ProtectedRoute>
-  )
+    <DashboardLayout allowedRoles={ROLES_ATENDIMENTOS_E_COTACOES}>
+      <AtendimentoForm />
+    </DashboardLayout>
+  );
 }

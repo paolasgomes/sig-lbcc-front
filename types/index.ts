@@ -64,15 +64,6 @@ export enum EstadoCivil {
   UNIAO_ESTAVEL = "uniao_estavel",
 }
 
-export enum TipoEvento {
-  CADASTRO = "cadastro",
-  ATUALIZACAO = "atualizacao",
-  ATENDIMENTO = "atendimento",
-  COTACAO = "cotacao",
-  STATUS = "status",
-  DOCUMENTO = "documento",
-}
-
 // Interfaces
 export interface Usuario {
   id: string;
@@ -254,32 +245,55 @@ export interface CotacaoUpdateInput {
   itens?: (ItemCotacaoInput & { id?: string })[];
 }
 
+export type TipoAtendimento =
+  | "consulta"
+  | "exame"
+  | "procedimento"
+  | "internacao"
+  | "quimioterapia"
+  | "radioterapia"
+  | "outro";
+
+export const TIPOS_ATENDIMENTO: TipoAtendimento[] = [
+  "consulta",
+  "exame",
+  "procedimento",
+  "internacao",
+  "quimioterapia",
+  "radioterapia",
+  "outro",
+];
+
 export interface Atendimento {
   id: string;
   pacienteId: string;
-  data: string;
-  dataHora?: string;
-  areaAtendimentoId: string;
-  areaId?: string;
-  tipoAtendimento: string;
-  tipo?: string;
+  tipo: TipoAtendimento;
+  dataAtendimento: string;
   descricao: string;
-  observacoes?: string;
-  status?: string;
-  responsavelId?: string;
-  cotacaoId?: string;
-  criadoPor: string;
   criadoEm: string;
+  atualizadoEm?: string;
+  pacienteNome?: string;
+  criadoPorNome?: string;
 }
 
-export interface Historico {
+export interface HistoricoPaciente {
   id: string;
   pacienteId: string;
-  dataHora: string;
-  tipoEvento: TipoEvento;
+  tipoEvento: string;
   descricao: string;
-  usuarioResponsavel: string;
+  referenciaId?: string | null;
+  criadoEm: string;
+  usuarioNome?: string;
 }
+
+export interface AtendimentoCreateInput {
+  pacienteId: string;
+  tipo: TipoAtendimento;
+  dataAtendimento: string;
+  descricao: string;
+}
+
+export type AtendimentoUpdateInput = AtendimentoCreateInput;
 
 export interface Documento {
   id: string;
@@ -296,7 +310,7 @@ export type PacienteFormData = Omit<Paciente, "id" | "criadoEm" | "atualizadoEm"
 export type CotacaoFormData = Omit<Cotacao, "id" | "criadoEm" | "ativo" | "itens"> & {
   itens: Omit<ItemCotacao, "id">[];
 };
-export type AtendimentoFormData = Omit<Atendimento, "id" | "criadoEm">;
+export type AtendimentoFormData = AtendimentoCreateInput;
 
 // Types para filtros
 export interface FiltroPaciente {
@@ -314,16 +328,14 @@ export interface FiltroCotacao {
 
 export interface FiltroAtendimento {
   pacienteId?: string;
-  areaId?: string;
+  tipo?: TipoAtendimento;
   periodoInicio?: string;
   periodoFim?: string;
-  tipo?: string;
 }
 
 // Types para dashboard
 export interface DashboardStats {
   totalPacientes: number;
-  totalAtendimentos: number;
   pacientesAtivos: number;
   pacientesSuspensos: number;
   pacientesEncerrados: number;

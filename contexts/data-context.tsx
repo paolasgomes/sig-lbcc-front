@@ -26,11 +26,8 @@ import {
   AreaAtendimento,
   Fornecedor,
   Produto,
-  Atendimento,
-  Historico,
   Documento,
   StatusPaciente,
-  TipoEvento,
   DashboardStats,
   Sexo,
   EstadoCivil,
@@ -38,8 +35,6 @@ import {
 import {
   fornecedoresMock,
   produtosMock,
-  atendimentosMock,
-  historicoMock,
   documentosMock,
 } from "@/mocks";
 import { useAuth } from "@/contexts/auth-context";
@@ -279,8 +274,6 @@ interface DataContextType {
   produtos: Produto[];
   produtosLoading: boolean;
   produtosError: string | null;
-  atendimentos: Atendimento[];
-  historico: Historico[];
   documentos: Documento[];
 
   // Estatísticas
@@ -327,16 +320,6 @@ interface DataContextType {
   updateProduto: (id: string, dados: Partial<Produto>) => Promise<Produto>;
   desativarProduto: (id: string) => Promise<void>;
 
-  // Atendimentos
-  getAtendimentoById: (id: string) => Atendimento | undefined;
-  getAtendimentosByPaciente: (pacienteId: string) => Atendimento[];
-  addAtendimento: (atendimento: Partial<Atendimento>) => void;
-  updateAtendimento: (id: string, dados: Partial<Atendimento>) => void;
-
-  // Histórico
-  getHistoricoByPaciente: (pacienteId: string) => Historico[];
-  addHistorico: (historico: Historico) => void;
-
   // Documentos
   getDocumentosByPaciente: (pacienteId: string) => Documento[];
   addDocumento: (documento: Documento) => void;
@@ -361,8 +344,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [produtosLoading, setProdutosLoading] = useState(true);
   const [produtosError, setProdutosError] = useState<string | null>(null);
-  const [atendimentos, setAtendimentos] = useState<Atendimento[]>(atendimentosMock);
-  const [historico, setHistorico] = useState<Historico[]>(historicoMock);
   const [documentos, setDocumentos] = useState<Documento[]>(documentosMock);
 
   const refreshUsuarios = useCallback(async () => {
@@ -525,14 +506,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const getStats = useCallback((): DashboardStats => {
     return {
       totalPacientes: pacientes.length,
-      totalAtendimentos: atendimentos.length,
       pacientesAtivos: pacientes.filter((p) => p.status === StatusPaciente.ATIVO).length,
       pacientesSuspensos: pacientes.filter((p) => p.status === StatusPaciente.SUSPENSO)
         .length,
       pacientesEncerrados: pacientes.filter((p) => p.status === StatusPaciente.ENCERRADO)
         .length,
     };
-  }, [pacientes, atendimentos]);
+  }, [pacientes]);
 
   // Pacientes
   const getPacienteById = useCallback(
@@ -727,18 +707,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const alterarStatusPaciente = useCallback(
-    async (id: string, novoStatus: StatusPaciente, usuarioNome: string) => {
+    async (id: string, novoStatus: StatusPaciente, _usuarioNome: string) => {
       await updatePaciente(id, { status: novoStatus });
-
-      const novoHistorico: Historico = {
-        id: `hist-${Date.now()}`,
-        pacienteId: id,
-        dataHora: new Date().toISOString(),
-        tipoEvento: TipoEvento.STATUS,
-        descricao: `Status alterado para ${novoStatus}`,
-        usuarioResponsavel: usuarioNome,
-      };
-      setHistorico((prev) => [...prev, novoHistorico]);
     },
     [updatePaciente],
   );
@@ -799,24 +769,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [areas],
   );
 
-  const deleteArea = useCallback(
-    async (id: string) => {
-      const areaEmUso = atendimentos.some(
-        (atendimento) =>
-          atendimento.areaId === id || atendimento.areaAtendimentoId === id,
-      );
-
-      if (areaEmUso) {
-        throw new Error(
-          "Esta área não pode ser excluída porque já está sendo usada em outro cadastro.",
-        );
-      }
-
-      await inativarAreaApi(id);
-      setAreas((prev) => prev.filter((area) => area.id !== id));
-    },
-    [atendimentos],
-  );
+  const deleteArea = useCallback(async (id: string) => {
+    await inativarAreaApi(id);
+    setAreas((prev) => prev.filter((area) => area.id !== id));
+  }, []);
 
   // Fornecedores
   const getFornecedorById = useCallback(
@@ -952,59 +908,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await queryClient.invalidateQueries({ queryKey: ["produtos"] });
   }, []);
 
-  // Atendimentos
-  const getAtendimentoById = useCallback(
-    (id: string) => {
-      return atendimentos.find((a) => a.id === id);
-    },
-    [atendimentos],
-  );
-
-  const getAtendimentosByPaciente = useCallback(
-    (pacienteId: string) => {
-      return atendimentos.filter((a) => a.pacienteId === pacienteId);
-    },
-    [atendimentos],
-  );
-
-  const addAtendimento = useCallback((atendimento: Partial<Atendimento>) => {
-    const novoAtendimento: Atendimento = {
-      id: atendimento.id ?? `atend-${Date.now()}`,
-      pacienteId: atendimento.pacienteId ?? "",
-      data:
-        atendimento.data ??
-        atendimento.dataHora?.split("T")[0] ??
-        new Date().toISOString().split("T")[0],
-      areaAtendimentoId: atendimento.areaAtendimentoId ?? atendimento.areaId ?? "",
-      tipoAtendimento: atendimento.tipoAtendimento ?? atendimento.tipo ?? "",
-      descricao: atendimento.descricao ?? "",
-      cotacaoId: atendimento.cotacaoId,
-      criadoPor:
-        atendimento.criadoPor ?? atendimento.responsavelId ?? usuario?.id ?? "sistema",
-      criadoEm: atendimento.criadoEm ?? new Date().toISOString(),
-      ...atendimento,
-    };
-    setAtendimentos((prev) => [...prev, novoAtendimento]);
-  }, []);
-
-  const updateAtendimento = useCallback((id: string, dados: Partial<Atendimento>) => {
-    setAtendimentos((prev) => prev.map((a) => (a.id === id ? { ...a, ...dados } : a)));
-  }, []);
-
-  // Histórico
-  const getHistoricoByPaciente = useCallback(
-    (pacienteId: string) => {
-      return historico
-        .filter((h) => h.pacienteId === pacienteId)
-        .sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
-    },
-    [historico],
-  );
-
-  const addHistorico = useCallback((novoHistorico: Historico) => {
-    setHistorico((prev) => [...prev, novoHistorico]);
-  }, []);
-
   // Documentos
   const getDocumentosByPaciente = useCallback(
     (pacienteId: string) => {
@@ -1017,25 +920,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setDocumentos((prev) => [...prev, documento]);
   }, []);
 
-  const removeDocumento = useCallback(
-    (id: string, usuarioNome: string, pacienteId: string) => {
-      const doc = documentos.find((d) => d.id === id);
-      if (doc) {
-        setDocumentos((prev) => prev.filter((d) => d.id !== id));
-
-        const novoHistorico: Historico = {
-          id: `hist-${Date.now()}`,
-          pacienteId,
-          dataHora: new Date().toISOString(),
-          tipoEvento: TipoEvento.DOCUMENTO,
-          descricao: `Documento "${doc.nomeArquivo}" removido`,
-          usuarioResponsavel: usuarioNome,
-        };
-        setHistorico((prev) => [...prev, novoHistorico]);
-      }
-    },
-    [documentos],
-  );
+  const removeDocumento = useCallback((id: string, _usuarioNome: string, _pacienteId: string) => {
+    setDocumentos((prev) => prev.filter((d) => d.id !== id));
+  }, []);
 
   return (
     <DataContext.Provider
@@ -1053,8 +940,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         produtos,
         produtosLoading,
         produtosError,
-        atendimentos,
-        historico,
         documentos,
         getStats,
         refreshUsuarios,
@@ -1084,12 +969,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         refreshProdutos,
         fetchProdutoById,
         desativarProduto,
-        getAtendimentoById,
-        getAtendimentosByPaciente,
-        addAtendimento,
-        updateAtendimento,
-        getHistoricoByPaciente,
-        addHistorico,
         getDocumentosByPaciente,
         addDocumento,
         removeDocumento,
