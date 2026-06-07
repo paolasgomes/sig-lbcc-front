@@ -53,4 +53,25 @@ describe("mapApiItemToItemCotacao", () => {
       ordem: 1,
     });
   });
+
+  it("maps produto_id when present", () => {
+    expect(
+      mapApiItemToItemCotacao({
+        id: "item-2",
+        cotacao_id: "c-1",
+        produto_id: "prod-1",
+        descricao: "Água",
+        quantidade: 2,
+        unidade: "CX",
+        ordem: 1,
+      }),
+    ).toEqual({
+      id: "item-2",
+      produtoId: "prod-1",
+      descricao: "Água",
+      quantidade: 2,
+      unidade: "CX",
+      ordem: 1,
+    });
+  });
 });

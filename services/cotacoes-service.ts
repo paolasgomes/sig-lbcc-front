@@ -20,6 +20,7 @@ export interface ApiCotacaoDTO {
 export interface ApiItemCotacaoDTO {
   id: string;
   cotacao_id: string;
+  produto_id?: string | null;
   descricao: string;
   quantidade: number;
   unidade: string;
@@ -84,6 +85,7 @@ export function mapApiCotacaoToCotacao(
 export function mapApiItemToItemCotacao(dto: ApiItemCotacaoDTO): ItemCotacao {
   return {
     id: dto.id,
+    produtoId: dto.produto_id ?? undefined,
     descricao: dto.descricao ?? "",
     quantidade: dto.quantidade ?? 0,
     unidade: dto.unidade ?? "UN",
@@ -101,8 +103,12 @@ function mapCotacaoToApiPayload(dados: Partial<CotacaoCreateInput>) {
   };
 }
 
-function mapItemToApiPayload(item: Omit<ItemCotacao, "id">, ordem: number) {
+function mapItemToApiPayload(
+  item: Omit<ItemCotacao, "id"> & { produtoId: string },
+  ordem: number,
+) {
   return {
+    produto_id: item.produtoId,
     descricao: item.descricao,
     quantidade: item.quantidade,
     unidade: item.unidade,

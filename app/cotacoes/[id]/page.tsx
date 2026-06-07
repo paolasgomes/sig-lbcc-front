@@ -1,10 +1,11 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useMemo, useState } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { useCotacao } from "@/hooks/use-cotacoes";
+import { useProdutos } from "@/hooks/use-produtos";
 import { useUsuario } from "@/hooks/use-usuario";
 import { ROLES_ATENDIMENTOS_E_COTACOES } from "@/lib/access-control";
 import { isCotacaoVencida, formatCotacaoNumero, formatDateOnly } from "@/lib/cotacoes-utils";
@@ -63,7 +64,13 @@ export default function CotacaoDetailPage({ params }: CotacaoDetailPageProps) {
     isTogglingStatus,
   } = useCotacao(id);
   const { isGestor } = useUsuario();
+  const { produtos } = useProdutos();
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const produtosPorId = useMemo(
+    () => new Map(produtos.map((p) => [p.id, p.nome])),
+    [produtos],
+  );
 
   if (isLoading) {
     return (
@@ -225,17 +232,21 @@ export default function CotacaoDetailPage({ params }: CotacaoDetailPageProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Produto</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead className="text-center">Quantidade</TableHead>
-                    <TableHead className="text-center">Unidade</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {cotacao.itens.map((item, index) => (
                     <TableRow key={item.id ?? index}>
+                      <TableCell>
+                        {item.produtoId
+                          ? (produtosPorId.get(item.produtoId) ?? "Produto removido")
+                          : "—"}
+                      </TableCell>
                       <TableCell className="font-medium">{item.descricao}</TableCell>
                       <TableCell className="text-center">{item.quantidade}</TableCell>
-                      <TableCell className="text-center">{item.unidade}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

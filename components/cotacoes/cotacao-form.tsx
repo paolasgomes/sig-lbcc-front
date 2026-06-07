@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Save, Plus, Trash2, FileText } from "lucide-react";
@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { usePacientes } from "@/hooks/use-pacientes";
 import { useAreas } from "@/hooks/use-areas";
+import { useProdutos } from "@/hooks/use-produtos";
 import { useCotacoes } from "@/hooks/use-cotacoes";
 import type { Cotacao } from "@/types";
 
@@ -42,12 +43,10 @@ interface CotacaoFormProps {
 
 type ItemFormRow = {
   id?: string;
+  produtoId?: string;
   descricao: string;
   quantidade: number;
-  unidade: string;
 };
-
-const UNIDADES = ["UN", "CX", "FR", "ML", "MG", "KG", "PC"];
 
 export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
   const router = useRouter();
@@ -56,6 +55,7 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
 
   const { pacientes } = usePacientes();
   const { areas } = useAreas();
+  const { produtos } = useProdutos();
   const { criarCotacao, atualizarCotacao, isCreating, isUpdating } = useCotacoes();
 
   const [pacienteId, setPacienteId] = useState(
@@ -68,18 +68,36 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
   const [itens, setItens] = useState<ItemFormRow[]>(
     cotacao?.itens.map((i) => ({
       id: i.id,
+      produtoId: i.produtoId,
       descricao: i.descricao,
       quantidade: i.quantidade,
-      unidade: i.unidade,
-    })) || [{ descricao: "", quantidade: 1, unidade: "UN" }],
+    })) || [{ descricao: "", quantidade: 1 }],
   );
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const pacientesAtivos = pacientes.filter((p) => p.status === "ativo");
   const areasAtivas = areas.filter((a) => a.ativo !== false);
 
+  const produtosVinculadosIds = useMemo(
+    () => new Set(itens.map((i) => i.produtoId).filter(Boolean) as string[]),
+    [itens],
+  );
+
+  const produtosParaSelecao = useMemo(
+    () =>
+      produtos.filter(
+        (p) => p.ativo !== false || produtosVinculadosIds.has(p.id),
+      ),
+    [produtos, produtosVinculadosIds],
+  );
+
+  const produtosPorId = useMemo(
+    () => new Map(produtos.map((p) => [p.id, p])),
+    [produtos],
+  );
+
   const handleAddRow = () => {
-    setItens([...itens, { descricao: "", quantidade: 1, unidade: "UN" }]);
+    setItens([...itens, { descricao: "", quantidade: 1 }]);
   };
 
   const handleRemoveRow = (index: number) => {
@@ -97,18 +115,34 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
     setItens(updated);
   };
 
+  const handleProdutoChange = (index: number, value: string) => {
+    const produto = produtosParaSelecao.find((p) => p.id === value);
+    if (!produto) return;
+
+    const updated = [...itens];
+    updated[index] = {
+      ...updated[index],
+      produtoId: produto.id,
+      descricao: produto.nome,
+    };
+    setItens(updated);
+  };
+
   const validate = (): string | null => {
     if (!pacienteId) return "Selecione um paciente.";
     if (!areaId) return "Selecione uma área.";
     if (!descricao.trim()) return "Informe a descrição.";
     if (!dataValidade) return "Informe a data de validade.";
     if (itens.length === 0) return "Adicione pelo menos um item.";
+    if (produtosParaSelecao.length === 0) {
+      return "Cadastre ao menos um produto ativo antes de adicionar itens.";
+    }
 
     for (let i = 0; i < itens.length; i++) {
       const item = itens[i];
+      if (!item.produtoId) return `Item ${i + 1}: selecione um produto.`;
       if (!item.descricao.trim()) return `Item ${i + 1}: informe a descrição.`;
       if (item.quantidade <= 0) return `Item ${i + 1}: quantidade deve ser maior que zero.`;
-      if (!item.unidade.trim()) return `Item ${i + 1}: informe a unidade.`;
     }
 
     return null;
@@ -129,11 +163,12 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
       areaId,
       dataValidade,
       observacoes: observacoes.trim(),
-      itens: itens.map(({ id, descricao: desc, quantidade, unidade }) => ({
+      itens: itens.map(({ id, produtoId, descricao: desc, quantidade }) => ({
         ...(id ? { id } : {}),
+        produtoId: produtoId!,
         descricao: desc.trim(),
         quantidade,
-        unidade: unidade.trim(),
+        unidade: produtosPorId.get(produtoId!)?.unidade ?? "UN",
       })),
     };
 
@@ -261,15 +296,32 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-48">Produto *</TableHead>
                   <TableHead>Descrição *</TableHead>
                   <TableHead className="w-28">Quantidade *</TableHead>
-                  <TableHead className="w-32">Unidade *</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {itens.map((item, index) => (
                   <TableRow key={index}>
+                    <TableCell>
+                      <Select
+                        value={item.produtoId}
+                        onValueChange={(v) => handleProdutoChange(index, v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um produto..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {produtosParaSelecao.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
                     <TableCell>
                       <Input
                         value={item.descricao}
@@ -292,23 +344,6 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
                           )
                         }
                       />
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={item.unidade}
-                        onValueChange={(v) => handleItemChange(index, "unidade", v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {UNIDADES.map((u) => (
-                            <SelectItem key={u} value={u}>
-                              {u}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     </TableCell>
                     <TableCell>
                       <Button

@@ -221,6 +221,15 @@ export interface Cotacao {
 
 export interface ItemCotacao {
   id?: string;
+  produtoId?: string;
+  descricao: string;
+  quantidade: number;
+  unidade: string;
+  ordem?: number;
+}
+
+export interface ItemCotacaoInput {
+  produtoId: string;
   descricao: string;
   quantidade: number;
   unidade: string;
@@ -233,7 +242,7 @@ export interface CotacaoCreateInput {
   areaId: string;
   dataValidade: string;
   observacoes?: string;
-  itens: Omit<ItemCotacao, "id">[];
+  itens: ItemCotacaoInput[];
 }
 
 export interface CotacaoUpdateInput {
@@ -242,7 +251,7 @@ export interface CotacaoUpdateInput {
   areaId?: string;
   dataValidade?: string;
   observacoes?: string;
-  itens?: ItemCotacao[];
+  itens?: (ItemCotacaoInput & { id?: string })[];
 }
 
 export interface Atendimento {
