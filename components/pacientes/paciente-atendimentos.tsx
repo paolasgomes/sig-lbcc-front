@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table'
 import { Empty } from '@/components/ui/empty'
 import { useData } from '@/contexts/data-context'
+import { useCotacoes } from '@/hooks/use-cotacoes'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -22,7 +23,8 @@ interface PacienteAtendimentosProps {
 }
 
 export function PacienteAtendimentos({ pacienteId }: PacienteAtendimentosProps) {
-  const { getAtendimentosByPaciente, getAreaById, getCotacaoById } = useData()
+  const { getAtendimentosByPaciente, getAreaById } = useData()
+  const { cotacoes } = useCotacoes('todas')
   const atendimentos = getAtendimentosByPaciente(pacienteId).sort(
     (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
   )
@@ -69,7 +71,9 @@ export function PacienteAtendimentos({ pacienteId }: PacienteAtendimentosProps) 
             <TableBody>
               {atendimentos.map(atendimento => {
                 const area = getAreaById(atendimento.areaAtendimentoId)
-                const cotacao = atendimento.cotacaoId ? getCotacaoById(atendimento.cotacaoId) : null
+                const cotacao = atendimento.cotacaoId
+                  ? cotacoes.find((c) => c.id === atendimento.cotacaoId)
+                  : null
 
                 return (
                   <TableRow key={atendimento.id}>

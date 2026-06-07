@@ -26,12 +26,10 @@ import {
   AreaAtendimento,
   Fornecedor,
   Produto,
-  Cotacao,
   Atendimento,
   Historico,
   Documento,
   StatusPaciente,
-  StatusCotacao,
   TipoEvento,
   DashboardStats,
   Sexo,
@@ -40,7 +38,6 @@ import {
 import {
   fornecedoresMock,
   produtosMock,
-  cotacoesMock,
   atendimentosMock,
   historicoMock,
   documentosMock,
@@ -282,7 +279,6 @@ interface DataContextType {
   produtos: Produto[];
   produtosLoading: boolean;
   produtosError: string | null;
-  cotacoes: Cotacao[];
   atendimentos: Atendimento[];
   historico: Historico[];
   documentos: Documento[];
@@ -331,13 +327,6 @@ interface DataContextType {
   updateProduto: (id: string, dados: Partial<Produto>) => Promise<Produto>;
   desativarProduto: (id: string) => Promise<void>;
 
-  // Cotações
-  getCotacaoById: (id: string) => Cotacao | undefined;
-  getCotacoesByPaciente: (pacienteId: string) => Cotacao[];
-  addCotacao: (cotacao: Partial<Cotacao>) => void;
-  updateCotacao: (id: string, dados: Partial<Cotacao>) => void;
-  verificarCotacoesVencidas: () => void;
-
   // Atendimentos
   getAtendimentoById: (id: string) => Atendimento | undefined;
   getAtendimentosByPaciente: (pacienteId: string) => Atendimento[];
@@ -372,7 +361,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [produtosLoading, setProdutosLoading] = useState(true);
   const [produtosError, setProdutosError] = useState<string | null>(null);
-  const [cotacoes, setCotacoes] = useState<Cotacao[]>(cotacoesMock);
   const [atendimentos, setAtendimentos] = useState<Atendimento[]>(atendimentosMock);
   const [historico, setHistorico] = useState<Historico[]>(historicoMock);
   const [documentos, setDocumentos] = useState<Documento[]>(documentosMock);
@@ -535,23 +523,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // Estatísticas
   const getStats = useCallback((): DashboardStats => {
-    const hoje = new Date().toISOString().split("T")[0];
-    const cotacoesVencidas =
-      cotacoes.filter((c) => c.dataValidade < hoje && c.status !== StatusCotacao.EXPIRADA)
-        .length + cotacoes.filter((c) => c.status === StatusCotacao.EXPIRADA).length;
-
     return {
       totalPacientes: pacientes.length,
       totalAtendimentos: atendimentos.length,
-      totalCotacoes: cotacoes.length,
-      cotacoesVencidas,
       pacientesAtivos: pacientes.filter((p) => p.status === StatusPaciente.ATIVO).length,
       pacientesSuspensos: pacientes.filter((p) => p.status === StatusPaciente.SUSPENSO)
         .length,
       pacientesEncerrados: pacientes.filter((p) => p.status === StatusPaciente.ENCERRADO)
         .length,
     };
-  }, [pacientes, atendimentos, cotacoes]);
+  }, [pacientes, atendimentos]);
 
   // Pacientes
   const getPacienteById = useCallback(
@@ -820,12 +801,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const deleteArea = useCallback(
     async (id: string) => {
-      const areaEmUso =
-        cotacoes.some((cotacao) => cotacao.areaAtendimentoId === id) ||
-        atendimentos.some(
-          (atendimento) =>
-            atendimento.areaId === id || atendimento.areaAtendimentoId === id,
-        );
+      const areaEmUso = atendimentos.some(
+        (atendimento) =>
+          atendimento.areaId === id || atendimento.areaAtendimentoId === id,
+      );
 
       if (areaEmUso) {
         throw new Error(
@@ -836,7 +815,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       await inativarAreaApi(id);
       setAreas((prev) => prev.filter((area) => area.id !== id));
     },
-    [atendimentos, cotacoes],
+    [atendimentos],
   );
 
   // Fornecedores
@@ -867,9 +846,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const deleteFornecedor = useCallback(
     (id: string) => {
-      const fornecedorEmUso =
-        cotacoes.some((cotacao) => cotacao.fornecedorId === id) ||
-        produtos.some((produto) => produto.fornecedorId === id);
+      const fornecedorEmUso = produtos.some((produto) => produto.fornecedorId === id);
 
       if (fornecedorEmUso) {
         throw new Error(
@@ -879,7 +856,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       setFornecedores((prev) => prev.filter((f) => f.id !== id));
     },
-    [cotacoes, produtos],
+    [produtos],
   );
 
   // Produtos
@@ -973,55 +950,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ),
     );
     await queryClient.invalidateQueries({ queryKey: ["produtos"] });
-  }, []);
-
-  // Cotações
-  const getCotacaoById = useCallback(
-    (id: string) => {
-      return cotacoes.find((c) => c.id === id);
-    },
-    [cotacoes],
-  );
-
-  const getCotacoesByPaciente = useCallback(
-    (pacienteId: string) => {
-      return cotacoes.filter((c) => c.pacienteId === pacienteId);
-    },
-    [cotacoes],
-  );
-
-  const addCotacao = useCallback((cotacao: Partial<Cotacao>) => {
-    const novaCotacao: Cotacao = {
-      id: cotacao.id ?? `cot-${Date.now()}`,
-      pacienteId: cotacao.pacienteId ?? "",
-      areaAtendimentoId: cotacao.areaAtendimentoId ?? "",
-      fornecedorId: cotacao.fornecedorId ?? "",
-      dataSolicitacao: cotacao.dataSolicitacao ?? new Date().toISOString().split("T")[0],
-      dataValidade: cotacao.dataValidade ?? new Date().toISOString().split("T")[0],
-      observacoes: cotacao.observacoes ?? "",
-      status: cotacao.status ?? StatusCotacao.PENDENTE,
-      itens: cotacao.itens ?? [],
-      criadoPor: cotacao.criadoPor ?? usuario?.id ?? "sistema",
-      criadoEm: cotacao.criadoEm ?? new Date().toISOString(),
-      ...cotacao,
-    };
-    setCotacoes((prev) => [...prev, novaCotacao]);
-  }, []);
-
-  const updateCotacao = useCallback((id: string, dados: Partial<Cotacao>) => {
-    setCotacoes((prev) => prev.map((c) => (c.id === id ? { ...c, ...dados } : c)));
-  }, []);
-
-  const verificarCotacoesVencidas = useCallback(() => {
-    const hoje = new Date().toISOString().split("T")[0];
-    setCotacoes((prev) =>
-      prev.map((c) => {
-        if (c.dataValidade < hoje && c.status !== StatusCotacao.EXPIRADA) {
-          return { ...c, status: StatusCotacao.EXPIRADA };
-        }
-        return c;
-      }),
-    );
   }, []);
 
   // Atendimentos
@@ -1125,7 +1053,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         produtos,
         produtosLoading,
         produtosError,
-        cotacoes,
         atendimentos,
         historico,
         documentos,
@@ -1157,11 +1084,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         refreshProdutos,
         fetchProdutoById,
         desativarProduto,
-        getCotacaoById,
-        getCotacoesByPaciente,
-        addCotacao,
-        updateCotacao,
-        verificarCotacoesVencidas,
         getAtendimentoById,
         getAtendimentosByPaciente,
         addAtendimento,

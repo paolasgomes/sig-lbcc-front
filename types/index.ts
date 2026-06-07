@@ -315,8 +315,6 @@ export interface FiltroAtendimento {
 export interface DashboardStats {
   totalPacientes: number;
   totalAtendimentos: number;
-  totalCotacoes: number;
-  cotacoesVencidas: number;
   pacientesAtivos: number;
   pacientesSuspensos: number;
   pacientesEncerrados: number;
