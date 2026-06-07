@@ -16,12 +16,19 @@ import { Button } from '@/components/ui/button'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { useData } from '@/contexts/data-context'
 import { useAuth } from '@/contexts/auth-context'
+import { useCotacoes } from '@/hooks/use-cotacoes'
+import { isCotacaoVencida } from '@/lib/cotacoes-utils'
 import { PERFIS_DASHBOARD_PACIENTES } from '@/lib/access-control'
 
 export default function DashboardPage() {
   const { getStats } = useData()
-  const { podeVisualizarValores } = useAuth()
+  const { podeVisualizarValores, podeCriarCotacao } = useAuth()
   const stats = getStats()
+  const { cotacoes } = useCotacoes('todas')
+  const totalCotacoes = cotacoes.length
+  const cotacoesVencidas = cotacoes.filter(
+    (c) => c.ativo && isCotacaoVencida(c.dataValidade),
+  ).length
 
   const cards = [
     {
@@ -40,7 +47,7 @@ export default function DashboardPage() {
     },
     {
       title: 'Cotações',
-      value: stats.totalCotacoes,
+      value: totalCotacoes,
       icon: FileText,
       color: 'bg-chart-3',
       href: '/cotacoes',
@@ -48,11 +55,11 @@ export default function DashboardPage() {
     },
     {
       title: 'Cotações Vencidas',
-      value: stats.cotacoesVencidas,
+      value: cotacoesVencidas,
       icon: AlertTriangle,
       color: 'bg-warning',
       textColor: 'text-warning-foreground',
-      href: '/cotacoes?status=expirada',
+      href: '/cotacoes',
       hidden: !podeVisualizarValores()
     }
   ]
@@ -84,7 +91,7 @@ export default function DashboardPage() {
   const quickLinks = [
     { label: 'Novo Paciente', href: '/pacientes/novo' },
     { label: 'Novo Atendimento', href: '/atendimentos/novo' },
-    { label: 'Nova Cotação', href: '/cotacoes/nova', hidden: !podeVisualizarValores() },
+    { label: 'Nova Cotação', href: '/cotacoes/nova', hidden: !podeCriarCotacao() },
     { label: 'Relatórios', href: '/relatorios' }
   ]
 

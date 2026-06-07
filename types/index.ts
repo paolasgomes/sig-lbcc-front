@@ -206,38 +206,52 @@ export type ProdutoUpdateInput = Partial<ProdutoCreateInput>;
 
 export interface Cotacao {
   id: string;
+  descricao: string;
   pacienteId: string;
-  areaAtendimentoId: string;
-  fornecedorId: string;
-  dataSolicitacao: string;
-  dataCriacao?: string;
-  dataAprovacao?: string;
-  aprovadoPor?: string;
+  areaId: string;
   dataValidade: string;
   observacoes: string;
-  status:
-    | StatusCotacao
-    | "rascunho"
-    | "enviada"
-    | "em_analise"
-    | "aprovada"
-    | "reprovada";
-  valorTotal?: number;
-  itens: ItemCotacao[];
-  criadoPor: string;
+  ativo: boolean;
+  numero?: string;
   criadoEm: string;
+  pacienteNome?: string;
+  areaNome?: string;
+  itens: ItemCotacao[];
 }
 
 export interface ItemCotacao {
-  id: string;
+  id?: string;
   produtoId?: string;
-  fornecedorId?: string;
-  observacao?: string;
   descricao: string;
-  unidade: string;
   quantidade: number;
-  precoUnitario?: number;
-  valorUnitario: number;
+  unidade: string;
+  ordem?: number;
+}
+
+export interface ItemCotacaoInput {
+  produtoId: string;
+  descricao: string;
+  quantidade: number;
+  unidade: string;
+  ordem?: number;
+}
+
+export interface CotacaoCreateInput {
+  descricao: string;
+  pacienteId: string;
+  areaId: string;
+  dataValidade: string;
+  observacoes?: string;
+  itens: ItemCotacaoInput[];
+}
+
+export interface CotacaoUpdateInput {
+  descricao?: string;
+  pacienteId?: string;
+  areaId?: string;
+  dataValidade?: string;
+  observacoes?: string;
+  itens?: (ItemCotacaoInput & { id?: string })[];
 }
 
 export interface Atendimento {
@@ -279,7 +293,9 @@ export interface Documento {
 
 // Types para formulários
 export type PacienteFormData = Omit<Paciente, "id" | "criadoEm" | "atualizadoEm">;
-export type CotacaoFormData = Omit<Cotacao, "id" | "criadoEm">;
+export type CotacaoFormData = Omit<Cotacao, "id" | "criadoEm" | "ativo" | "itens"> & {
+  itens: Omit<ItemCotacao, "id">[];
+};
 export type AtendimentoFormData = Omit<Atendimento, "id" | "criadoEm">;
 
 // Types para filtros
@@ -292,9 +308,8 @@ export interface FiltroPaciente {
 export interface FiltroCotacao {
   pacienteId?: string;
   areaId?: string;
-  periodoInicio?: string;
-  periodoFim?: string;
-  status?: StatusCotacao;
+  ativo?: boolean | "todas";
+  busca?: string;
 }
 
 export interface FiltroAtendimento {
@@ -309,8 +324,6 @@ export interface FiltroAtendimento {
 export interface DashboardStats {
   totalPacientes: number;
   totalAtendimentos: number;
-  totalCotacoes: number;
-  cotacoesVencidas: number;
   pacientesAtivos: number;
   pacientesSuspensos: number;
   pacientesEncerrados: number;

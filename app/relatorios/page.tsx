@@ -4,6 +4,8 @@ import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { useData } from "@/contexts/data-context";
+import { useCotacoes } from "@/hooks/use-cotacoes";
+import { isCotacaoVencida } from "@/lib/cotacoes-utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -58,7 +60,8 @@ const COLORS = [
 ];
 
 export default function RelatoriosPage() {
-  const { pacientes, atendimentos, cotacoes, areas } = useData();
+  const { pacientes, atendimentos, areas } = useData();
+  const { cotacoes } = useCotacoes("todas");
   const [periodoInicio, setPeriodoInicio] = useState(
     format(startOfMonth(new Date()), "yyyy-MM-dd"),
   );
@@ -72,12 +75,18 @@ export default function RelatoriosPage() {
       dataHora?: string;
       dataCriacao?: string;
       dataSolicitacao?: string;
+      criadoEm?: string;
     },
   >(
     items: T[],
   ) => {
     return items.filter((item) => {
-      const data = item.dataHora || item.dataCriacao || item.dataSolicitacao || item.data;
+      const data =
+        item.dataHora ||
+        item.dataCriacao ||
+        item.dataSolicitacao ||
+        item.criadoEm ||
+        item.data;
       if (!data) return false;
       try {
         return isWithinInterval(parseISO(data), {
@@ -131,45 +140,28 @@ export default function RelatoriosPage() {
     },
   ].filter((item) => item.value > 0);
 
-  // Cotacoes por status
   const cotacoesPorStatus = [
     {
-      name: "Rascunho",
-      value: cotacoesFiltradas.filter((c) => c.status === "rascunho").length,
+      name: "Ativas",
+      value: cotacoesFiltradas.filter((c) => c.ativo).length,
     },
     {
-      name: "Enviada",
-      value: cotacoesFiltradas.filter((c) => c.status === "enviada").length,
+      name: "Inativas",
+      value: cotacoesFiltradas.filter((c) => !c.ativo).length,
     },
     {
-      name: "Em Analise",
-      value: cotacoesFiltradas.filter((c) => c.status === "em_analise").length,
-    },
-    {
-      name: "Aprovada",
-      value: cotacoesFiltradas.filter((c) => c.status === "aprovada").length,
-    },
-    {
-      name: "Reprovada",
-      value: cotacoesFiltradas.filter((c) => c.status === "reprovada").length,
+      name: "Vencidas",
+      value: cotacoesFiltradas.filter(
+        (c) => c.ativo && isCotacaoVencida(c.dataValidade),
+      ).length,
     },
   ].filter((item) => item.value > 0);
 
-  // Valor total das cotacoes
-  const valorTotalCotacoes = cotacoesFiltradas.reduce(
-    (acc, c) => acc + (c.valorTotal || 0),
-    0,
-  );
-  const valorAprovado = cotacoesFiltradas
-    .filter((c) => c.status === "aprovada")
-    .reduce((acc, c) => acc + (c.valorTotal || 0), 0);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+  const cotacoesAtivas = cotacoesFiltradas.filter((c) => c.ativo).length;
+  const cotacoesInativas = cotacoesFiltradas.filter((c) => !c.ativo).length;
+  const cotacoesVencidas = cotacoesFiltradas.filter(
+    (c) => c.ativo && isCotacaoVencida(c.dataValidade),
+  ).length;
 
   return (
     <ProtectedRoute allowedRoles={["admin", "gestor"]}>
@@ -253,21 +245,20 @@ export default function RelatoriosPage() {
               <CardContent>
                 <div className="text-2xl font-bold">{cotacoesFiltradas.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  {cotacoesFiltradas.filter((c) => c.status === "aprovada").length}{" "}
-                  aprovadas
+                  {cotacoesAtivas} ativas, {cotacoesInativas} inativas
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Valor Aprovado</CardTitle>
+                <CardTitle className="text-sm font-medium">Cotações Vencidas</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(valorAprovado)}</div>
+                <div className="text-2xl font-bold">{cotacoesVencidas}</div>
                 <p className="text-xs text-muted-foreground">
-                  Total: {formatCurrency(valorTotalCotacoes)}
+                  Ativas com validade expirada
                 </p>
               </CardContent>
             </Card>

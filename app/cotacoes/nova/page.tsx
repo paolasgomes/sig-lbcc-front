@@ -1,15 +1,14 @@
-"use client"
+"use client";
 
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { ProtectedRoute } from "@/components/auth/protected-route"
-import { CotacaoForm } from "@/components/cotacoes/cotacao-form"
+import { use } from "react";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { CotacaoForm } from "@/components/cotacoes/cotacao-form";
+import { ROLES_ATENDIMENTOS_E_COTACOES } from "@/lib/access-control";
 
 export default function NovaCotacaoPage() {
   return (
-    <ProtectedRoute allowedRoles={["admin", "gestor", "atendente"]}>
-      <DashboardLayout>
-        <CotacaoForm />
-      </DashboardLayout>
-    </ProtectedRoute>
-  )
+    <DashboardLayout allowedRoles={ROLES_ATENDIMENTOS_E_COTACOES}>
+      <CotacaoForm />
+    </DashboardLayout>
+  );
 }

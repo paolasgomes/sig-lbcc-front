@@ -8,11 +8,12 @@ import { PerfilUsuario } from '@/types'
 interface DashboardLayoutProps {
   children: React.ReactNode
   perfisPermitidos?: PerfilUsuario[]
+  allowedRoles?: string[]
 }
 
-export function DashboardLayout({ children, perfisPermitidos }: DashboardLayoutProps) {
+export function DashboardLayout({ children, perfisPermitidos, allowedRoles }: DashboardLayoutProps) {
   return (
-    <ProtectedRoute perfisPermitidos={perfisPermitidos}>
+    <ProtectedRoute perfisPermitidos={perfisPermitidos} allowedRoles={allowedRoles}>
       <div className="flex h-screen bg-background">
         <AppSidebar />
         <div className="flex flex-1 flex-col overflow-hidden">

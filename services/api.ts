@@ -1,6 +1,7 @@
 import axios from "axios";
 
 export const TOKEN_STORAGE_KEY = "sig-lbcc-token";
+export const USER_STORAGE_KEY = "sig-lbcc-user";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -54,6 +55,9 @@ api.interceptors.response.use(
       !error?.config?.url?.includes("/login")
     ) {
       clearCookie(TOKEN_STORAGE_KEY);
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem(USER_STORAGE_KEY);
+      }
       window.dispatchEvent(new Event("auth:unauthorized"));
 
       if (window.location.pathname !== "/login") {
