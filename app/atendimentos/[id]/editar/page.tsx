@@ -1,34 +1,36 @@
-"use client"
+"use client";
 
-import { use } from "react"
-import { notFound } from "next/navigation"
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { ProtectedRoute } from "@/components/auth/protected-route"
-import { AtendimentoForm } from "@/components/atendimentos/atendimento-form"
-import { useData } from "@/contexts/data-context"
+import { use } from "react";
+import { notFound } from "next/navigation";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { AtendimentoForm } from "@/components/atendimentos/atendimento-form";
+import { ROLES_ATENDIMENTOS_E_COTACOES } from "@/lib/access-control";
+import { useAtendimento } from "@/hooks/use-atendimentos";
+import { TableLoading } from "@/components/ui/table-state";
 
 interface EditarAtendimentoPageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 export default function EditarAtendimentoPage({ params }: EditarAtendimentoPageProps) {
-  const { id } = use(params)
-  const { atendimentos } = useData()
-  const atendimento = atendimentos.find(a => a.id === id)
+  const { id } = use(params);
+  const { atendimento, isLoading } = useAtendimento(id);
 
-  if (!atendimento) {
-    notFound()
+  if (isLoading) {
+    return (
+      <DashboardLayout allowedRoles={ROLES_ATENDIMENTOS_E_COTACOES}>
+        <TableLoading columns={1} rows={4} />
+      </DashboardLayout>
+    );
   }
 
-  if (atendimento.status === "concluido" || atendimento.status === "cancelado") {
-    notFound()
+  if (!atendimento) {
+    notFound();
   }
 
   return (
-    <ProtectedRoute allowedRoles={["admin", "gestor", "atendente"]}>
-      <DashboardLayout>
-        <AtendimentoForm atendimento={atendimento} isEditing />
-      </DashboardLayout>
-    </ProtectedRoute>
-  )
+    <DashboardLayout allowedRoles={ROLES_ATENDIMENTOS_E_COTACOES}>
+      <AtendimentoForm atendimento={atendimento} isEditing />
+    </DashboardLayout>
+  );
 }
