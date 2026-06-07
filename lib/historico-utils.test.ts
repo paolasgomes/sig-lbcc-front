@@ -44,6 +44,14 @@ describe("getHistoricoLink", () => {
   it("returns null for categories without links", () => {
     expect(getHistoricoLink("uuid-3", "ALTERACAO_STATUS")).toBeNull();
   });
+
+  it("returns null for removed atendimento events", () => {
+    expect(getHistoricoLink("uuid-4", "ATENDIMENTO_REMOVIDO")).toBeNull();
+  });
+
+  it("returns null for removed documento events", () => {
+    expect(getHistoricoLink("uuid-5", "DOCUMENTO_REMOVIDO")).toBeNull();
+  });
 });
 
 describe("getHistoricoCategoriaConfig", () => {

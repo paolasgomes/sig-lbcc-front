@@ -24,6 +24,8 @@ const COTACAO_EVENTS = new Set(["COTACAO_CRIADA", "COTACAO_EDITADA"]);
 
 const DOCUMENTO_EVENTS = new Set(["DOCUMENTO_ANEXADO", "DOCUMENTO_REMOVIDO"]);
 
+const EVENTOS_SEM_LINK = new Set(["ATENDIMENTO_REMOVIDO", "DOCUMENTO_REMOVIDO"]);
+
 export function getHistoricoCategoria(tipoEvento: string): HistoricoCategoria {
   const normalized = tipoEvento.toUpperCase();
 
@@ -40,6 +42,8 @@ export function getHistoricoLink(
   tipoEvento: string,
 ): string | null {
   if (!referenciaId) return null;
+
+  if (EVENTOS_SEM_LINK.has(tipoEvento.toUpperCase())) return null;
 
   const categoria = getHistoricoCategoria(tipoEvento);
 
