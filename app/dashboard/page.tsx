@@ -17,6 +17,7 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { useData } from '@/contexts/data-context'
 import { useAuth } from '@/contexts/auth-context'
 import { useCotacoes } from '@/hooks/use-cotacoes'
+import { useAtendimentos } from '@/hooks/use-atendimentos'
 import { isCotacaoVencida } from '@/lib/cotacoes-utils'
 import { PERFIS_DASHBOARD_PACIENTES } from '@/lib/access-control'
 
@@ -24,6 +25,7 @@ export default function DashboardPage() {
   const { getStats } = useData()
   const { podeVisualizarValores, podeCriarCotacao } = useAuth()
   const stats = getStats()
+  const { atendimentos } = useAtendimentos()
   const { cotacoes } = useCotacoes('todas')
   const totalCotacoes = cotacoes.length
   const cotacoesVencidas = cotacoes.filter(
@@ -40,7 +42,7 @@ export default function DashboardPage() {
     },
     {
       title: 'Atendimentos',
-      value: stats.totalAtendimentos,
+      value: atendimentos.length,
       icon: ClipboardList,
       color: 'bg-chart-2',
       href: '/atendimentos'
