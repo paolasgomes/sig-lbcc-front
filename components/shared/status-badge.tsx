@@ -1,4 +1,4 @@
-import { StatusPaciente, StatusCotacao } from "@/types";
+import { StatusPaciente } from "@/types";
 import { cn } from "@/lib/utils";
 
 interface StatusBadgeProps {
@@ -22,20 +22,12 @@ const statusConfig: Record<string, { label: string; className: string }> = {
     className: "bg-muted text-muted-foreground border-border",
   },
   // Status de Cotação
-  [StatusCotacao.PENDENTE]: {
-    label: "Pendente",
-    className: "bg-info/15 text-info border-info/30",
-  },
-  [StatusCotacao.VALIDA]: {
-    label: "Válida",
+  ativo: {
+    label: "Ativa",
     className: "bg-success/15 text-success border-success/30",
   },
-  [StatusCotacao.EXPIRADA]: {
-    label: "Expirada",
-    className: "bg-destructive/15 text-destructive border-destructive/30",
-  },
   inativo: {
-    label: "Inativo",
+    label: "Inativa",
     className: "bg-muted text-muted-foreground border-border",
   },
   agendado: {
