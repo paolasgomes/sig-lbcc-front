@@ -10,7 +10,7 @@ import {
   Package,
   FileText,
   ClipboardList,
-  BarChart3,
+  // BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
@@ -82,12 +82,12 @@ const navItems: NavItem[] = [
     icon: Package,
     perfilMinimo: PERFIS_GESTAO_BASE,
   },
-  {
-    label: "Relatórios",
-    href: "/relatorios",
-    icon: BarChart3,
-    allowedRoles: ROLES_GESTAO_COMPLETA,
-  },
+  // {
+  //   label: "Relatórios",
+  //   href: "/relatorios",
+  //   icon: BarChart3,
+  //   allowedRoles: ROLES_GESTAO_COMPLETA,
+  // },
 ];
 
 export function AppSidebar() {
