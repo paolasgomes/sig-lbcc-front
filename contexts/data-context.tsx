@@ -293,11 +293,6 @@ interface DataContextType {
   addPaciente: (paciente: Partial<Paciente>) => Promise<Paciente>;
   updatePaciente: (id: string, dados: Partial<Paciente>) => Promise<Paciente>;
   deletePaciente: (id: string) => Promise<void>;
-  alterarStatusPaciente: (
-    id: string,
-    novoStatus: StatusPaciente,
-    usuarioNome: string,
-  ) => Promise<void>;
 
   // Áreas
   refreshAreas: () => Promise<void>;
@@ -706,13 +701,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     void refreshPacientes();
   }, []);
 
-  const alterarStatusPaciente = useCallback(
-    async (id: string, novoStatus: StatusPaciente, _usuarioNome: string) => {
-      await updatePaciente(id, { status: novoStatus });
-    },
-    [updatePaciente],
-  );
-
   // Áreas
   const getAreaById = useCallback(
     (id: string) => {
@@ -953,7 +941,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         addPaciente,
         updatePaciente,
         deletePaciente,
-        alterarStatusPaciente,
         refreshAreas,
         getAreaById,
         addArea,

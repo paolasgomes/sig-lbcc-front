@@ -1,5 +1,4 @@
 export { usuariosMock } from './usuarios'
-export { pacientesMock } from './pacientes'
 export { areasMock } from './areas'
 export { fornecedoresMock } from './fornecedores'
 export { produtosMock } from './produtos'
