@@ -140,27 +140,41 @@ export interface AreaCreateInput {
 
 export type AreaUpdateInput = Partial<AreaCreateInput>;
 
+export interface ApiFornecedorDTO {
+  id: string;
+  razao_social?: string | null;
+  nome_fantasia?: string | null;
+  cnpj?: string | null;
+  telefone?: string | null;
+  email?: string | null;
+  ativo?: boolean;
+  fornecedorTemVinculos?: boolean;
+}
+
 export interface Fornecedor {
   id: string;
-  nome: string;
-  razaoSocial?: string;
+  razaoSocial: string;
   nomeFantasia?: string;
   cnpj?: string;
-  inscricaoEstadual?: string;
-  tipoServico: string;
-  contato: string;
-  telefoneContato?: string;
-  email: string;
-  telefone: string;
-  endereco?: string;
-  numero?: string;
-  complemento?: string;
-  bairro?: string;
-  cidade?: string;
-  uf?: string;
-  cep?: string;
+  telefone?: string;
+  email?: string;
   ativo: boolean;
+  fornecedorTemVinculos?: boolean;
 }
+
+export interface FornecedorCreateInput {
+  razaoSocial: string;
+  nomeFantasia?: string;
+  cnpj?: string;
+  telefone?: string;
+  email?: string;
+  ativo?: boolean;
+}
+
+export type FornecedorUpdateInput = Pick<
+  FornecedorCreateInput,
+  "nomeFantasia" | "telefone" | "email"
+>;
 
 export interface ApiProdutoDTO {
   id: string;

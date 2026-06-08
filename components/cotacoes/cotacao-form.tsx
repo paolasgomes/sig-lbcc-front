@@ -358,7 +358,7 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
                         <SelectContent>
                           {fornecedoresParaSelecao.map((f) => (
                             <SelectItem key={f.id} value={f.id}>
-                              {f.nomeFantasia ?? f.razaoSocial ?? f.nome}
+                              {f.nomeFantasia ?? f.razaoSocial}
                             </SelectItem>
                           ))}
                         </SelectContent>
