@@ -1,43 +1,112 @@
 import { api } from "./api";
-import type { Fornecedor } from "@/types";
 import { getFriendlyApiError } from "@/lib/api-errors";
-
-export interface ApiFornecedorDTO {
-  id: string;
-  razao_social?: string;
-  nome_fantasia?: string;
-  cnpj?: string;
-  telefone?: string;
-  email?: string;
-  ativo?: boolean;
-}
+import type {
+  ApiFornecedorDTO,
+  Fornecedor,
+  FornecedorCreateInput,
+  FornecedorUpdateInput,
+} from "@/types";
 
 function getErrorMessage(error: unknown, fallback: string) {
   return getFriendlyApiError(error, fallback);
 }
 
 export function mapApiFornecedorToFornecedor(dto: ApiFornecedorDTO): Fornecedor {
-  const nome = dto.nome_fantasia ?? dto.razao_social ?? "Fornecedor";
-
   return {
     id: dto.id,
-    nome,
-    razaoSocial: dto.razao_social,
-    nomeFantasia: dto.nome_fantasia,
-    cnpj: dto.cnpj,
-    email: dto.email ?? "",
-    telefone: dto.telefone ?? "",
-    contato: "",
-    tipoServico: "",
+    razaoSocial: dto.razao_social ?? "",
+    nomeFantasia: dto.nome_fantasia ?? undefined,
+    cnpj: dto.cnpj ?? undefined,
+    telefone: dto.telefone ?? undefined,
+    email: dto.email ?? undefined,
     ativo: dto.ativo ?? true,
+    fornecedorTemVinculos: dto.fornecedorTemVinculos,
   };
 }
 
-export async function listarFornecedores() {
+export function mapFornecedorCreateToApi(dados: FornecedorCreateInput) {
+  return {
+    razao_social: dados.razaoSocial,
+    nome_fantasia: dados.nomeFantasia,
+    cnpj: dados.cnpj,
+    telefone: dados.telefone,
+    email: dados.email,
+    ativo: dados.ativo,
+  };
+}
+
+export function mapFornecedorUpdateToApi(dados: FornecedorUpdateInput) {
+  return {
+    nome_fantasia: dados.nomeFantasia,
+    telefone: dados.telefone,
+    email: dados.email,
+  };
+}
+
+function unwrapFornecedor(data: ApiFornecedorDTO | ApiFornecedorDTO[]) {
+  return Array.isArray(data) ? data[0] : data;
+}
+
+export async function listarFornecedores(): Promise<Fornecedor[]> {
   try {
     const response = await api.get<ApiFornecedorDTO[]>("/fornecedores");
-    return response.data;
+    return response.data.map(mapApiFornecedorToFornecedor);
   } catch (error) {
     throw new Error(getErrorMessage(error, "Erro ao carregar fornecedores."));
+  }
+}
+
+export async function obterFornecedor(id: string): Promise<Fornecedor> {
+  try {
+    const response = await api.get<ApiFornecedorDTO>(`/fornecedores/${id}`);
+    return mapApiFornecedorToFornecedor(response.data);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Erro ao carregar fornecedor."));
+  }
+}
+
+export async function criarFornecedor(dados: FornecedorCreateInput): Promise<Fornecedor> {
+  try {
+    const response = await api.post<ApiFornecedorDTO | ApiFornecedorDTO[]>(
+      "/fornecedores",
+      mapFornecedorCreateToApi(dados),
+    );
+    return mapApiFornecedorToFornecedor(unwrapFornecedor(response.data));
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Erro ao criar fornecedor."));
+  }
+}
+
+export async function atualizarFornecedor(
+  id: string,
+  dados: FornecedorUpdateInput,
+): Promise<Fornecedor> {
+  try {
+    const response = await api.put<ApiFornecedorDTO | ApiFornecedorDTO[]>(
+      `/fornecedores/${id}`,
+      mapFornecedorUpdateToApi(dados),
+    );
+    return mapApiFornecedorToFornecedor(unwrapFornecedor(response.data));
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Erro ao atualizar fornecedor."));
+  }
+}
+
+export async function alternarStatusFornecedor(id: string): Promise<Fornecedor> {
+  try {
+    const response = await api.patch<{ data: ApiFornecedorDTO }>(
+      `/fornecedores/${id}/status`,
+    );
+    return mapApiFornecedorToFornecedor(response.data.data);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Erro ao alterar status do fornecedor."));
+  }
+}
+
+export async function excluirFornecedor(id: string): Promise<void> {
+  try {
+    await api.delete(`/fornecedores/${id}`);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Erro ao excluir fornecedor."));
   }
 }

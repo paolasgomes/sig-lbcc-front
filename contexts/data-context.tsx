@@ -24,7 +24,6 @@ import {
   UsuarioUpdateInput,
   Paciente,
   AreaAtendimento,
-  Fornecedor,
   Produto,
   Documento,
   StatusPaciente,
@@ -33,7 +32,6 @@ import {
   EstadoCivil,
 } from "@/types";
 import {
-  fornecedoresMock,
   produtosMock,
   documentosMock,
 } from "@/mocks";
@@ -270,7 +268,6 @@ interface DataContextType {
   areas: AreaAtendimento[];
   areasLoading: boolean;
   areasError: string | null;
-  fornecedores: Fornecedor[];
   produtos: Produto[];
   produtosLoading: boolean;
   produtosError: string | null;
@@ -301,12 +298,6 @@ interface DataContextType {
   updateArea: (id: string, dados: Partial<AreaAtendimento>) => Promise<AreaAtendimento>;
   deleteArea: (id: string) => Promise<void>;
 
-  // Fornecedores
-  getFornecedorById: (id: string) => Fornecedor | undefined;
-  addFornecedor: (fornecedor: Partial<Fornecedor>) => void;
-  updateFornecedor: (id: string, dados: Partial<Fornecedor>) => void;
-  deleteFornecedor: (id: string) => void;
-
   // Produtos
   refreshProdutos: () => Promise<void>;
   getProdutoById: (id: string) => Produto | undefined;
@@ -335,7 +326,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [areas, setAreas] = useState<AreaAtendimento[]>([]);
   const [areasLoading, setAreasLoading] = useState(true);
   const [areasError, setAreasError] = useState<string | null>(null);
-  const [fornecedores, setFornecedores] = useState<Fornecedor[]>(fornecedoresMock);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [produtosLoading, setProdutosLoading] = useState(true);
   const [produtosError, setProdutosError] = useState<string | null>(null);
@@ -762,47 +752,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setAreas((prev) => prev.filter((area) => area.id !== id));
   }, []);
 
-  // Fornecedores
-  const getFornecedorById = useCallback(
-    (id: string) => {
-      return fornecedores.find((f) => f.id === id);
-    },
-    [fornecedores],
-  );
-
-  const addFornecedor = useCallback((fornecedor: Partial<Fornecedor>) => {
-    const novoFornecedor: Fornecedor = {
-      id: fornecedor.id ?? `forn-${Date.now()}`,
-      nome: fornecedor.nome ?? fornecedor.nomeFantasia ?? fornecedor.razaoSocial ?? "",
-      tipoServico: fornecedor.tipoServico ?? "geral",
-      contato: fornecedor.contato ?? "",
-      email: fornecedor.email ?? "",
-      telefone: fornecedor.telefone ?? "",
-      ativo: fornecedor.ativo ?? true,
-      ...fornecedor,
-    };
-    setFornecedores((prev) => [...prev, novoFornecedor]);
-  }, []);
-
-  const updateFornecedor = useCallback((id: string, dados: Partial<Fornecedor>) => {
-    setFornecedores((prev) => prev.map((f) => (f.id === id ? { ...f, ...dados } : f)));
-  }, []);
-
-  const deleteFornecedor = useCallback(
-    (id: string) => {
-      const fornecedorEmUso = produtos.some((produto) => produto.fornecedorId === id);
-
-      if (fornecedorEmUso) {
-        throw new Error(
-          "Este fornecedor não pode ser excluído porque já está sendo usado em outro cadastro.",
-        );
-      }
-
-      setFornecedores((prev) => prev.filter((f) => f.id !== id));
-    },
-    [produtos],
-  );
-
   // Produtos
 
   const getProdutoById = useCallback(
@@ -924,7 +873,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         areas,
         areasLoading,
         areasError,
-        fornecedores,
         produtos,
         produtosLoading,
         produtosError,
@@ -946,10 +894,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         addArea,
         updateArea,
         deleteArea,
-        getFornecedorById,
-        addFornecedor,
-        updateFornecedor,
-        deleteFornecedor,
         getProdutoById,
         addProduto,
         updateProduto,

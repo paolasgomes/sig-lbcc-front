@@ -1,5 +1,4 @@
 export { usuariosMock } from './usuarios'
 export { areasMock } from './areas'
-export { fornecedoresMock } from './fornecedores'
 export { produtosMock } from './produtos'
 export { documentosMock } from './documentos'

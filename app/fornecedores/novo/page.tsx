@@ -1,15 +1,13 @@
-"use client"
+"use client";
 
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import { ProtectedRoute } from "@/components/auth/protected-route"
-import { FornecedorForm } from "@/components/fornecedores/fornecedor-form"
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { FornecedorForm } from "@/components/fornecedores/fornecedor-form";
+import { PERFIS_GESTAO_BASE } from "@/lib/access-control";
 
 export default function NovoFornecedorPage() {
   return (
-    <ProtectedRoute allowedRoles={["admin", "gestor"]}>
-      <DashboardLayout>
-        <FornecedorForm />
-      </DashboardLayout>
-    </ProtectedRoute>
-  )
+    <DashboardLayout perfisPermitidos={PERFIS_GESTAO_BASE}>
+      <FornecedorForm />
+    </DashboardLayout>
+  );
 }
