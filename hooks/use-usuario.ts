@@ -5,7 +5,10 @@ import { PerfilUsuario } from "@/types";
 
 export function useUsuario() {
   const { usuario } = useAuth();
-  const isGestor = usuario?.perfil === PerfilUsuario.GESTOR;
+  const perfil = usuario?.perfil ?? null;
+  const isGestor = perfil === PerfilUsuario.GESTOR;
+  const podeAlterarStatusPaciente =
+    perfil === PerfilUsuario.OPERADOR || perfil === PerfilUsuario.GESTOR;
 
-  return { usuario, perfil: usuario?.perfil ?? null, isGestor };
+  return { usuario, perfil, isGestor, podeAlterarStatusPaciente };
 }

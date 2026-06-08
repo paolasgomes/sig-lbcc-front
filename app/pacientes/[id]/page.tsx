@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -25,11 +25,10 @@ import { PacienteAtendimentos } from "@/components/pacientes/paciente-atendiment
 import { PacienteCotacoes } from "@/components/pacientes/paciente-cotacoes";
 import { PacienteDocumentos } from "@/components/pacientes/paciente-documentos";
 import { AlterarStatusModal } from "@/components/pacientes/alterar-status-modal";
-import { useData } from "@/contexts/data-context";
-import { useAuth } from "@/contexts/auth-context";
+import { usePaciente } from "@/hooks/use-pacientes";
+import { useUsuario } from "@/hooks/use-usuario";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Paciente } from "@/types";
 import { Spinner } from "@/components/ui/spinner";
 import { PERFIS_DASHBOARD_PACIENTES } from "@/lib/access-control";
 
@@ -39,41 +38,10 @@ interface PageProps {
 
 export default function PacienteDetalhePage({ params }: PageProps) {
   const { id } = use(params);
-  const { getPacienteById, fetchPacienteById } = useData();
-  const { podeAlterarStatus } = useAuth();
-  const [paciente, setPaciente] = useState<Paciente | undefined>(() =>
-    getPacienteById(id),
-  );
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { paciente, isLoading, error } = usePaciente(id);
+  const { podeAlterarStatusPaciente } = useUsuario();
 
-  useEffect(() => {
-    const pacienteLocal = getPacienteById(id);
-
-    if (pacienteLocal) {
-      setPaciente(pacienteLocal);
-    }
-
-    setIsLoading(true);
-    setLoadError(null);
-
-    void fetchPacienteById(id)
-      .then((pacienteDetalhado) => {
-        setPaciente(pacienteDetalhado);
-      })
-      .catch((error) => {
-        setLoadError(
-          error instanceof Error
-            ? error.message
-            : "Erro ao carregar detalhes do paciente.",
-        );
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [id]);
-
-  if (isLoading && !paciente) {
+  if (isLoading) {
     return (
       <DashboardLayout perfisPermitidos={PERFIS_DASHBOARD_PACIENTES}>
         <div className="flex min-h-80 items-center justify-center gap-3 text-muted-foreground">
@@ -84,12 +52,12 @@ export default function PacienteDetalhePage({ params }: PageProps) {
     );
   }
 
-  if (loadError && !paciente) {
+  if (error && !paciente) {
     return (
       <DashboardLayout perfisPermitidos={PERFIS_DASHBOARD_PACIENTES}>
         <Alert variant="destructive">
           <AlertTitle>Não foi possível carregar o paciente</AlertTitle>
-          <AlertDescription>{loadError}</AlertDescription>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       </DashboardLayout>
     );
@@ -110,13 +78,6 @@ export default function PacienteDetalhePage({ params }: PageProps) {
   return (
     <DashboardLayout perfisPermitidos={PERFIS_DASHBOARD_PACIENTES}>
       <div className="flex flex-col gap-6">
-        {loadError && (
-          <Alert variant="destructive">
-            <AlertTitle>Falha ao atualizar os dados do paciente</AlertTitle>
-            <AlertDescription>{loadError}</AlertDescription>
-          </Alert>
-        )}
-
         <PageHeader
           title={
             <div className="flex items-center gap-3">
@@ -127,7 +88,7 @@ export default function PacienteDetalhePage({ params }: PageProps) {
           description={`CPF: ${paciente.cpf} | SUS: ${paciente.numeroSUS}`}
           actions={
             <div className="flex gap-2">
-              {podeAlterarStatus() && (
+              {podeAlterarStatusPaciente && (
                 <AlterarStatusModal
                   pacienteId={paciente.id}
                   statusAtual={paciente.status}

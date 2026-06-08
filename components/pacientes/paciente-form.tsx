@@ -59,20 +59,21 @@ const estadoCivilOptions = [
 
 export function PacienteForm({ paciente, modo }: PacienteFormProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const criarPacienteMutation = useMutation({
     mutationFn: criarPaciente,
-    onSuccess: (id) => {
-      router.replace(`/pacientes/${id}`);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pacientes"] });
     },
   });
 
   const atualizarPacienteMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: any }) =>
       atualizarPaciente(id, payload),
-    onSuccess: (data) => {
-      const { id } = data;
-      router.replace(`/pacientes/${id}`);
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["pacientes"] });
+      queryClient.invalidateQueries({ queryKey: ["pacientes", id] });
     },
   });
   const { usuario } = useAuth();
@@ -252,8 +253,7 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
     setSubmitError(null);
 
     try {
-      // Constrói payload para a API a partir do form
-      const payload = {
+      const basePayload = {
         nome: formData.nomeCompleto,
         cpf: onlyDigits(formData.cpf || "", 11),
         rg: formData.rg || undefined,
@@ -279,18 +279,23 @@ export function PacienteForm({ paciente, modo }: PacienteFormProps) {
         hospital_tratamento: formData.setor || undefined,
         medico_responsavel: formData.medicoResponsavel || undefined,
         data_inicio_tratamento: formData.dataInicioTratamento || undefined,
-        status: "ativo",
         id_origem: formData.numeroSUS || undefined,
-      } as any;
+      } as const;
 
       if (modo === "criar") {
-        const novoApi = await criarPacienteMutation.mutateAsync(payload);
+        const novoApi = await criarPacienteMutation.mutateAsync({
+          ...basePayload,
+          status: "ativo",
+        });
 
         const novoId = (novoApi as any)?.id ?? (novoApi as any)?.id_origem;
 
         router.push(`/pacientes/${novoId}`);
       } else if (paciente) {
-        await atualizarPacienteMutation.mutateAsync({ id: paciente.id, payload });
+        await atualizarPacienteMutation.mutateAsync({
+          id: paciente.id,
+          payload: basePayload,
+        });
 
         router.push(`/pacientes/${paciente.id}`);
       }
