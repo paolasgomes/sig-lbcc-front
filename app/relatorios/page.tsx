@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { ProtectedRoute } from "@/components/auth/protected-route";
-import { useData } from "@/contexts/data-context";
+import { usePacientes } from "@/hooks/use-pacientes";
+import { StatusPaciente } from "@/types";
 import { useCotacoes } from "@/hooks/use-cotacoes";
 import { useAtendimentos } from "@/hooks/use-atendimentos";
 import { getTipoAtendimentoLabel } from "@/lib/atendimentos-utils";
@@ -63,7 +64,7 @@ const COLORS = [
 ];
 
 export default function RelatoriosPage() {
-  const { pacientes } = useData();
+  const { pacientes } = usePacientes();
   const { atendimentos } = useAtendimentos();
   const { cotacoes } = useCotacoes("todas");
   const [periodoInicio, setPeriodoInicio] = useState(
@@ -110,11 +111,17 @@ export default function RelatoriosPage() {
 
   // Estatisticas de pacientes por status
   const pacientesPorStatus = [
-    { name: "Ativos", value: pacientes.filter((p) => p.status === "ativo").length },
-    { name: "Suspensos", value: pacientes.filter((p) => p.status === "suspenso").length },
+    {
+      name: "Ativos",
+      value: pacientes.filter((p) => p.status === StatusPaciente.ATIVO).length,
+    },
+    {
+      name: "Suspensos",
+      value: pacientes.filter((p) => p.status === StatusPaciente.SUSPENSO).length,
+    },
     {
       name: "Encerrados",
-      value: pacientes.filter((p) => p.status === "encerrado").length,
+      value: pacientes.filter((p) => p.status === StatusPaciente.ENCERRADO).length,
     },
   ].filter((item) => item.value > 0);
 
@@ -200,7 +207,7 @@ export default function RelatoriosPage() {
               <CardContent>
                 <div className="text-2xl font-bold">{pacientes.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  {pacientes.filter((p) => p.status === "ativo").length} ativos
+                  {pacientes.filter((p) => p.status === StatusPaciente.ATIVO).length} ativos
                 </p>
               </CardContent>
             </Card>
