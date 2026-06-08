@@ -233,6 +233,7 @@ export default function CotacaoDetailPage({ params }: CotacaoDetailPageProps) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Produto</TableHead>
+                    <TableHead>Fornecedor</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead className="text-center">Quantidade</TableHead>
                   </TableRow>
@@ -245,6 +246,7 @@ export default function CotacaoDetailPage({ params }: CotacaoDetailPageProps) {
                           ? (produtosPorId.get(item.produtoId) ?? "Produto removido")
                           : "—"}
                       </TableCell>
+                      <TableCell>{item.fornecedorNome ?? "—"}</TableCell>
                       <TableCell className="font-medium">{item.descricao}</TableCell>
                       <TableCell className="text-center">{item.quantidade}</TableCell>
                     </TableRow>

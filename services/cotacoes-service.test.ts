@@ -74,4 +74,33 @@ describe("mapApiItemToItemCotacao", () => {
       ordem: 1,
     });
   });
+
+  it("maps fornecedor_id and fornecedores join", () => {
+    expect(
+      mapApiItemToItemCotacao({
+        id: "item-3",
+        cotacao_id: "c-1",
+        produto_id: "prod-1",
+        fornecedor_id: "forn-1",
+        descricao: "Seringa",
+        quantidade: 5,
+        unidade: "UN",
+        ordem: 1,
+        fornecedores: {
+          id: "forn-1",
+          razao_social: "Distribuidora ABC Ltda",
+          nome_fantasia: "ABC Med",
+        },
+      }),
+    ).toEqual({
+      id: "item-3",
+      produtoId: "prod-1",
+      fornecedorId: "forn-1",
+      fornecedorNome: "ABC Med",
+      descricao: "Seringa",
+      quantidade: 5,
+      unidade: "UN",
+      ordem: 1,
+    });
+  });
 });
