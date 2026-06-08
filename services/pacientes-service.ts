@@ -185,6 +185,28 @@ export async function atualizarPaciente(id: string, dados: PacienteUpdateInput) 
   }
 }
 
+export type PacienteStatusERS = "ativo" | "suspenso" | "encerrado";
+
+export async function alterarStatusPaciente(
+  id: string,
+  status: PacienteStatusERS,
+): Promise<ApiPacienteDTO> {
+  try {
+    const response = await api.patch<ApiPacienteDTO>(
+      `/pacientes/${id}/status`,
+      { status },
+    );
+
+    const data = (response.data as any)?.data ?? response.data;
+
+    return data as ApiPacienteDTO;
+  } catch (error) {
+    throw new Error(
+      getErrorMessage(error, "Erro ao alterar status do paciente."),
+    );
+  }
+}
+
 export async function inativarPaciente(id: string) {
   try {
     await api.delete(`/pacientes/${id}`);
