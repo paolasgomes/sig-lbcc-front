@@ -14,7 +14,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { useData } from '@/contexts/data-context'
+import { usePacientes } from '@/hooks/use-pacientes'
+import { computePacienteStats } from '@/lib/pacientes-utils'
 import { useAuth } from '@/contexts/auth-context'
 import { useCotacoes } from '@/hooks/use-cotacoes'
 import { useAtendimentos } from '@/hooks/use-atendimentos'
@@ -22,9 +23,10 @@ import { isCotacaoVencida } from '@/lib/cotacoes-utils'
 import { PERFIS_DASHBOARD_PACIENTES } from '@/lib/access-control'
 
 export default function DashboardPage() {
-  const { getStats } = useData()
+  const { pacientes } = usePacientes()
+  const { totalPacientes, pacientesAtivos, pacientesSuspensos, pacientesEncerrados } =
+    computePacienteStats(pacientes)
   const { podeVisualizarValores, podeCriarCotacao } = useAuth()
-  const stats = getStats()
   const { atendimentos } = useAtendimentos()
   const { cotacoes } = useCotacoes('todas')
   const totalCotacoes = cotacoes.length
@@ -35,7 +37,7 @@ export default function DashboardPage() {
   const cards = [
     {
       title: 'Total de Pacientes',
-      value: stats.totalPacientes,
+      value: totalPacientes,
       icon: Users,
       color: 'bg-chart-1',
       href: '/pacientes'
@@ -69,21 +71,21 @@ export default function DashboardPage() {
   const statusCards = [
     {
       title: 'Pacientes Ativos',
-      value: stats.pacientesAtivos,
+      value: pacientesAtivos,
       icon: UserCheck,
       color: 'text-success',
       bgColor: 'bg-success/10'
     },
     {
       title: 'Pacientes Suspensos',
-      value: stats.pacientesSuspensos,
+      value: pacientesSuspensos,
       icon: UserMinus,
       color: 'text-warning',
       bgColor: 'bg-warning/10'
     },
     {
       title: 'Pacientes Encerrados',
-      value: stats.pacientesEncerrados,
+      value: pacientesEncerrados,
       icon: UserX,
       color: 'text-muted-foreground',
       bgColor: 'bg-muted'
