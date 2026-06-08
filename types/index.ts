@@ -213,6 +213,8 @@ export interface Cotacao {
 export interface ItemCotacao {
   id?: string;
   produtoId?: string;
+  fornecedorId?: string;
+  fornecedorNome?: string;
   descricao: string;
   quantidade: number;
   unidade: string;
@@ -221,6 +223,7 @@ export interface ItemCotacao {
 
 export interface ItemCotacaoInput {
   produtoId: string;
+  fornecedorId: string;
   descricao: string;
   quantidade: number;
   unidade: string;

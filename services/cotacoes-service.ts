@@ -21,10 +21,16 @@ export interface ApiItemCotacaoDTO {
   id: string;
   cotacao_id: string;
   produto_id?: string | null;
+  fornecedor_id?: string | null;
   descricao: string;
   quantidade: number;
   unidade: string;
   ordem?: number | null;
+  fornecedores?: {
+    id: string;
+    razao_social?: string | null;
+    nome_fantasia?: string | null;
+  } | null;
 }
 
 interface ApiErrorBody {
@@ -82,10 +88,19 @@ export function mapApiCotacaoToCotacao(
   };
 }
 
+function mapFornecedorNome(
+  fornecedor?: ApiItemCotacaoDTO["fornecedores"],
+): string | undefined {
+  if (!fornecedor) return undefined;
+  return fornecedor.nome_fantasia ?? fornecedor.razao_social ?? undefined;
+}
+
 export function mapApiItemToItemCotacao(dto: ApiItemCotacaoDTO): ItemCotacao {
   return {
     id: dto.id,
     produtoId: dto.produto_id ?? undefined,
+    fornecedorId: dto.fornecedor_id ?? undefined,
+    fornecedorNome: mapFornecedorNome(dto.fornecedores),
     descricao: dto.descricao ?? "",
     quantidade: dto.quantidade ?? 0,
     unidade: dto.unidade ?? "UN",
@@ -104,11 +119,12 @@ function mapCotacaoToApiPayload(dados: Partial<CotacaoCreateInput>) {
 }
 
 function mapItemToApiPayload(
-  item: Omit<ItemCotacao, "id"> & { produtoId: string },
+  item: Omit<ItemCotacao, "id"> & { produtoId: string; fornecedorId: string },
   ordem: number,
 ) {
   return {
     produto_id: item.produtoId,
+    fornecedor_id: item.fornecedorId,
     descricao: item.descricao,
     quantidade: item.quantidade,
     unidade: item.unidade,

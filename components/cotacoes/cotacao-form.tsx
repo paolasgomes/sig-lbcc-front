@@ -33,6 +33,7 @@ import {
 import { usePacientes } from "@/hooks/use-pacientes";
 import { useAreas } from "@/hooks/use-areas";
 import { useProdutos } from "@/hooks/use-produtos";
+import { useFornecedores } from "@/hooks/use-fornecedores";
 import { useCotacoes } from "@/hooks/use-cotacoes";
 import type { Cotacao } from "@/types";
 
@@ -44,6 +45,7 @@ interface CotacaoFormProps {
 type ItemFormRow = {
   id?: string;
   produtoId?: string;
+  fornecedorId?: string;
   descricao: string;
   quantidade: number;
 };
@@ -56,6 +58,7 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
   const { pacientes } = usePacientes();
   const { areas } = useAreas();
   const { produtos } = useProdutos();
+  const { fornecedores } = useFornecedores();
   const { criarCotacao, atualizarCotacao, isCreating, isUpdating } = useCotacoes();
 
   const [pacienteId, setPacienteId] = useState(
@@ -69,6 +72,7 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
     cotacao?.itens.map((i) => ({
       id: i.id,
       produtoId: i.produtoId,
+      fornecedorId: i.fornecedorId,
       descricao: i.descricao,
       quantidade: i.quantidade,
     })) || [{ descricao: "", quantidade: 1 }],
@@ -94,6 +98,19 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
   const produtosPorId = useMemo(
     () => new Map(produtos.map((p) => [p.id, p])),
     [produtos],
+  );
+
+  const fornecedoresVinculadosIds = useMemo(
+    () => new Set(itens.map((i) => i.fornecedorId).filter(Boolean) as string[]),
+    [itens],
+  );
+
+  const fornecedoresParaSelecao = useMemo(
+    () =>
+      fornecedores.filter(
+        (f) => f.ativo !== false || fornecedoresVinculadosIds.has(f.id),
+      ),
+    [fornecedores, fornecedoresVinculadosIds],
   );
 
   const handleAddRow = () => {
@@ -137,10 +154,14 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
     if (produtosParaSelecao.length === 0) {
       return "Cadastre ao menos um produto ativo antes de adicionar itens.";
     }
+    if (fornecedoresParaSelecao.length === 0) {
+      return "Cadastre ao menos um fornecedor ativo antes de adicionar itens.";
+    }
 
     for (let i = 0; i < itens.length; i++) {
       const item = itens[i];
       if (!item.produtoId) return `Item ${i + 1}: selecione um produto.`;
+      if (!item.fornecedorId) return `Item ${i + 1}: selecione um fornecedor.`;
       if (!item.descricao.trim()) return `Item ${i + 1}: informe a descrição.`;
       if (item.quantidade <= 0) return `Item ${i + 1}: quantidade deve ser maior que zero.`;
     }
@@ -163,9 +184,10 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
       areaId,
       dataValidade,
       observacoes: observacoes.trim(),
-      itens: itens.map(({ id, produtoId, descricao: desc, quantidade }) => ({
+      itens: itens.map(({ id, produtoId, fornecedorId, descricao: desc, quantidade }) => ({
         ...(id ? { id } : {}),
         produtoId: produtoId!,
+        fornecedorId: fornecedorId!,
         descricao: desc.trim(),
         quantidade,
         unidade: produtosPorId.get(produtoId!)?.unidade ?? "UN",
@@ -297,6 +319,7 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-48">Produto *</TableHead>
+                  <TableHead className="w-48">Fornecedor *</TableHead>
                   <TableHead>Descrição *</TableHead>
                   <TableHead className="w-28">Quantidade *</TableHead>
                   <TableHead className="w-12"></TableHead>
@@ -317,6 +340,25 @@ export function CotacaoForm({ cotacao, isEditing }: CotacaoFormProps) {
                           {produtosParaSelecao.map((p) => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={item.fornecedorId}
+                        onValueChange={(v) =>
+                          handleItemChange(index, "fornecedorId", v)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um fornecedor..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fornecedoresParaSelecao.map((f) => (
+                            <SelectItem key={f.id} value={f.id}>
+                              {f.nomeFantasia ?? f.razaoSocial ?? f.nome}
                             </SelectItem>
                           ))}
                         </SelectContent>
