@@ -21,8 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
-import { useData } from "@/contexts/data-context";
-import { useAuth } from "@/contexts/auth-context";
+import { usePaciente } from "@/hooks/use-pacientes";
 import { StatusPaciente } from "@/types";
 
 interface AlterarStatusModalProps {
@@ -37,29 +36,25 @@ const statusOptions = [
 ];
 
 export function AlterarStatusModal({ pacienteId, statusAtual }: AlterarStatusModalProps) {
-  const { alterarStatusPaciente } = useData();
-  const { usuario } = useAuth();
+  const { alterarStatus, isAlterandoStatus } = usePaciente(pacienteId);
   const [open, setOpen] = useState(false);
   const [novoStatus, setNovoStatus] = useState<StatusPaciente>(statusAtual);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleConfirm = async () => {
     if (novoStatus !== statusAtual) {
-      setIsSubmitting(true);
       setSubmitError(null);
 
       try {
-        await alterarStatusPaciente(pacienteId, novoStatus, usuario?.nome || "Sistema");
+        await alterarStatus(novoStatus);
       } catch (error) {
         setSubmitError(
-          error instanceof Error ? error.message : "Erro ao alterar status do paciente.",
+          error instanceof Error
+            ? error.message
+            : "Erro ao alterar status do paciente.",
         );
-        setIsSubmitting(false);
         return;
       }
-
-      setIsSubmitting(false);
     }
 
     setOpen(false);
@@ -110,15 +105,15 @@ export function AlterarStatusModal({ pacienteId, statusAtual }: AlterarStatusMod
           <Button
             variant="outline"
             onClick={() => setOpen(false)}
-            disabled={isSubmitting}
+            disabled={isAlterandoStatus}
           >
             Cancelar
           </Button>
           <Button
             onClick={() => void handleConfirm()}
-            disabled={novoStatus === statusAtual || isSubmitting}
+            disabled={novoStatus === statusAtual || isAlterandoStatus}
           >
-            {isSubmitting ? "Salvando..." : "Confirmar Alteração"}
+            {isAlterandoStatus ? "Salvando..." : "Confirmar Alteração"}
           </Button>
         </DialogFooter>
       </DialogContent>
