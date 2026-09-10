@@ -29,7 +29,7 @@ interface PacienteCotacoesProps {
 }
 
 export function PacienteCotacoes({ pacienteId }: PacienteCotacoesProps) {
-  const { cotacoes } = useCotacoes("todas");
+  const { cotacoes } = useCotacoes();
   const { isGestor } = useUsuario();
 
   const cotacoesPaciente = cotacoes
@@ -45,6 +45,7 @@ export function PacienteCotacoes({ pacienteId }: PacienteCotacoesProps) {
           <CardTitle>Cotações</CardTitle>
           <CardDescription>Cotações vinculadas ao paciente</CardDescription>
         </div>
+
         {isGestor && (
           <Button asChild>
             <Link href={`/cotacoes/nova?pacienteId=${pacienteId}`}>
@@ -54,6 +55,7 @@ export function PacienteCotacoes({ pacienteId }: PacienteCotacoesProps) {
           </Button>
         )}
       </CardHeader>
+
       <CardContent>
         {cotacoesPaciente.length === 0 ? (
           <Empty
@@ -71,10 +73,12 @@ export function PacienteCotacoes({ pacienteId }: PacienteCotacoesProps) {
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
               {cotacoesPaciente.map((cotacao) => {
                 const vencida =
-                  cotacao.ativo && isCotacaoVencida(cotacao.dataValidade);
+                  cotacao.status !== "cancelada" &&
+                  isCotacaoVencida(cotacao.dataValidade);
 
                 return (
                   <TableRow
@@ -84,20 +88,23 @@ export function PacienteCotacoes({ pacienteId }: PacienteCotacoesProps) {
                     <TableCell className="font-medium">
                       {cotacao.descricao}
                     </TableCell>
+
                     <TableCell>{cotacao.areaNome ?? "-"}</TableCell>
+
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {formatDateOnly(cotacao.dataValidade)}
+
                         {vencida && (
                           <AlertTriangle className="h-4 w-4 text-destructive" />
                         )}
                       </div>
                     </TableCell>
+
                     <TableCell>
-                      <StatusBadge
-                        status={cotacao.ativo ? "ativo" : "inativo"}
-                      />
+                      <StatusBadge status={cotacao.status} />
                     </TableCell>
+
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" asChild>
                         <Link href={`/cotacoes/${cotacao.id}`}>

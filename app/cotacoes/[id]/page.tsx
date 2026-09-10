@@ -3,13 +3,22 @@
 import { use, useMemo, useState } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { useCotacao } from "@/hooks/use-cotacoes";
 import { useProdutos } from "@/hooks/use-produtos";
 import { useUsuario } from "@/hooks/use-usuario";
+
 import { ROLES_ATENDIMENTOS_E_COTACOES } from "@/lib/access-control";
-import { isCotacaoVencida, formatCotacaoNumero, formatDateOnly } from "@/lib/cotacoes-utils";
+
+import {
+  isCotacaoVencida,
+  formatCotacaoNumero,
+  formatDateOnly,
+} from "@/lib/cotacoes-utils";
+
 import { Button } from "@/components/ui/button";
+
 import {
   Card,
   CardContent,
@@ -17,6 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
 import {
   Table,
   TableBody,
@@ -25,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,45 +47,95 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Spinner } from "@/components/ui/spinner";
+
 import {
   ArrowLeft,
   Pencil,
   FileText,
-  Ban,
-  CheckCircle,
   AlertTriangle,
+  XCircle,
 } from "lucide-react";
+
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 interface CotacaoDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function CotacaoDetailPage({ params }: CotacaoDetailPageProps) {
+function formatStatus(status: string) {
+  const statusMap: Record<string, string> = {
+    aberta: "Aberta",
+    em_andamento: "Em andamento",
+    pronta_para_analise: "Pronta para análise",
+    finalizada: "Finalizada",
+    cancelada: "Cancelada",
+  };
+
+  return statusMap[status] ?? status;
+}
+
+function getStatusBadge(status: string) {
+  const statusMap: Record<string, string> = {
+    aberta: "aberta",
+    em_andamento: "em_andamento",
+    pronta_para_analise: "pronta_para_analise",
+    finalizada: "finalizada",
+    cancelada: "cancelada",
+  };
+
+  return statusMap[status] ?? status;
+}
+
+export default function CotacaoDetailPage({
+  params,
+}: CotacaoDetailPageProps) {
   const { id } = use(params);
+
   const {
     cotacao,
     isLoading,
     error,
-    alternarStatus,
-    isTogglingStatus,
+    cancelarCotacao,
+    isCanceling,
   } = useCotacao(id);
+
   const { isGestor } = useUsuario();
   const { produtos } = useProdutos();
-  const [actionError, setActionError] = useState<string | null>(null);
+
+  const [actionError, setActionError] =
+    useState<string | null>(null);
+
+  const [motivoCancelamento, setMotivoCancelamento] =
+    useState("");
 
   const produtosPorId = useMemo(
-    () => new Map(produtos.map((p) => [p.id, p.nome])),
+    () =>
+      new Map(
+        produtos.map((p) => [p.id, p.nome]),
+      ),
     [produtos],
   );
 
   if (isLoading) {
     return (
-      <DashboardLayout allowedRoles={ROLES_ATENDIMENTOS_E_COTACOES}>
+      <DashboardLayout
+        allowedRoles={
+          ROLES_ATENDIMENTOS_E_COTACOES
+        }
+      >
         <div className="flex justify-center py-12">
           <Spinner className="h-8 w-8" />
         </div>
@@ -86,186 +147,471 @@ export default function CotacaoDetailPage({ params }: CotacaoDetailPageProps) {
     notFound();
   }
 
-  const vencida = cotacao.ativo && isCotacaoVencida(cotacao.dataValidade);
+  const vencida =
+    cotacao.status !== "cancelada" &&
+    cotacao.status !== "finalizada" &&
+    isCotacaoVencida(
+      cotacao.dataValidade,
+    );
 
-  const formatDateTime = (dateStr: string) => {
+  const bloqueada =
+    cotacao.status === "finalizada" ||
+    cotacao.status === "cancelada";
+
+  const formatDateTime = (
+    dateStr: string,
+  ) => {
     try {
-      return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: ptBR });
+      return format(
+        new Date(dateStr),
+        "dd/MM/yyyy HH:mm",
+        {
+          locale: ptBR,
+        },
+      );
     } catch {
       return dateStr;
     }
   };
 
-  const handleToggleStatus = async () => {
+  const handleCancelar = async () => {
+    const motivo =
+      motivoCancelamento.trim();
+
+    if (!motivo) {
+      setActionError(
+        "Informe o motivo do cancelamento.",
+      );
+      return;
+    }
+
     setActionError(null);
+
     try {
-      await alternarStatus();
+      await cancelarCotacao(motivo);
+      setMotivoCancelamento("");
     } catch (err) {
       setActionError(
-        err instanceof Error ? err.message : "Erro ao alterar status da cotação.",
+        err instanceof Error
+          ? err.message
+          : "Erro ao cancelar a cotação.",
       );
     }
   };
 
   return (
-    <DashboardLayout allowedRoles={ROLES_ATENDIMENTOS_E_COTACOES}>
+    <DashboardLayout
+      allowedRoles={
+        ROLES_ATENDIMENTOS_E_COTACOES
+      }
+    >
       <div className="flex flex-col gap-6">
+        {/* Cabeçalho */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+            >
               <Link href="/cotacoes">
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
+
             <div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-2xl font-bold tracking-tight">
-                  Cotação {formatCotacaoNumero(cotacao)}
+                  Cotação{" "}
+                  {formatCotacaoNumero(
+                    cotacao,
+                  )}
                 </h1>
-                <StatusBadge status={cotacao.ativo ? "ativo" : "inativo"} />
+
+                <StatusBadge
+                  status={getStatusBadge(
+                    cotacao.status,
+                  )}
+                />
               </div>
-              <p className="text-muted-foreground">{cotacao.descricao}</p>
+
+              <p className="text-muted-foreground">
+                {cotacao.descricao}
+              </p>
             </div>
           </div>
 
           {isGestor && (
-            <div className="flex gap-2">
-              <Button variant="outline" asChild>
-                <Link href={`/cotacoes/${cotacao.id}/editar`}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Editar
-                </Link>
-              </Button>
+            <div className="flex flex-wrap gap-2">
+              {/* Editar */}
+              {!bloqueada && (
+                <Button
+                  variant="outline"
+                  asChild
+                >
+                  <Link
+                    href={`/cotacoes/${cotacao.id}/editar`}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Editar
+                  </Link>
+                </Button>
+              )}
 
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" disabled={isTogglingStatus}>
-                    {cotacao.ativo ? (
-                      <>
-                        <Ban className="mr-2 h-4 w-4" />
-                        Inativar
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Ativar
-                      </>
-                    )}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      {cotacao.ativo ? "Inativar cotação?" : "Ativar cotação?"}
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {cotacao.ativo
-                        ? "A cotação ficará inativa e não poderá ser utilizada em novas propostas."
-                        : "A cotação será reativada."}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleToggleStatus}>
-                      Confirmar
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              {/* Cancelar cotação */}
+              {!bloqueada && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive hover:text-white"
+                      disabled={isCanceling}
+                    >
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Cancelar cotação
+                    </Button>
+                  </AlertDialogTrigger>
+
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Cancelar cotação?
+                      </AlertDialogTitle>
+
+                      <AlertDialogDescription>
+                        Essa ação é irreversível.
+                        A cotação não será
+                        excluída do banco de
+                        dados, mas seu status
+                        será alterado para
+                        cancelada.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <div className="space-y-2 py-2">
+                      <Label htmlFor="motivo-cancelamento">
+                        Motivo do cancelamento
+                      </Label>
+
+                      <Textarea
+                        id="motivo-cancelamento"
+                        placeholder="Informe o motivo do cancelamento..."
+                        value={
+                          motivoCancelamento
+                        }
+                        onChange={(event) =>
+                          setMotivoCancelamento(
+                            event.target.value,
+                          )
+                        }
+                        maxLength={1000}
+                      />
+                    </div>
+
+                    <AlertDialogFooter>
+                      <AlertDialogCancel
+                        onClick={() =>
+                          setMotivoCancelamento(
+                            "",
+                          )
+                        }
+                      >
+                        Voltar
+                      </AlertDialogCancel>
+
+                      <AlertDialogAction
+                        onClick={
+                          handleCancelar
+                        }
+                        disabled={
+                          isCanceling ||
+                          !motivoCancelamento.trim()
+                        }
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {isCanceling
+                          ? "Cancelando..."
+                          : "Confirmar cancelamento"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           )}
         </div>
 
+        {/* Erro */}
         {actionError && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Erro na operação</AlertTitle>
-            <AlertDescription>{actionError}</AlertDescription>
+
+            <AlertTitle>
+              Erro na operação
+            </AlertTitle>
+
+            <AlertDescription>
+              {actionError}
+            </AlertDescription>
           </Alert>
         )}
 
+        {/* Aviso de vencimento */}
+        {vencida && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+
+            <AlertTitle>
+              Cotação vencida
+            </AlertTitle>
+
+            <AlertDescription>
+              A data de validade desta cotação
+              já foi ultrapassada.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Aviso de cancelamento */}
+        {cotacao.status ===
+          "cancelada" && (
+          <Alert variant="destructive">
+            <XCircle className="h-4 w-4" />
+
+            <AlertTitle>
+              Cotação cancelada
+            </AlertTitle>
+
+            <AlertDescription>
+              <span className="font-medium">
+                Motivo:
+              </span>{" "}
+              {cotacao.motivoCancelamento ??
+                "Motivo não informado."}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Informações gerais */}
         <Card>
           <CardHeader>
-            <CardTitle>Informações gerais</CardTitle>
+            <CardTitle>
+              Informações gerais
+            </CardTitle>
           </CardHeader>
+
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div>
-              <p className="text-sm text-muted-foreground">Paciente</p>
+              <p className="text-sm text-muted-foreground">
+                Paciente
+              </p>
+
               <p className="font-medium">
-                {cotacao.pacienteNome ?? cotacao.pacienteId}
+                {cotacao.pacienteNome ??
+                  cotacao.pacienteId}
               </p>
             </div>
+
             <div>
-              <p className="text-sm text-muted-foreground">Área</p>
-              <p className="font-medium">{cotacao.areaNome ?? cotacao.areaId}</p>
+              <p className="text-sm text-muted-foreground">
+                Área
+              </p>
+
+              <p className="font-medium">
+                {cotacao.areaNome ??
+                  cotacao.areaId}
+              </p>
             </div>
+
             <div>
-              <p className="text-sm text-muted-foreground">Validade</p>
+              <p className="text-sm text-muted-foreground">
+                Status
+              </p>
+
+              <p className="font-medium">
+                {formatStatus(
+                  cotacao.status,
+                )}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm text-muted-foreground">
+                Validade
+              </p>
+
               <div className="flex items-center gap-1 font-medium">
-                {formatDateOnly(cotacao.dataValidade)}
+                {formatDateOnly(
+                  cotacao.dataValidade,
+                )}
+
                 {vencida && (
                   <AlertTriangle className="h-4 w-4 text-destructive" />
                 )}
               </div>
             </div>
+
             {cotacao.observacoes && (
               <div className="sm:col-span-2">
-                <p className="text-sm text-muted-foreground">Observações</p>
-                <p>{cotacao.observacoes}</p>
+                <p className="text-sm text-muted-foreground">
+                  Observações
+                </p>
+
+                <p>
+                  {cotacao.observacoes}
+                </p>
               </div>
             )}
           </CardContent>
         </Card>
 
+        {/* Itens */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
               Itens
             </CardTitle>
+
             <CardDescription>
-              {cotacao.itens.length} item(ns) incluído(s)
+              {cotacao.itens.length} item(ns)
+              incluído(s)
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Produto</TableHead>
-                    <TableHead>Fornecedor</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead className="text-center">Quantidade</TableHead>
+                    <TableHead>
+                      Produto
+                    </TableHead>
+
+                    <TableHead>
+                      Descrição
+                    </TableHead>
+
+                    <TableHead className="text-center">
+                      Quantidade
+                    </TableHead>
+
+                    <TableHead>
+                      Unidade
+                    </TableHead>
+
+                    <TableHead>
+                      Especificações
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
+
                 <TableBody>
-                  {cotacao.itens.map((item, index) => (
-                    <TableRow key={item.id ?? index}>
-                      <TableCell>
-                        {item.produtoId
-                          ? (produtosPorId.get(item.produtoId) ?? "Produto removido")
-                          : "—"}
+                  {cotacao.itens.map(
+                    (item, index) => (
+                      <TableRow
+                        key={
+                          item.id ?? index
+                        }
+                      >
+                        <TableCell>
+                          {item.produtoId
+                            ? produtosPorId.get(
+                                item.produtoId,
+                              ) ??
+                              "Produto removido"
+                            : "—"}
+                        </TableCell>
+
+                        <TableCell className="font-medium">
+                          {item.descricao}
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          {item.quantidade}
+                        </TableCell>
+
+                        <TableCell>
+                          {item.unidade ??
+                            "UN"}
+                        </TableCell>
+
+                        <TableCell>
+                          {item.especificacoes ||
+                            "—"}
+                        </TableCell>
+                      </TableRow>
+                    ),
+                  )}
+
+                  {cotacao.itens.length ===
+                    0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="h-24 text-center text-muted-foreground"
+                      >
+                        Nenhum item
+                        cadastrado.
                       </TableCell>
-                      <TableCell>{item.fornecedorNome ?? "—"}</TableCell>
-                      <TableCell className="font-medium">{item.descricao}</TableCell>
-                      <TableCell className="text-center">{item.quantidade}</TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </div>
           </CardContent>
         </Card>
 
+        {/* Metadados */}
         <Card>
           <CardHeader>
-            <CardTitle>Metadados</CardTitle>
+            <CardTitle>
+              Metadados
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Criado em</span>
-              <span>{formatDateTime(cotacao.criadoEm)}</span>
+
+          <CardContent className="space-y-3">
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">
+                Criado em
+              </span>
+
+              <span>
+                {formatDateTime(
+                  cotacao.criadoEm,
+                )}
+              </span>
             </div>
+
+            {cotacao.atualizadoEm && (
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">
+                  Atualizado em
+                </span>
+
+                <span>
+                  {formatDateTime(
+                    cotacao.atualizadoEm,
+                  )}
+                </span>
+              </div>
+            )}
+
+            {cotacao.status ===
+              "cancelada" &&
+              cotacao.motivoCancelamento && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-muted-foreground">
+                    Motivo do cancelamento
+                  </span>
+
+                  <span>
+                    {
+                      cotacao.motivoCancelamento
+                    }
+                  </span>
+                </div>
+              )}
           </CardContent>
         </Card>
       </div>
