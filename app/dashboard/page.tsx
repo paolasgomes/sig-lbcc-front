@@ -28,10 +28,14 @@ export default function DashboardPage() {
     computePacienteStats(pacientes)
   const { podeVisualizarValores, podeCriarCotacao } = useAuth()
   const { atendimentos } = useAtendimentos()
-  const { cotacoes } = useCotacoes('todas')
+  const { cotacoes } = useCotacoes()
+
   const totalCotacoes = cotacoes.length
+
   const cotacoesVencidas = cotacoes.filter(
-    (c) => c.ativo && isCotacaoVencida(c.dataValidade),
+    (c) =>
+      c.status !== 'cancelada' &&
+      isCotacaoVencida(c.dataValidade),
   ).length
 
   const cards = [

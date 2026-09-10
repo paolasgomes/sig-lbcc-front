@@ -81,7 +81,6 @@
  *       e.preventDefault();
  *       handleSubmit(new FormData(e.currentTarget));
  *     }}>
- *       {/* form fields */}
  *       <button type="submit" disabled={isPending}>
  *         {isPending ? 'Salvando...' : 'Salvar'}
  *       </button>
@@ -119,7 +118,7 @@
  *       // formData processing
  *       mutate(formData);
  *     }}>
- *       {/* form fields */}
+ *       
  *     </form>
  *   );
  * }
