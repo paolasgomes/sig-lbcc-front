@@ -357,3 +357,47 @@ export interface DashboardStats {
   pacientesSuspensos: number;
   pacientesEncerrados: number;
 }
+export interface OrcamentoItem {
+  id?: string;
+  itemId: string;
+  valorUnitario: number;
+  valorTotal?: number;
+  observacoes?: string;
+}
+
+export interface Orcamento {
+  id: string;
+  cotacaoId: string;
+  fornecedorId: string;
+  dataProposta: string;
+  validadeProposta?: string;
+  valorTotal: number;
+  prazoEntrega?: string;
+  condicoesPagamento?: string;
+  observacoes: string;
+  selecionada: boolean;
+  criadoEm: string;
+  cotacaoNome?: string;
+  fornecedorNome?: string;
+  itens: OrcamentoItem[];
+}
+
+export interface OrcamentoCreateInput {
+  cotacaoId: string;
+  fornecedorId: string;
+  dataProposta: string;
+  validadeProposta?: string;
+  prazoEntrega?: string;
+  condicoesPagamento?: string;
+  observacoes?: string;
+  itens: OrcamentoItem[];
+}
+
+export interface OrcamentoUpdateInput {
+  fornecedorId?: string;
+  dataProposta?: string;
+  validadeProposta?: string;
+  prazoEntrega?: string;
+  condicoesPagamento?: string;
+  observacoes?: string;
+}
