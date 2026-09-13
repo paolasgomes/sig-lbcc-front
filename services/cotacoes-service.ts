@@ -1,7 +1,14 @@
 import axios from "axios";
 import { api } from "./api";
 import { getFriendlyApiError } from "@/lib/api-errors";
-import type { Cotacao, CotacaoCreateInput, CotacaoUpdateInput, ItemCotacao } from "@/types";
+
+import type {
+  Cotacao,
+  CotacaoCreateInput,
+  CotacaoStatusInput,
+  CotacaoUpdateInput,
+  ItemCotacao,
+} from "@/types";
 
 export interface ApiCotacaoDTO {
   id: string;
@@ -10,54 +17,56 @@ export interface ApiCotacaoDTO {
   area_id: string;
   data_validade: string;
   observacoes?: string | null;
-  ativo: boolean;
+  status: string;
+  motivo_cancelamento?: string | null;
   numero?: string | null;
   created_at: string;
-  pacientes?: { id: string; nome: string } | null;
-  areas?: { id: string; nome: string } | null;
+  updated_at?: string;
+
+  pacientes?: {
+    id: string;
+    nome: string;
+  } | null;
+
+  areas?: {
+    id: string;
+    nome: string;
+  } | null;
+
+  cotacao_itens?: ApiItemCotacaoDTO[];
 }
 
 export interface ApiItemCotacaoDTO {
   id: string;
   cotacao_id: string;
   produto_id?: string | null;
-  fornecedor_id?: string | null;
   descricao: string;
   quantidade: number;
   unidade: string;
+  especificacoes?: string | null;
   ordem?: number | null;
-  fornecedores?: {
-    id: string;
-    razao_social?: string | null;
-    nome_fantasia?: string | null;
-  } | null;
 }
 
 interface ApiErrorBody {
   erro?: string;
   error?: string;
   message?: string;
-  cotacaoTemVinculos?: boolean;
-  relacionamentos?: { propostas?: number; itens?: number };
 }
 
-export class CotacaoVinculosError extends Error {
-  relacionamentos: { propostas: number; itens: number };
-
-  constructor(message: string, relacionamentos: { propostas: number; itens: number }) {
-    super(message);
-    this.name = "CotacaoVinculosError";
-    this.relacionamentos = relacionamentos;
-  }
-}
-
-function getApiErrorMessage(error: unknown, fallback: string): string {
+function getApiErrorMessage(
+  error: unknown,
+  fallback: string,
+): string {
   if (axios.isAxiosError<ApiErrorBody>(error)) {
     const data = error.response?.data;
-    const candidate = data?.erro ?? data?.error ?? data?.message;
 
-    if (typeof candidate === "string" && candidate.length > 0) {
-      return candidate;
+    const message =
+      data?.erro ??
+      data?.error ??
+      data?.message;
+
+    if (message) {
+      return message;
     }
 
     if (error.response?.status === 403) {
@@ -65,225 +74,454 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
     }
   }
 
-  return getFriendlyApiError(error, fallback);
+  return getFriendlyApiError(
+    error,
+    fallback,
+  );
 }
 
-export function mapApiCotacaoToCotacao(
-  apiCotacao: ApiCotacaoDTO,
-  itens: ItemCotacao[] = [],
-): Cotacao {
-  return {
-    id: apiCotacao.id,
-    descricao: apiCotacao.descricao ?? "",
-    pacienteId: apiCotacao.paciente_id ?? "",
-    areaId: apiCotacao.area_id ?? "",
-    dataValidade: apiCotacao.data_validade ?? "",
-    observacoes: apiCotacao.observacoes ?? "",
-    ativo: apiCotacao.ativo ?? true,
-    numero: apiCotacao.numero ?? undefined,
-    criadoEm: apiCotacao.created_at ?? new Date().toISOString(),
-    pacienteNome: apiCotacao.pacientes?.nome,
-    areaNome: apiCotacao.areas?.nome,
-    itens,
-  };
-}
+// =========================
+// MAPEADORES
+// =========================
 
-function mapFornecedorNome(
-  fornecedor?: ApiItemCotacaoDTO["fornecedores"],
-): string | undefined {
-  if (!fornecedor) return undefined;
-  return fornecedor.nome_fantasia ?? fornecedor.razao_social ?? undefined;
-}
-
-export function mapApiItemToItemCotacao(dto: ApiItemCotacaoDTO): ItemCotacao {
+export function mapApiItemToItemCotacao(
+  dto: ApiItemCotacaoDTO,
+): ItemCotacao {
   return {
     id: dto.id,
-    produtoId: dto.produto_id ?? undefined,
-    fornecedorId: dto.fornecedor_id ?? undefined,
-    fornecedorNome: mapFornecedorNome(dto.fornecedores),
+    cotacaoId: dto.cotacao_id,
+    produtoId:
+      dto.produto_id ?? undefined,
     descricao: dto.descricao ?? "",
     quantidade: dto.quantidade ?? 0,
     unidade: dto.unidade ?? "UN",
+    especificacoes:
+      dto.especificacoes ?? undefined,
     ordem: dto.ordem ?? undefined,
   };
 }
 
-function mapCotacaoToApiPayload(dados: Partial<CotacaoCreateInput>) {
+export function mapApiCotacaoToCotacao(
+  dto: ApiCotacaoDTO,
+  itens: ItemCotacao[] = [],
+): Cotacao {
   return {
-    descricao: dados.descricao,
-    data_validade: dados.dataValidade,
-    paciente_id: dados.pacienteId,
-    area_id: dados.areaId,
-    observacoes: dados.observacoes ?? "",
+    id: dto.id,
+
+    numero:
+      dto.numero ?? undefined,
+
+    descricao:
+      dto.descricao ?? "",
+
+    pacienteId:
+      dto.paciente_id ?? "",
+
+    areaId:
+      dto.area_id ?? "",
+
+    dataValidade:
+      dto.data_validade ?? "",
+
+    observacoes:
+      dto.observacoes ?? "",
+
+    status:
+      dto.status as Cotacao["status"],
+
+    motivoCancelamento:
+      dto.motivo_cancelamento ?? null,
+
+    criadoEm:
+      dto.created_at ??
+      new Date().toISOString(),
+
+    atualizadoEm:
+      dto.updated_at ?? undefined,
+
+    pacienteNome:
+      dto.pacientes?.nome,
+
+    areaNome:
+      dto.areas?.nome,
+
+    itens:
+      dto.cotacao_itens?.map(
+        mapApiItemToItemCotacao,
+      ) ?? itens,
+  };
+}
+
+function mapCotacaoToApiPayload(
+  dados:
+    | Partial<CotacaoCreateInput>
+    | CotacaoUpdateInput,
+) {
+  return {
+    ...(dados.descricao !== undefined && {
+      descricao: dados.descricao,
+    }),
+
+    ...(dados.dataValidade !== undefined && {
+      data_validade: dados.dataValidade,
+    }),
+
+    ...(dados.pacienteId !== undefined && {
+      paciente_id: dados.pacienteId,
+    }),
+
+    ...(dados.areaId !== undefined && {
+      area_id: dados.areaId,
+    }),
+
+    ...(dados.observacoes !== undefined && {
+      observacoes:
+        dados.observacoes ?? "",
+    }),
   };
 }
 
 function mapItemToApiPayload(
-  item: Omit<ItemCotacao, "id"> & { produtoId: string; fornecedorId: string },
+  item: Omit<ItemCotacao, "id"> & {
+    id?: string;
+  },
   ordem: number,
 ) {
   return {
-    produto_id: item.produtoId,
-    fornecedor_id: item.fornecedorId,
-    descricao: item.descricao,
-    quantidade: item.quantidade,
-    unidade: item.unidade,
+    ...(item.id && {
+      id: item.id,
+    }),
+
+    produto_id:
+      item.produtoId ?? null,
+
+    descricao:
+      item.descricao,
+
+    quantidade:
+      item.quantidade,
+
+    unidade:
+      item.unidade,
+
+    especificacoes:
+      item.especificacoes ?? null,
+
     ordem,
   };
 }
 
-export async function listarItensCotacao(cotacaoId: string): Promise<ItemCotacao[]> {
+// =========================
+// ITENS
+// =========================
+
+export async function listarItensCotacao(
+  cotacaoId: string,
+): Promise<ItemCotacao[]> {
   try {
-    const response = await api.get<ApiItemCotacaoDTO[]>(
-      `/cotacao-itens/cotacao/${cotacaoId}`,
+    const response =
+      await api.get<ApiItemCotacaoDTO[]>(
+        `/cotacao-itens/cotacao/${cotacaoId}`,
+      );
+
+    return response.data.map(
+      mapApiItemToItemCotacao,
     );
-    return response.data.map(mapApiItemToItemCotacao);
   } catch (error) {
-    throw new Error(getApiErrorMessage(error, "Erro ao carregar itens da cotação."));
+    throw new Error(
+      getApiErrorMessage(
+        error,
+        "Erro ao carregar itens da cotação.",
+      ),
+    );
   }
 }
 
-export async function listarCotacoes(ativo?: boolean | "todas"): Promise<Cotacao[]> {
+// =========================
+// LISTAR COTAÇÕES
+// =========================
+
+export async function listarCotacoes(): Promise<Cotacao[]> {
   try {
-    let dtos: ApiCotacaoDTO[];
-
-    if (ativo === "todas") {
-      const [ativas, inativas] = await Promise.all([
-        api.get<ApiCotacaoDTO[]>("/cotacoes"),
-        api.get<ApiCotacaoDTO[]>("/cotacoes", { params: { ativo: false } }),
-      ]);
-      const merged = new Map<string, ApiCotacaoDTO>();
-      [...ativas.data, ...inativas.data].forEach((c) => merged.set(c.id, c));
-      dtos = Array.from(merged.values()).sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    const response =
+      await api.get<ApiCotacaoDTO[]>(
+        "/cotacoes",
       );
-    } else if (ativo === false) {
-      const response = await api.get<ApiCotacaoDTO[]>("/cotacoes", {
-        params: { ativo: false },
-      });
-      dtos = response.data;
-    } else {
-      const response = await api.get<ApiCotacaoDTO[]>("/cotacoes");
-      dtos = response.data;
-    }
 
-    const cotacoesComItens = await Promise.all(
+    const dtos = response.data;
+
+    return Promise.all(
       dtos.map(async (dto) => {
-        const itens = await listarItensCotacao(dto.id);
-        return mapApiCotacaoToCotacao(dto, itens);
+        if (dto.cotacao_itens) {
+          return mapApiCotacaoToCotacao(
+            dto,
+          );
+        }
+
+        const itens =
+          await listarItensCotacao(
+            dto.id,
+          );
+
+        return mapApiCotacaoToCotacao(
+          dto,
+          itens,
+        );
       }),
     );
-
-    return cotacoesComItens;
   } catch (error) {
-    throw new Error(getApiErrorMessage(error, "Erro ao carregar cotações."));
-  }
-}
-
-export async function obterCotacao(id: string): Promise<Cotacao> {
-  try {
-    const [cotacaoResponse, itens] = await Promise.all([
-      api.get<ApiCotacaoDTO>(`/cotacoes/${id}`),
-      listarItensCotacao(id),
-    ]);
-    return mapApiCotacaoToCotacao(cotacaoResponse.data, itens);
-  } catch (error) {
-    throw new Error(getApiErrorMessage(error, "Erro ao carregar cotação."));
-  }
-}
-
-export async function criarCotacao(dados: CotacaoCreateInput): Promise<Cotacao> {
-  try {
-    const response = await api.post<ApiCotacaoDTO>(
-      "/cotacoes",
-      mapCotacaoToApiPayload(dados),
+    throw new Error(
+      getApiErrorMessage(
+        error,
+        "Erro ao carregar cotações.",
+      ),
     );
-    const cotacaoId = response.data.id;
+  }
+}
 
-    const itensCriados: ItemCotacao[] = [];
-    for (let index = 0; index < dados.itens.length; index++) {
-      const itemResponse = await api.post<ApiItemCotacaoDTO>(
-        `/cotacao-itens/cotacao/${cotacaoId}`,
-        mapItemToApiPayload(dados.itens[index], index + 1),
+// =========================
+// OBTER COTAÇÃO
+// =========================
+
+export async function obterCotacao(
+  id: string,
+): Promise<Cotacao> {
+  try {
+    const response =
+      await api.get<ApiCotacaoDTO>(
+        `/cotacoes/${id}`,
       );
-      itensCriados.push(mapApiItemToItemCotacao(itemResponse.data));
+
+    const dto = response.data;
+
+    if (dto.cotacao_itens) {
+      return mapApiCotacaoToCotacao(
+        dto,
+      );
     }
 
-    return mapApiCotacaoToCotacao(response.data, itensCriados);
+    const itens =
+      await listarItensCotacao(id);
+
+    return mapApiCotacaoToCotacao(
+      dto,
+      itens,
+    );
   } catch (error) {
-    throw new Error(getApiErrorMessage(error, "Erro ao criar cotação."));
+    throw new Error(
+      getApiErrorMessage(
+        error,
+        "Erro ao carregar cotação.",
+      ),
+    );
   }
 }
 
-export async function atualizarCotacao(id: string, dados: CotacaoUpdateInput): Promise<Cotacao> {
+// =========================
+// CRIAR COTAÇÃO
+// =========================
+
+export async function criarCotacao(
+  dados: CotacaoCreateInput,
+): Promise<Cotacao> {
   try {
-    const response = await api.put<ApiCotacaoDTO>(
+    const payload = {
+      ...mapCotacaoToApiPayload(
+        dados,
+      ),
+
+      itens: dados.itens.map(
+        (item, index) =>
+          mapItemToApiPayload(
+            item,
+            index + 1,
+          ),
+      ),
+    };
+
+    const response =
+      await api.post<ApiCotacaoDTO>(
+        "/cotacoes",
+        payload,
+      );
+
+    return mapApiCotacaoToCotacao(
+      response.data,
+    );
+  } catch (error) {
+    throw new Error(
+      getApiErrorMessage(
+        error,
+        "Erro ao criar cotação.",
+      ),
+    );
+  }
+}
+
+// =========================
+// ATUALIZAR COTAÇÃO
+// =========================
+
+export async function atualizarCotacao(
+  id: string,
+  dados: CotacaoUpdateInput,
+): Promise<Cotacao> {
+  try {
+    await api.put(
       `/cotacoes/${id}`,
-      mapCotacaoToApiPayload(dados),
+      mapCotacaoToApiPayload(
+        dados,
+      ),
     );
 
     if (dados.itens) {
-      const itensAtuais = await listarItensCotacao(id);
-      const idsAtuais = new Set(itensAtuais.map((i) => i.id).filter(Boolean) as string[]);
-      const idsEnviados = new Set(
-        dados.itens.map((i) => i.id).filter(Boolean) as string[],
+      const itensAtuais =
+        await listarItensCotacao(
+          id,
+        );
+
+      const idsEnviados =
+        new Set(
+          dados.itens
+            .map(
+              (item) => item.id,
+            )
+            .filter(Boolean),
+        );
+
+      // Remove os itens que
+      // não foram enviados novamente.
+      for (const item of itensAtuais) {
+        if (
+          item.id &&
+          !idsEnviados.has(
+            item.id,
+          )
+        ) {
+          await api.delete(
+            `/cotacao-itens/${item.id}`,
+          );
+        }
+      }
+
+      const idsAtuais =
+        new Set(
+          itensAtuais
+            .map(
+              (item) => item.id,
+            )
+            .filter(Boolean),
+        );
+
+      // Atualiza itens existentes
+      // ou cria novos itens.
+      for (
+        let index = 0;
+        index < dados.itens.length;
+        index++
+      ) {
+        const item =
+          dados.itens[index];
+
+        const payload =
+          mapItemToApiPayload(
+            item,
+            index + 1,
+          );
+
+        if (
+          item.id &&
+          idsAtuais.has(
+            item.id,
+          )
+        ) {
+          await api.put(
+            `/cotacao-itens/${item.id}`,
+            payload,
+          );
+        } else {
+          await api.post(
+            `/cotacao-itens/cotacao/${id}`,
+            payload,
+          );
+        }
+      }
+    }
+
+    return obterCotacao(id);
+  } catch (error) {
+    throw new Error(
+      getApiErrorMessage(
+        error,
+        "Erro ao atualizar cotação.",
+      ),
+    );
+  }
+}
+
+// =========================
+// STATUS DO PROCESSO
+// =========================
+
+export async function alterarStatusProgressoCotacao(
+  id: string,
+  dados: CotacaoStatusInput,
+): Promise<Cotacao> {
+  try {
+    const response =
+      await api.patch<ApiCotacaoDTO>(
+        `/cotacoes/${id}/status-progresso`,
+        {
+          status:
+            dados.status,
+
+          ...(dados.motivo_cancelamento !==
+            undefined && {
+            motivo_cancelamento:
+              dados.motivo_cancelamento,
+          }),
+        },
       );
 
-      for (const itemAtual of itensAtuais) {
-        if (itemAtual.id && !idsEnviados.has(itemAtual.id)) {
-          await api.delete(`/cotacao-itens/${itemAtual.id}`);
-        }
-      }
-
-      for (let index = 0; index < dados.itens.length; index++) {
-        const item = dados.itens[index];
-        const payload = mapItemToApiPayload(item, index + 1);
-
-        if (item.id && idsAtuais.has(item.id)) {
-          await api.put(`/cotacao-itens/${item.id}`, payload);
-        } else {
-          await api.post(`/cotacao-itens/cotacao/${id}`, payload);
-        }
-      }
-    }
-
-    return obterCotacao(id);
+    return mapApiCotacaoToCotacao(
+      response.data,
+    );
   } catch (error) {
-    throw new Error(getApiErrorMessage(error, "Erro ao atualizar cotação."));
+    throw new Error(
+      getApiErrorMessage(
+        error,
+        "Erro ao alterar status da cotação.",
+      ),
+    );
   }
 }
 
-export async function alternarStatusCotacao(id: string): Promise<Cotacao> {
-  try {
-    await api.patch(`/cotacoes/${id}/status`);
-    return obterCotacao(id);
-  } catch (error) {
-    throw new Error(getApiErrorMessage(error, "Erro ao alterar status da cotação."));
+// =========================
+// CANCELAR COTAÇÃO
+// =========================
+
+export async function cancelarCotacao(
+  id: string,
+  motivoCancelamento: string,
+): Promise<Cotacao> {
+  const motivo =
+    motivoCancelamento.trim();
+
+  if (!motivo) {
+    throw new Error(
+      "Informe o motivo do cancelamento.",
+    );
   }
+
+  return alterarStatusProgressoCotacao(
+    id,
+    {
+      status:
+        "cancelada" as Cotacao["status"],
+
+      motivo_cancelamento:
+        motivo,
+    },
+  );
 }
 
-export async function excluirCotacao(id: string): Promise<void> {
-  try {
-    await api.delete(`/cotacoes/${id}`);
-  } catch (error) {
-    if (axios.isAxiosError<ApiErrorBody>(error)) {
-      const data = error.response?.data;
-
-      if (data?.cotacaoTemVinculos && data.relacionamentos) {
-        throw new CotacaoVinculosError(
-          data.erro ?? "Cotação possui vínculos e não pode ser excluída.",
-          {
-            propostas: data.relacionamentos.propostas ?? 0,
-            itens: data.relacionamentos.itens ?? 0,
-          },
-        );
-      }
-
-      if (error.response?.status === 403) {
-        throw new Error("Apenas gestor pode realizar esta ação.");
-      }
-    }
-
-    throw new Error(getApiErrorMessage(error, "Erro ao excluir cotação."));
-  }
-}

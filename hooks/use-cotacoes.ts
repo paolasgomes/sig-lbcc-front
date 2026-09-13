@@ -1,69 +1,146 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+
 import {
   listarCotacoes,
   obterCotacao,
   criarCotacao,
   atualizarCotacao,
-  alternarStatusCotacao,
-  excluirCotacao,
-  CotacaoVinculosError,
+  alterarStatusProgressoCotacao,
+  cancelarCotacao,
 } from "@/services/cotacoes-service";
-import type { CotacaoCreateInput, CotacaoUpdateInput } from "@/types";
 
-export { CotacaoVinculosError };
+import type {
+  CotacaoCreateInput,
+  CotacaoStatusInput,
+  CotacaoUpdateInput,
+} from "@/types";
 
-export function useCotacoes(ativo?: boolean | "todas") {
+export function useCotacoes() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["cotacoes", ativo ?? "ativas"],
-    queryFn: () => listarCotacoes(ativo ?? "todas"),
+    queryKey: ["cotacoes"],
+    queryFn: () => listarCotacoes(),
     staleTime: 1000 * 60,
   });
 
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ["cotacoes"] });
+    queryClient.invalidateQueries({
+      queryKey: ["cotacoes"],
+    });
 
   const createMutation = useMutation({
-    mutationFn: (dados: CotacaoCreateInput) => criarCotacao(dados),
+    mutationFn: (dados: CotacaoCreateInput) =>
+      criarCotacao(dados),
+
     onSuccess: invalidate,
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, dados }: { id: string; dados: CotacaoUpdateInput }) =>
+    mutationFn: ({
+      id,
+      dados,
+    }: {
+      id: string;
+      dados: CotacaoUpdateInput;
+    }) =>
       atualizarCotacao(id, dados),
+
     onSuccess: (_, { id }) => {
       invalidate();
-      queryClient.invalidateQueries({ queryKey: ["cotacoes", id] });
+
+      queryClient.invalidateQueries({
+        queryKey: ["cotacoes", id],
+      });
     },
   });
 
-  const toggleStatusMutation = useMutation({
-    mutationFn: (id: string) => alternarStatusCotacao(id),
-    onSuccess: invalidate,
+  const progressStatusMutation = useMutation({
+    mutationFn: ({
+      id,
+      dados,
+    }: {
+      id: string;
+      dados: CotacaoStatusInput;
+    }) =>
+      alterarStatusProgressoCotacao(
+        id,
+        dados,
+      ),
+
+    onSuccess: (_, { id }) => {
+      invalidate();
+
+      queryClient.invalidateQueries({
+        queryKey: ["cotacoes", id],
+      });
+    },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => excluirCotacao(id),
-    onSuccess: invalidate,
+  const cancelMutation = useMutation({
+    mutationFn: ({
+      id,
+      motivoCancelamento,
+    }: {
+      id: string;
+      motivoCancelamento: string;
+    }) =>
+      cancelarCotacao(
+        id,
+        motivoCancelamento,
+      ),
+
+    onSuccess: (_, { id }) => {
+      invalidate();
+
+      queryClient.invalidateQueries({
+        queryKey: ["cotacoes", id],
+      });
+    },
   });
 
   return {
     cotacoes: query.data ?? [],
+
     isLoading: query.isLoading,
+
     error:
-      query.error instanceof Error ? query.error.message : ((query.error as any) ?? null),
+      query.error instanceof Error
+        ? query.error.message
+        : query.error ?? null,
+
     refetch: query.refetch,
-    criarCotacao: createMutation.mutateAsync,
-    atualizarCotacao: updateMutation.mutateAsync,
-    alternarStatus: toggleStatusMutation.mutateAsync,
-    excluirCotacao: deleteMutation.mutateAsync,
-    isCreating: createMutation.isPending,
-    isUpdating: updateMutation.isPending,
-    isTogglingStatus: toggleStatusMutation.isPending,
-    isDeleting: deleteMutation.isPending,
+
+    criarCotacao:
+      createMutation.mutateAsync,
+
+    isCreating:
+      createMutation.isPending,
+
+    atualizarCotacao:
+      updateMutation.mutateAsync,
+
+    isUpdating:
+      updateMutation.isPending,
+
+    alterarStatusProgresso:
+      progressStatusMutation.mutateAsync,
+
+    isChangingProgressStatus:
+      progressStatusMutation.isPending,
+
+    cancelarCotacao:
+      cancelMutation.mutateAsync,
+
+    isCanceling:
+      cancelMutation.isPending,
+
     query,
   };
 }
@@ -79,37 +156,72 @@ export function useCotacao(id: string) {
   });
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["cotacoes"] });
-    queryClient.invalidateQueries({ queryKey: ["cotacoes", id] });
+    queryClient.invalidateQueries({
+      queryKey: ["cotacoes"],
+    });
+
+    queryClient.invalidateQueries({
+      queryKey: ["cotacoes", id],
+    });
   };
 
   const updateMutation = useMutation({
-    mutationFn: (dados: CotacaoUpdateInput) => atualizarCotacao(id, dados),
+    mutationFn: (dados: CotacaoUpdateInput) =>
+      atualizarCotacao(id, dados),
+
     onSuccess: invalidate,
   });
 
-  const toggleStatusMutation = useMutation({
-    mutationFn: () => alternarStatusCotacao(id),
+  const progressStatusMutation = useMutation({
+    mutationFn: (dados: CotacaoStatusInput) =>
+      alterarStatusProgressoCotacao(
+        id,
+        dados,
+      ),
+
     onSuccess: invalidate,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: () => excluirCotacao(id),
+  const cancelMutation = useMutation({
+    mutationFn: (motivoCancelamento: string) =>
+      cancelarCotacao(
+        id,
+        motivoCancelamento,
+      ),
+
     onSuccess: invalidate,
   });
 
   return {
     cotacao: query.data ?? null,
+
     isLoading: query.isLoading,
+
     error:
-      query.error instanceof Error ? query.error.message : ((query.error as any) ?? null),
+      query.error instanceof Error
+        ? query.error.message
+        : query.error ?? null,
+
     refetch: query.refetch,
-    atualizarCotacao: updateMutation.mutateAsync,
-    alternarStatus: toggleStatusMutation.mutateAsync,
-    excluirCotacao: deleteMutation.mutateAsync,
-    isUpdating: updateMutation.isPending,
-    isTogglingStatus: toggleStatusMutation.isPending,
-    isDeleting: deleteMutation.isPending,
+
+    atualizarCotacao:
+      updateMutation.mutateAsync,
+
+    isUpdating:
+      updateMutation.isPending,
+
+    alterarStatusProgresso:
+      progressStatusMutation.mutateAsync,
+
+    isChangingProgressStatus:
+      progressStatusMutation.isPending,
+
+    cancelarCotacao:
+      cancelMutation.mutateAsync,
+
+    isCanceling:
+      cancelMutation.isPending,
+
     query,
   };
 }

@@ -40,14 +40,11 @@ export enum StatusPaciente {
 }
 
 export enum StatusCotacao {
-  RASCUNHO = "rascunho",
-  ENVIADA = "enviada",
-  EM_ANALISE = "em_analise",
-  APROVADA = "aprovada",
-  REPROVADA = "reprovada",
-  PENDENTE = "pendente",
-  VALIDA = "valida",
-  EXPIRADA = "expirada",
+  ABERTA = "aberta",
+  EM_ANDAMENTO = "em_andamento",
+  PRONTA_PARA_ANALISE = "pronta_para_analise",
+  FINALIZADA = "finalizada",
+  CANCELADA = "cancelada",
 }
 
 export enum Sexo {
@@ -84,17 +81,23 @@ export interface Paciente {
   dataNascimento: string;
   sexo: Sexo;
   estadoCivil: EstadoCivil;
+
   /** @deprecated - Not persisted in API, kept for backward compatibility */
   naturalidade?: string;
+
   /** @deprecated - Not persisted in API, kept for backward compatibility */
   escolaridade?: string;
+
   profissao: string;
   endereco: Endereco;
   telefone: string;
+
   /** @deprecated - Not persisted in API, kept for backward compatibility */
   nomePai?: string;
+
   /** @deprecated - Not persisted in API, kept for backward compatibility */
   nomeMae?: string;
+
   numeroSUS: string;
   diagnosticoOncologico: string;
   diagnostico?: string;
@@ -138,7 +141,8 @@ export interface AreaCreateInput {
   descricao: string;
 }
 
-export type AreaUpdateInput = Partial<AreaCreateInput>;
+export type AreaUpdateInput =
+  Partial<AreaCreateInput>;
 
 export interface ApiFornecedorDTO {
   id: string;
@@ -200,47 +204,70 @@ export interface Produto {
   fornecedorId?: string;
 }
 
-export interface ProdutoCreateInput {
-  nome: string;
-  descricao: string;
-  unidade: string;
-  ativo?: boolean;
-}
-
-export type ProdutoUpdateInput = Partial<ProdutoCreateInput>;
+// =========================
+// COTAÇÕES
+// =========================
 
 export interface Cotacao {
   id: string;
+  numero?: string;
   descricao: string;
   pacienteId: string;
   areaId: string;
   dataValidade: string;
   observacoes: string;
-  ativo: boolean;
-  numero?: string;
+
+  /**
+   * Status de processo da cotação.
+   *
+   * aberta:
+   * Cotação criada, aguardando orçamentos.
+   *
+   * em_andamento:
+   * Já possui pelo menos um orçamento.
+   *
+   * pronta_para_analise:
+   * Quantidade suficiente de orçamentos para análise.
+   *
+   * finalizada:
+   * Um fornecedor vencedor foi selecionado.
+   *
+   * cancelada:
+   * Cotação cancelada com motivo obrigatório.
+   */
+  status: StatusCotacao;
+
+  /**
+   * Motivo informado quando a cotação é cancelada.
+   */
+  motivoCancelamento?: string | null;
+
   criadoEm: string;
+  atualizadoEm?: string;
+
   pacienteNome?: string;
   areaNome?: string;
+
   itens: ItemCotacao[];
 }
 
 export interface ItemCotacao {
   id?: string;
+  cotacaoId?: string;
   produtoId?: string;
-  fornecedorId?: string;
-  fornecedorNome?: string;
   descricao: string;
   quantidade: number;
   unidade: string;
+  especificacoes?: string;
   ordem?: number;
 }
 
 export interface ItemCotacaoInput {
-  produtoId: string;
-  fornecedorId: string;
+  produtoId?: string;
   descricao: string;
   quantidade: number;
   unidade: string;
+  especificacoes?: string;
   ordem?: number;
 }
 
@@ -259,8 +286,19 @@ export interface CotacaoUpdateInput {
   areaId?: string;
   dataValidade?: string;
   observacoes?: string;
-  itens?: (ItemCotacaoInput & { id?: string })[];
+  itens?: (ItemCotacaoInput & {
+    id?: string;
+  })[];
 }
+
+export interface CotacaoStatusInput {
+  status: StatusCotacao;
+  motivo_cancelamento?: string;
+}
+
+// =========================
+// ATENDIMENTOS
+// =========================
 
 export type TipoAtendimento =
   | "consulta"
@@ -310,7 +348,8 @@ export interface AtendimentoCreateInput {
   descricao: string;
 }
 
-export type AtendimentoUpdateInput = AtendimentoCreateInput;
+export type AtendimentoUpdateInput =
+  AtendimentoCreateInput;
 
 export interface Documento {
   id: string;
@@ -322,14 +361,29 @@ export interface Documento {
   url: string;
 }
 
-// Types para formulários
-export type PacienteFormData = Omit<Paciente, "id" | "criadoEm" | "atualizadoEm">;
-export type CotacaoFormData = Omit<Cotacao, "id" | "criadoEm" | "ativo" | "itens"> & {
+// =========================
+// TYPES PARA FORMULÁRIOS
+// =========================
+
+export type PacienteFormData = Omit<
+  Paciente,
+  "id" | "criadoEm" | "atualizadoEm"
+>;
+
+export type CotacaoFormData = Omit<
+  Cotacao,
+  "id" | "criadoEm" | "atualizadoEm" | "status" | "itens"
+> & {
   itens: Omit<ItemCotacao, "id">[];
 };
-export type AtendimentoFormData = AtendimentoCreateInput;
 
-// Types para filtros
+export type AtendimentoFormData =
+  AtendimentoCreateInput;
+
+// =========================
+// TYPES PARA FILTROS
+// =========================
+
 export interface FiltroPaciente {
   nome?: string;
   documento?: string;
@@ -339,7 +393,7 @@ export interface FiltroPaciente {
 export interface FiltroCotacao {
   pacienteId?: string;
   areaId?: string;
-  ativo?: boolean | "todas";
+  status?: StatusCotacao;
   busca?: string;
 }
 
@@ -350,13 +404,17 @@ export interface FiltroAtendimento {
   periodoFim?: string;
 }
 
-// Types para dashboard
+// =========================
+// TYPES PARA DASHBOARD
+// =========================
+
 export interface DashboardStats {
   totalPacientes: number;
   pacientesAtivos: number;
   pacientesSuspensos: number;
   pacientesEncerrados: number;
 }
+<<<<<<< HEAD
 export interface OrcamentoItem {
   id?: string;
   itemId: string;
@@ -401,3 +459,6 @@ export interface OrcamentoUpdateInput {
   condicoesPagamento?: string;
   observacoes?: string;
 }
+=======
+
+>>>>>>> 2e8ea1e5c18b0f9354202294c73ac2b3339ce33c
