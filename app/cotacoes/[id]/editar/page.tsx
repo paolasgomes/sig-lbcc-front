@@ -13,14 +13,24 @@ interface EditarCotacaoPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function EditarCotacaoPage({ params }: EditarCotacaoPageProps) {
+export default function EditarCotacaoPage({
+  params,
+}: EditarCotacaoPageProps) {
   const { id } = use(params);
-  const { cotacao, isLoading, error } = useCotacao(id);
+
+  const {
+    cotacao,
+    isLoading,
+    error,
+  } = useCotacao(id);
+
   const { isGestor } = useUsuario();
 
   if (isLoading) {
     return (
-      <DashboardLayout allowedRoles={ROLES_ATENDIMENTOS_E_COTACOES}>
+      <DashboardLayout
+        allowedRoles={ROLES_ATENDIMENTOS_E_COTACOES}
+      >
         <div className="flex justify-center py-12">
           <Spinner className="h-8 w-8" />
         </div>
@@ -36,9 +46,22 @@ export default function EditarCotacaoPage({ params }: EditarCotacaoPageProps) {
     notFound();
   }
 
+  // Cotações finalizadas ou canceladas não podem mais ser editadas.
+  if (
+    cotacao.status === "finalizada" ||
+    cotacao.status === "cancelada"
+  ) {
+    notFound();
+  }
+
   return (
-    <DashboardLayout allowedRoles={ROLES_ATENDIMENTOS_E_COTACOES}>
-      <CotacaoForm cotacao={cotacao} isEditing />
+    <DashboardLayout
+      allowedRoles={ROLES_ATENDIMENTOS_E_COTACOES}
+    >
+      <CotacaoForm
+        cotacao={cotacao}
+        isEditing
+      />
     </DashboardLayout>
   );
 }

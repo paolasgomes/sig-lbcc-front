@@ -37,7 +37,13 @@ import {
   TrendingUp,
   Calendar,
 } from "lucide-react";
-import { format, parseISO, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
+import {
+  format,
+  parseISO,
+  isWithinInterval,
+  startOfMonth,
+  endOfMonth,
+} from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   BarChart,
@@ -66,10 +72,12 @@ const COLORS = [
 export default function RelatoriosPage() {
   const { pacientes } = usePacientes();
   const { atendimentos } = useAtendimentos();
-  const { cotacoes } = useCotacoes("todas");
+  const { cotacoes } = useCotacoes();
+
   const [periodoInicio, setPeriodoInicio] = useState(
     format(startOfMonth(new Date()), "yyyy-MM-dd"),
   );
+
   const [periodoFim, setPeriodoFim] = useState(
     format(endOfMonth(new Date()), "yyyy-MM-dd"),
   );
@@ -92,7 +100,9 @@ export default function RelatoriosPage() {
         item.dataSolicitacao ||
         item.criadoEm ||
         item.data;
+
       if (!data) return false;
+
       try {
         return isWithinInterval(parseISO(data), {
           start: parseISO(periodoInicio),
@@ -107,6 +117,7 @@ export default function RelatoriosPage() {
   const atendimentosFiltrados = filtrarPorPeriodo(
     atendimentos.map((a) => ({ ...a, data: a.dataAtendimento })),
   );
+
   const cotacoesFiltradas = filtrarPorPeriodo(cotacoes);
 
   // Estatisticas de pacientes por status
@@ -131,27 +142,50 @@ export default function RelatoriosPage() {
     value: atendimentosFiltrados.filter((a) => a.tipo === tipo).length,
   })).filter((item) => item.value > 0);
 
+  // Cotações por status do processo
   const cotacoesPorStatus = [
     {
-      name: "Ativas",
-      value: cotacoesFiltradas.filter((c) => c.ativo).length,
+      name: "Abertas",
+      value: cotacoesFiltradas.filter((c) => c.status === "aberta").length,
     },
     {
-      name: "Inativas",
-      value: cotacoesFiltradas.filter((c) => !c.ativo).length,
-    },
-    {
-      name: "Vencidas",
+      name: "Em andamento",
       value: cotacoesFiltradas.filter(
-        (c) => c.ativo && isCotacaoVencida(c.dataValidade),
+        (c) => c.status === "em_andamento",
+      ).length,
+    },
+    {
+      name: "Prontas para análise",
+      value: cotacoesFiltradas.filter(
+        (c) => c.status === "pronta_para_analise",
+      ).length,
+    },
+    {
+      name: "Finalizadas",
+      value: cotacoesFiltradas.filter(
+        (c) => c.status === "finalizada",
+      ).length,
+    },
+    {
+      name: "Canceladas",
+      value: cotacoesFiltradas.filter(
+        (c) => c.status === "cancelada",
       ).length,
     },
   ].filter((item) => item.value > 0);
 
-  const cotacoesAtivas = cotacoesFiltradas.filter((c) => c.ativo).length;
-  const cotacoesInativas = cotacoesFiltradas.filter((c) => !c.ativo).length;
+  const cotacoesAtivas = cotacoesFiltradas.filter(
+    (c) => c.status !== "cancelada",
+  ).length;
+
+  const cotacoesCanceladas = cotacoesFiltradas.filter(
+    (c) => c.status === "cancelada",
+  ).length;
+
   const cotacoesVencidas = cotacoesFiltradas.filter(
-    (c) => c.ativo && isCotacaoVencida(c.dataValidade),
+    (c) =>
+      c.status !== "cancelada" &&
+      isCotacaoVencida(c.dataValidade),
   ).length;
 
   return (
@@ -185,6 +219,7 @@ export default function RelatoriosPage() {
                     onChange={(e) => setPeriodoInicio(e.target.value)}
                   />
                 </Field>
+
                 <Field>
                   <FieldLabel>Data Fim</FieldLabel>
                   <Input
@@ -201,13 +236,18 @@ export default function RelatoriosPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total de Pacientes</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total de Pacientes
+                </CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{pacientes.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  {pacientes.filter((p) => p.status === StatusPaciente.ATIVO).length} ativos
+                  {pacientes.filter(
+                    (p) => p.status === StatusPaciente.ATIVO,
+                  ).length}{" "}
+                  ativos
                 </p>
               </CardContent>
             </Card>
@@ -220,7 +260,9 @@ export default function RelatoriosPage() {
                 <ClipboardList className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{atendimentosFiltrados.length}</div>
+                <div className="text-2xl font-bold">
+                  {atendimentosFiltrados.length}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   no período selecionado
                 </p>
@@ -229,26 +271,32 @@ export default function RelatoriosPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Cotacoes no Periodo</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Cotacoes no Periodo
+                </CardTitle>
                 <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{cotacoesFiltradas.length}</div>
+                <div className="text-2xl font-bold">
+                  {cotacoesFiltradas.length}
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  {cotacoesAtivas} ativas, {cotacoesInativas} inativas
+                  {cotacoesAtivas} em andamento, {cotacoesCanceladas} canceladas
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Cotações Vencidas</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Cotações Vencidas
+                </CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{cotacoesVencidas}</div>
                 <p className="text-xs text-muted-foreground">
-                  Ativas com validade expirada
+                  Cotações não canceladas com validade expirada
                 </p>
               </CardContent>
             </Card>
@@ -303,6 +351,7 @@ export default function RelatoriosPage() {
                           />
                         ))}
                       </Pie>
+
                       <Tooltip
                         contentStyle={{
                           backgroundColor: "hsl(var(--card))",
@@ -323,7 +372,9 @@ export default function RelatoriosPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Atendimentos por Tipo</CardTitle>
-                <CardDescription>Tipos de atendimentos no período</CardDescription>
+                <CardDescription>
+                  Tipos de atendimentos no período
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {atendimentosPorTipo.length > 0 ? (
@@ -348,6 +399,7 @@ export default function RelatoriosPage() {
                           />
                         ))}
                       </Pie>
+
                       <Tooltip
                         contentStyle={{
                           backgroundColor: "hsl(var(--card))",
@@ -368,20 +420,28 @@ export default function RelatoriosPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Cotacoes por Status</CardTitle>
-                <CardDescription>Status das cotacoes no periodo</CardDescription>
+                <CardDescription>
+                  Status das cotacoes no periodo
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {cotacoesPorStatus.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={cotacoesPorStatus} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        className="stroke-muted"
+                      />
+
                       <XAxis type="number" className="text-xs" />
+
                       <YAxis
                         dataKey="name"
                         type="category"
                         className="text-xs"
-                        width={80}
+                        width={120}
                       />
+
                       <Tooltip
                         contentStyle={{
                           backgroundColor: "hsl(var(--card))",
@@ -389,6 +449,7 @@ export default function RelatoriosPage() {
                           borderRadius: "var(--radius)",
                         }}
                       />
+
                       <Bar
                         dataKey="value"
                         fill="hsl(var(--chart-2))"
@@ -413,23 +474,29 @@ export default function RelatoriosPage() {
                 Distribuicao de pacientes por tipo de cancer
               </CardDescription>
             </CardHeader>
+
             <CardContent>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Diagnostico</TableHead>
-                      <TableHead className="text-center">Quantidade</TableHead>
+                      <TableHead className="text-center">
+                        Quantidade
+                      </TableHead>
                       <TableHead className="text-center">%</TableHead>
                     </TableRow>
                   </TableHeader>
+
                   <TableBody>
                     {(() => {
                       const diagnosticos = pacientes.reduce(
                         (acc, p) => {
                           if (p.diagnostico) {
-                            acc[p.diagnostico] = (acc[p.diagnostico] || 0) + 1;
+                            acc[p.diagnostico] =
+                              (acc[p.diagnostico] || 0) + 1;
                           }
+
                           return acc;
                         },
                         {} as Record<string, number>,
@@ -440,8 +507,14 @@ export default function RelatoriosPage() {
                         .slice(0, 10)
                         .map(([diagnostico, count]) => (
                           <TableRow key={diagnostico}>
-                            <TableCell className="font-medium">{diagnostico}</TableCell>
-                            <TableCell className="text-center">{count}</TableCell>
+                            <TableCell className="font-medium">
+                              {diagnostico}
+                            </TableCell>
+
+                            <TableCell className="text-center">
+                              {count}
+                            </TableCell>
+
                             <TableCell className="text-center">
                               {((count / pacientes.length) * 100).toFixed(1)}%
                             </TableCell>

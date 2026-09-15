@@ -31,14 +31,7 @@ import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { TableLoading } from "@/components/ui/table-state";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-} from "@/components/ui/pagination";
+import { ListPagination } from "@/components/shared/list-pagination";
 import { useUsuarios } from "@/hooks/use-usuarios";
 import { PerfilUsuario } from "@/types";
 import { useMutation } from "@tanstack/react-query";
@@ -302,32 +295,11 @@ export default function UsuariosPage() {
             <div className="text-sm text-muted-foreground">
               Exibindo {displayedUsuarios.length} de {usuariosFiltrados.length} usuários
             </div>
-            {pageCount > 1 && (
-              <Pagination aria-label="Pagination">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    />
-                  </PaginationItem>
-                  {Array.from({ length: pageCount }).map((_, i) => (
-                    <PaginationItem key={i}>
-                      <PaginationLink
-                        onClick={() => setPage(i + 1)}
-                        isActive={page === i + 1}
-                      >
-                        {i + 1}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            )}
+            <ListPagination
+              page={page}
+              pageCount={pageCount}
+              onPageChange={setPage}
+            />
           </div>
         )}
       </div>

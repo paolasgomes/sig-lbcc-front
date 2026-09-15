@@ -31,14 +31,7 @@ import TableActions, {
   TableActionButton,
 } from "@/components/ui/table-actions";
 import { TableLoading } from "@/components/ui/table-state";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-} from "@/components/ui/pagination";
+import { ListPagination } from "@/components/shared/list-pagination";
 import {
   Select,
   SelectContent,
@@ -306,32 +299,11 @@ export default function ProdutosPage() {
             <div className="text-sm text-muted-foreground">
               Exibindo {displayedProdutos.length} de {produtosFiltrados.length} produtos
             </div>
-            {pageCount > 1 && (
-              <Pagination aria-label="Pagination">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    />
-                  </PaginationItem>
-                  {Array.from({ length: pageCount }).map((_, i) => (
-                    <PaginationItem key={i}>
-                      <PaginationLink
-                        onClick={() => setPage(i + 1)}
-                        isActive={page === i + 1}
-                      >
-                        {i + 1}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            )}
+            <ListPagination
+              page={page}
+              pageCount={pageCount}
+              onPageChange={setPage}
+            />
           </div>
         )}
       </div>
