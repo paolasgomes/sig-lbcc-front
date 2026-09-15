@@ -526,6 +526,58 @@ export async function criarOrcamentosItem(
   }
 }
 
+export async function atualizarOrcamentoItem(
+  cotacaoId: string,
+  itemId: string,
+  orcamentoId: string,
+  valorUnitario: number,
+): Promise<Cotacao> {
+  try {
+    const response =
+      await api.put<ApiCotacaoDTO>(
+        `/cotacoes/${cotacaoId}/itens/${itemId}/orcamentos/${orcamentoId}`,
+        {
+          valor_unitario: valorUnitario,
+        },
+      );
+
+    return mapApiCotacaoToCotacao(
+      response.data,
+    );
+  } catch (error) {
+    throw new Error(
+      getApiErrorMessage(
+        error,
+        "Erro ao corrigir orçamento.",
+      ),
+    );
+  }
+}
+
+export async function excluirOrcamentoItem(
+  cotacaoId: string,
+  itemId: string,
+  orcamentoId: string,
+): Promise<Cotacao> {
+  try {
+    const response =
+      await api.delete<ApiCotacaoDTO>(
+        `/cotacoes/${cotacaoId}/itens/${itemId}/orcamentos/${orcamentoId}`,
+      );
+
+    return mapApiCotacaoToCotacao(
+      response.data,
+    );
+  } catch (error) {
+    throw new Error(
+      getApiErrorMessage(
+        error,
+        "Erro ao apagar orçamento.",
+      ),
+    );
+  }
+}
+
 // =========================
 // STATUS DO PROCESSO
 // =========================

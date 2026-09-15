@@ -14,9 +14,12 @@ import {
   alterarStatusProgressoCotacao,
   cancelarCotacao,
   criarOrcamentosItem,
+  atualizarOrcamentoItem,
+  excluirOrcamentoItem,
 } from "@/services/cotacoes-service";
 
 import type {
+  Cotacao,
   CotacaoCreateInput,
   CotacaoStatusInput,
   CotacaoUpdateInput,
@@ -194,6 +197,15 @@ export function useCotacao(id: string) {
     onSuccess: invalidate,
   });
 
+  const onOrcamentoSuccess = (cotacao: Cotacao) => {
+    queryClient.setQueryData(
+      ["cotacoes", id],
+      cotacao,
+    );
+
+    invalidate();
+  };
+
   const createOrcamentosMutation = useMutation({
     mutationFn: ({
       itemId,
@@ -208,14 +220,44 @@ export function useCotacao(id: string) {
         blocos,
       ),
 
-    onSuccess: (cotacao) => {
-      queryClient.setQueryData(
-        ["cotacoes", id],
-        cotacao,
-      );
+    onSuccess: onOrcamentoSuccess,
+  });
 
-      invalidate();
-    },
+  const updateOrcamentoMutation = useMutation({
+    mutationFn: ({
+      itemId,
+      orcamentoId,
+      valorUnitario,
+    }: {
+      itemId: string;
+      orcamentoId: string;
+      valorUnitario: number;
+    }) =>
+      atualizarOrcamentoItem(
+        id,
+        itemId,
+        orcamentoId,
+        valorUnitario,
+      ),
+
+    onSuccess: onOrcamentoSuccess,
+  });
+
+  const deleteOrcamentoMutation = useMutation({
+    mutationFn: ({
+      itemId,
+      orcamentoId,
+    }: {
+      itemId: string;
+      orcamentoId: string;
+    }) =>
+      excluirOrcamentoItem(
+        id,
+        itemId,
+        orcamentoId,
+      ),
+
+    onSuccess: onOrcamentoSuccess,
   });
 
   return {
@@ -253,6 +295,18 @@ export function useCotacao(id: string) {
 
     isCreatingOrcamentos:
       createOrcamentosMutation.isPending,
+
+    atualizarOrcamento:
+      updateOrcamentoMutation.mutateAsync,
+
+    isUpdatingOrcamento:
+      updateOrcamentoMutation.isPending,
+
+    apagarOrcamento:
+      deleteOrcamentoMutation.mutateAsync,
+
+    isDeletingOrcamento:
+      deleteOrcamentoMutation.isPending,
 
     query,
   };

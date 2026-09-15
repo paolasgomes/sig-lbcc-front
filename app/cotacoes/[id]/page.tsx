@@ -71,6 +71,7 @@ import { ptBR } from "date-fns/locale";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { LancarOrcamentoModal } from "@/components/cotacoes/lancar-orcamento-modal";
+import { AcoesOrcamento } from "@/components/cotacoes/acoes-orcamento";
 
 interface CotacaoDetailPageProps {
   params: Promise<{ id: string }>;
@@ -120,6 +121,10 @@ export default function CotacaoDetailPage({
     isCanceling,
     criarOrcamentos,
     isCreatingOrcamentos,
+    atualizarOrcamento,
+    isUpdatingOrcamento,
+    apagarOrcamento,
+    isDeletingOrcamento,
   } = useCotacao(id);
 
   const { isGestor } = useUsuario();
@@ -168,10 +173,15 @@ export default function CotacaoDetailPage({
     cotacao.status === "finalizada" ||
     cotacao.status === "cancelada";
 
-  const podeLancarOrcamento =
+  const podeMutarOrcamento =
     isGestor &&
     !bloqueada &&
     cotacao.ativo !== false;
+
+  const isMutatingOrcamento =
+    isCreatingOrcamentos ||
+    isUpdatingOrcamento ||
+    isDeletingOrcamento;
 
   const formatDateTime = (
     dateStr: string,
@@ -528,7 +538,7 @@ export default function CotacaoDetailPage({
                     {item.id && (
                       <LancarOrcamentoModal
                         itemDescricao={item.descricao}
-                        disabled={!podeLancarOrcamento}
+                        disabled={!podeMutarOrcamento}
                         isSubmitting={isCreatingOrcamentos}
                         fornecedorIdsNoItem={orcamentos.map(
                           (orcamento) => orcamento.fornecedorId,
@@ -558,6 +568,12 @@ export default function CotacaoDetailPage({
                           <TableHead className="text-right">
                             Total
                           </TableHead>
+
+                          {podeMutarOrcamento && (
+                            <TableHead className="w-24 text-right">
+                              Ações
+                            </TableHead>
+                          )}
                         </TableRow>
                       </TableHeader>
 
@@ -579,13 +595,35 @@ export default function CotacaoDetailPage({
                                 orcamento.valorTotal,
                               )}
                             </TableCell>
+
+                            {podeMutarOrcamento && item.id && (
+                              <TableCell>
+                                <AcoesOrcamento
+                                  orcamento={orcamento}
+                                  isBusy={isMutatingOrcamento}
+                                  onCorrigir={async (valorUnitario) => {
+                                    await atualizarOrcamento({
+                                      itemId: item.id as string,
+                                      orcamentoId: orcamento.id,
+                                      valorUnitario,
+                                    });
+                                  }}
+                                  onApagar={async () => {
+                                    await apagarOrcamento({
+                                      itemId: item.id as string,
+                                      orcamentoId: orcamento.id,
+                                    });
+                                  }}
+                                />
+                              </TableCell>
+                            )}
                           </TableRow>
                         ))}
 
                         {orcamentos.length === 0 && (
                           <TableRow>
                             <TableCell
-                              colSpan={3}
+                              colSpan={podeMutarOrcamento ? 4 : 3}
                               className="h-16 text-center text-muted-foreground"
                             >
                               Nenhum orçamento lançado.
