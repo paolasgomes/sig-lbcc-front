@@ -70,6 +70,7 @@ import { ptBR } from "date-fns/locale";
 
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { LancarOrcamentoModal } from "@/components/cotacoes/lancar-orcamento-modal";
 
 interface CotacaoDetailPageProps {
   params: Promise<{ id: string }>;
@@ -99,6 +100,13 @@ function getStatusBadge(status: string) {
   return statusMap[status] ?? status;
 }
 
+function formatBRL(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
+
 export default function CotacaoDetailPage({
   params,
 }: CotacaoDetailPageProps) {
@@ -110,6 +118,8 @@ export default function CotacaoDetailPage({
     error,
     cancelarCotacao,
     isCanceling,
+    criarOrcamentos,
+    isCreatingOrcamentos,
   } = useCotacao(id);
 
   const { isGestor } = useUsuario();
@@ -157,6 +167,11 @@ export default function CotacaoDetailPage({
   const bloqueada =
     cotacao.status === "finalizada" ||
     cotacao.status === "cancelada";
+
+  const podeLancarOrcamento =
+    isGestor &&
+    !bloqueada &&
+    cotacao.ativo !== false;
 
   const formatDateTime = (
     dateStr: string,
@@ -479,86 +494,113 @@ export default function CotacaoDetailPage({
             </CardDescription>
           </CardHeader>
 
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>
-                      Produto
-                    </TableHead>
+          <CardContent className="space-y-6">
+            {cotacao.itens.map((item, index) => {
+              const orcamentos = item.orcamentos ?? [];
 
-                    <TableHead>
-                      Descrição
-                    </TableHead>
+              return (
+                <div
+                  key={item.id ?? index}
+                  className="space-y-3"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="font-medium">
+                        {item.descricao}
+                      </p>
 
-                    <TableHead className="text-center">
-                      Quantidade
-                    </TableHead>
+                      <p className="text-sm text-muted-foreground">
+                        {item.produtoId
+                          ? produtosPorId.get(
+                              item.produtoId,
+                            ) ??
+                            "Produto removido"
+                          : "Sem produto vinculado"}
+                        {" · "}
+                        {item.quantidade}{" "}
+                        {item.unidade ?? "UN"}
+                        {item.especificacoes
+                          ? ` · ${item.especificacoes}`
+                          : ""}
+                      </p>
+                    </div>
 
-                    <TableHead>
-                      Unidade
-                    </TableHead>
+                    {item.id && (
+                      <LancarOrcamentoModal
+                        itemDescricao={item.descricao}
+                        disabled={!podeLancarOrcamento}
+                        isSubmitting={isCreatingOrcamentos}
+                        onSubmit={async (bloco) => {
+                          await criarOrcamentos({
+                            itemId: item.id as string,
+                            blocos: [bloco],
+                          });
+                        }}
+                      />
+                    )}
+                  </div>
 
-                    <TableHead>
-                      Especificações
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>
+                            Fornecedor
+                          </TableHead>
 
-                <TableBody>
-                  {cotacao.itens.map(
-                    (item, index) => (
-                      <TableRow
-                        key={
-                          item.id ?? index
-                        }
-                      >
-                        <TableCell>
-                          {item.produtoId
-                            ? produtosPorId.get(
-                                item.produtoId,
-                              ) ??
-                              "Produto removido"
-                            : "—"}
-                        </TableCell>
+                          <TableHead className="text-right">
+                            Unitário
+                          </TableHead>
 
-                        <TableCell className="font-medium">
-                          {item.descricao}
-                        </TableCell>
+                          <TableHead className="text-right">
+                            Total
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
 
-                        <TableCell className="text-center">
-                          {item.quantidade}
-                        </TableCell>
+                      <TableBody>
+                        {orcamentos.map((orcamento) => (
+                          <TableRow key={orcamento.id}>
+                            <TableCell className="font-medium">
+                              {orcamento.fornecedorNome}
+                            </TableCell>
 
-                        <TableCell>
-                          {item.unidade ??
-                            "UN"}
-                        </TableCell>
+                            <TableCell className="text-right">
+                              {formatBRL(
+                                orcamento.valorUnitario,
+                              )}
+                            </TableCell>
 
-                        <TableCell>
-                          {item.especificacoes ||
-                            "—"}
-                        </TableCell>
-                      </TableRow>
-                    ),
-                  )}
+                            <TableCell className="text-right">
+                              {formatBRL(
+                                orcamento.valorTotal,
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
 
-                  {cotacao.itens.length ===
-                    0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        className="h-24 text-center text-muted-foreground"
-                      >
-                        Nenhum item
-                        cadastrado.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                        {orcamentos.length === 0 && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={3}
+                              className="h-16 text-center text-muted-foreground"
+                            >
+                              Nenhum orçamento lançado.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              );
+            })}
+
+            {cotacao.itens.length === 0 && (
+              <p className="text-center text-muted-foreground">
+                Nenhum item cadastrado.
+              </p>
+            )}
           </CardContent>
         </Card>
 

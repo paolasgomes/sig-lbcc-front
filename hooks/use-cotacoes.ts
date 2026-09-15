@@ -13,12 +13,14 @@ import {
   atualizarCotacao,
   alterarStatusProgressoCotacao,
   cancelarCotacao,
+  criarOrcamentosItem,
 } from "@/services/cotacoes-service";
 
 import type {
   CotacaoCreateInput,
   CotacaoStatusInput,
   CotacaoUpdateInput,
+  OrcamentoBlocoInput,
 } from "@/types";
 
 export function useCotacoes() {
@@ -192,6 +194,30 @@ export function useCotacao(id: string) {
     onSuccess: invalidate,
   });
 
+  const createOrcamentosMutation = useMutation({
+    mutationFn: ({
+      itemId,
+      blocos,
+    }: {
+      itemId: string;
+      blocos: OrcamentoBlocoInput[];
+    }) =>
+      criarOrcamentosItem(
+        id,
+        itemId,
+        blocos,
+      ),
+
+    onSuccess: (cotacao) => {
+      queryClient.setQueryData(
+        ["cotacoes", id],
+        cotacao,
+      );
+
+      invalidate();
+    },
+  });
+
   return {
     cotacao: query.data ?? null,
 
@@ -221,6 +247,12 @@ export function useCotacao(id: string) {
 
     isCanceling:
       cancelMutation.isPending,
+
+    criarOrcamentos:
+      createOrcamentosMutation.mutateAsync,
+
+    isCreatingOrcamentos:
+      createOrcamentosMutation.isPending,
 
     query,
   };

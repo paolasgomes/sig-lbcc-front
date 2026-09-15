@@ -42,6 +42,7 @@ describe("mapApiCotacaoToCotacao", () => {
       pacienteNome: "Maria Silva",
       areaNome: "Quimioterapia",
       itens: [],
+      ativo: true,
     });
   });
 
@@ -80,8 +81,65 @@ describe("mapApiCotacaoToCotacao", () => {
         unidade: "UN",
         especificacoes: "10ml",
         ordem: 1,
+        orcamentos: [],
       },
     ]);
+  });
+
+  it("maps nested orcamentos on each item from snake_case", () => {
+    const result = mapApiCotacaoToCotacao({
+      id: "uuid-4",
+      descricao: "Cotação com orçamento",
+      paciente_id: "p-1",
+      area_id: "a-1",
+      data_validade: "2026-12-31",
+      observacoes: null,
+      status: "em_andamento",
+      motivo_cancelamento: null,
+      ativo: true,
+      created_at: "2026-06-01T00:00:00Z",
+      cotacao_itens: [
+        {
+          id: "item-1",
+          cotacao_id: "uuid-4",
+          descricao: "Seringa",
+          quantidade: 2,
+          unidade: "UN",
+          orcamentos: [
+            {
+              id: "orc-1",
+              fornecedor_id: "forn-1",
+              fornecedor_nome: "Farmacia Central",
+              valor_unitario: 10,
+              valor_total: 20,
+              selecionada: false,
+            },
+          ],
+        },
+        {
+          id: "item-2",
+          cotacao_id: "uuid-4",
+          descricao: "Luva",
+          quantidade: 5,
+          unidade: "CX",
+          orcamentos: [],
+        },
+      ],
+    });
+
+    expect(result.status).toBe("em_andamento");
+    expect(result.ativo).toBe(true);
+    expect(result.itens[0].orcamentos).toEqual([
+      {
+        id: "orc-1",
+        fornecedorId: "forn-1",
+        fornecedorNome: "Farmacia Central",
+        valorUnitario: 10,
+        valorTotal: 20,
+        selecionada: false,
+      },
+    ]);
+    expect(result.itens[1].orcamentos).toEqual([]);
   });
 
   it("maps motivo de cancelamento", () => {
@@ -124,6 +182,7 @@ describe("mapApiItemToItemCotacao", () => {
       unidade: "UN",
       especificacoes: undefined,
       ordem: 1,
+      orcamentos: [],
     });
   });
 
@@ -147,6 +206,7 @@ describe("mapApiItemToItemCotacao", () => {
       unidade: "CX",
       especificacoes: undefined,
       ordem: 1,
+      orcamentos: [],
     });
   });
 
@@ -171,6 +231,7 @@ describe("mapApiItemToItemCotacao", () => {
       unidade: "UN",
       especificacoes: "10ml, descartável",
       ordem: 1,
+      orcamentos: [],
     });
   });
 });
