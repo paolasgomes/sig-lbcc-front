@@ -530,10 +530,13 @@ export default function CotacaoDetailPage({
                         itemDescricao={item.descricao}
                         disabled={!podeLancarOrcamento}
                         isSubmitting={isCreatingOrcamentos}
-                        onSubmit={async (bloco) => {
+                        fornecedorIdsNoItem={orcamentos.map(
+                          (orcamento) => orcamento.fornecedorId,
+                        )}
+                        onSubmit={async (blocos) => {
                           await criarOrcamentos({
                             itemId: item.id as string,
-                            blocos: [bloco],
+                            blocos,
                           });
                         }}
                       />
