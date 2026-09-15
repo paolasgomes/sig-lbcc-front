@@ -57,14 +57,7 @@ import {
 
 import { TableLoading } from "@/components/ui/table-state";
 
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-} from "@/components/ui/pagination";
+import { ListPagination } from "@/components/shared/list-pagination";
 
 import {
   ROLES_ATENDIMENTOS_E_COTACOES,
@@ -414,53 +407,13 @@ export default function CotacoesPage() {
               </div>
             )}
 
-            {!isLoading && total > pageSize && (
-              <Pagination className="mt-4">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() =>
-                        setPage((currentPage) =>
-                          Math.max(1, currentPage - 1),
-                        )
-                      }
-                      aria-disabled={page === 1}
-                    />
-                  </PaginationItem>
-
-                  {Array.from(
-                    {
-                      length: pageCount,
-                    },
-                    (_, index) => index + 1,
-                  ).map((currentPage) => (
-                    <PaginationItem key={currentPage}>
-                      <PaginationLink
-                        isActive={currentPage === page}
-                        onClick={() =>
-                          setPage(currentPage)
-                        }
-                      >
-                        {currentPage}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() =>
-                        setPage((currentPage) =>
-                          Math.min(
-                            pageCount,
-                            currentPage + 1,
-                          ),
-                        )
-                      }
-                      aria-disabled={page === pageCount}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+            {!isLoading && (
+              <ListPagination
+                className="mt-4"
+                page={page}
+                pageCount={pageCount}
+                onPageChange={setPage}
+              />
             )}
           </CardContent>
         </Card>
