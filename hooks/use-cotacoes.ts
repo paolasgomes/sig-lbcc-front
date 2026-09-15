@@ -13,12 +13,18 @@ import {
   atualizarCotacao,
   alterarStatusProgressoCotacao,
   cancelarCotacao,
+  criarOrcamentosItem,
+  atualizarOrcamentoItem,
+  excluirOrcamentoItem,
+  escolherVencedorItem,
 } from "@/services/cotacoes-service";
 
 import type {
+  Cotacao,
   CotacaoCreateInput,
   CotacaoStatusInput,
   CotacaoUpdateInput,
+  OrcamentoBlocoInput,
 } from "@/types";
 
 export function useCotacoes() {
@@ -192,6 +198,86 @@ export function useCotacao(id: string) {
     onSuccess: invalidate,
   });
 
+  const onOrcamentoSuccess = (cotacao: Cotacao) => {
+    queryClient.setQueryData(
+      ["cotacoes", id],
+      cotacao,
+    );
+
+    invalidate();
+  };
+
+  const createOrcamentosMutation = useMutation({
+    mutationFn: ({
+      itemId,
+      blocos,
+    }: {
+      itemId: string;
+      blocos: OrcamentoBlocoInput[];
+    }) =>
+      criarOrcamentosItem(
+        id,
+        itemId,
+        blocos,
+      ),
+
+    onSuccess: onOrcamentoSuccess,
+  });
+
+  const updateOrcamentoMutation = useMutation({
+    mutationFn: ({
+      itemId,
+      orcamentoId,
+      valorUnitario,
+    }: {
+      itemId: string;
+      orcamentoId: string;
+      valorUnitario: number;
+    }) =>
+      atualizarOrcamentoItem(
+        id,
+        itemId,
+        orcamentoId,
+        valorUnitario,
+      ),
+
+    onSuccess: onOrcamentoSuccess,
+  });
+
+  const deleteOrcamentoMutation = useMutation({
+    mutationFn: ({
+      itemId,
+      orcamentoId,
+    }: {
+      itemId: string;
+      orcamentoId: string;
+    }) =>
+      excluirOrcamentoItem(
+        id,
+        itemId,
+        orcamentoId,
+      ),
+
+    onSuccess: onOrcamentoSuccess,
+  });
+
+  const escolherVencedorMutation = useMutation({
+    mutationFn: ({
+      itemId,
+      orcamentoId,
+    }: {
+      itemId: string;
+      orcamentoId: string;
+    }) =>
+      escolherVencedorItem(
+        id,
+        itemId,
+        orcamentoId,
+      ),
+
+    onSuccess: onOrcamentoSuccess,
+  });
+
   return {
     cotacao: query.data ?? null,
 
@@ -221,6 +307,30 @@ export function useCotacao(id: string) {
 
     isCanceling:
       cancelMutation.isPending,
+
+    criarOrcamentos:
+      createOrcamentosMutation.mutateAsync,
+
+    isCreatingOrcamentos:
+      createOrcamentosMutation.isPending,
+
+    atualizarOrcamento:
+      updateOrcamentoMutation.mutateAsync,
+
+    isUpdatingOrcamento:
+      updateOrcamentoMutation.isPending,
+
+    apagarOrcamento:
+      deleteOrcamentoMutation.mutateAsync,
+
+    isDeletingOrcamento:
+      deleteOrcamentoMutation.isPending,
+
+    escolherVencedor:
+      escolherVencedorMutation.mutateAsync,
+
+    isEscolhendoVencedor:
+      escolherVencedorMutation.isPending,
 
     query,
   };

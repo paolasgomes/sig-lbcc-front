@@ -56,6 +56,8 @@ import {
 
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Spinner } from "@/components/ui/spinner";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 import {
   ArrowLeft,
@@ -63,6 +65,7 @@ import {
   FileText,
   AlertTriangle,
   XCircle,
+  Trophy,
 } from "lucide-react";
 
 import { format } from "date-fns";
@@ -70,6 +73,8 @@ import { ptBR } from "date-fns/locale";
 
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { LancarOrcamentoModal } from "@/components/cotacoes/lancar-orcamento-modal";
+import { AcoesOrcamento } from "@/components/cotacoes/acoes-orcamento";
 
 interface CotacaoDetailPageProps {
   params: Promise<{ id: string }>;
@@ -99,6 +104,13 @@ function getStatusBadge(status: string) {
   return statusMap[status] ?? status;
 }
 
+function formatBRL(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
+
 export default function CotacaoDetailPage({
   params,
 }: CotacaoDetailPageProps) {
@@ -110,6 +122,14 @@ export default function CotacaoDetailPage({
     error,
     cancelarCotacao,
     isCanceling,
+    criarOrcamentos,
+    isCreatingOrcamentos,
+    atualizarOrcamento,
+    isUpdatingOrcamento,
+    apagarOrcamento,
+    isDeletingOrcamento,
+    escolherVencedor,
+    isEscolhendoVencedor,
   } = useCotacao(id);
 
   const { isGestor } = useUsuario();
@@ -157,6 +177,17 @@ export default function CotacaoDetailPage({
   const bloqueada =
     cotacao.status === "finalizada" ||
     cotacao.status === "cancelada";
+
+  const podeMutarOrcamento =
+    isGestor &&
+    !bloqueada &&
+    cotacao.ativo !== false;
+
+  const isMutatingOrcamento =
+    isCreatingOrcamentos ||
+    isUpdatingOrcamento ||
+    isDeletingOrcamento ||
+    isEscolhendoVencedor;
 
   const formatDateTime = (
     dateStr: string,
@@ -479,86 +510,178 @@ export default function CotacaoDetailPage({
             </CardDescription>
           </CardHeader>
 
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>
-                      Produto
-                    </TableHead>
+          <CardContent className="space-y-6">
+            {cotacao.itens.map((item, index) => {
+              const orcamentos = item.orcamentos ?? [];
+              const podeDefinirVencedor = orcamentos.length >= 3;
 
-                    <TableHead>
-                      Descrição
-                    </TableHead>
+              return (
+                <div
+                  key={item.id ?? index}
+                  className="space-y-3"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="font-medium">
+                        {item.descricao}
+                      </p>
 
-                    <TableHead className="text-center">
-                      Quantidade
-                    </TableHead>
+                      <p className="text-sm text-muted-foreground">
+                        {item.produtoId
+                          ? produtosPorId.get(
+                              item.produtoId,
+                            ) ??
+                            "Produto removido"
+                          : "Sem produto vinculado"}
+                        {" · "}
+                        {item.quantidade}{" "}
+                        {item.unidade ?? "UN"}
+                        {item.especificacoes
+                          ? ` · ${item.especificacoes}`
+                          : ""}
+                      </p>
+                    </div>
 
-                    <TableHead>
-                      Unidade
-                    </TableHead>
+                    {item.id && (
+                      <LancarOrcamentoModal
+                        itemDescricao={item.descricao}
+                        disabled={!podeMutarOrcamento}
+                        isSubmitting={isCreatingOrcamentos}
+                        fornecedorIdsNoItem={orcamentos.map(
+                          (orcamento) => orcamento.fornecedorId,
+                        )}
+                        onSubmit={async (blocos) => {
+                          await criarOrcamentos({
+                            itemId: item.id as string,
+                            blocos,
+                          });
+                        }}
+                      />
+                    )}
+                  </div>
 
-                    <TableHead>
-                      Especificações
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>
+                            Fornecedor
+                          </TableHead>
 
-                <TableBody>
-                  {cotacao.itens.map(
-                    (item, index) => (
-                      <TableRow
-                        key={
-                          item.id ?? index
-                        }
-                      >
-                        <TableCell>
-                          {item.produtoId
-                            ? produtosPorId.get(
-                                item.produtoId,
-                              ) ??
-                              "Produto removido"
-                            : "—"}
-                        </TableCell>
+                          <TableHead className="text-right">
+                            Unitário
+                          </TableHead>
 
-                        <TableCell className="font-medium">
-                          {item.descricao}
-                        </TableCell>
+                          <TableHead className="text-right">
+                            Total
+                          </TableHead>
 
-                        <TableCell className="text-center">
-                          {item.quantidade}
-                        </TableCell>
+                          {podeMutarOrcamento && (
+                            <TableHead className="w-48 text-right">
+                              Ações
+                            </TableHead>
+                          )}
+                        </TableRow>
+                      </TableHeader>
 
-                        <TableCell>
-                          {item.unidade ??
-                            "UN"}
-                        </TableCell>
+                      <TableBody>
+                        {orcamentos.map((orcamento) => (
+                          <TableRow
+                            key={orcamento.id}
+                            className={cn(
+                              orcamento.selecionada &&
+                                "bg-primary/10 hover:bg-primary/15",
+                            )}
+                          >
+                            <TableCell className="font-medium">
+                              <div className="flex flex-wrap items-center gap-2">
+                                {orcamento.fornecedorNome}
+                                {orcamento.selecionada && (
+                                  <Badge variant="secondary">
+                                    Vencedor
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
 
-                        <TableCell>
-                          {item.especificacoes ||
-                            "—"}
-                        </TableCell>
-                      </TableRow>
-                    ),
-                  )}
+                            <TableCell className="text-right">
+                              {formatBRL(
+                                orcamento.valorUnitario,
+                              )}
+                            </TableCell>
 
-                  {cotacao.itens.length ===
-                    0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        className="h-24 text-center text-muted-foreground"
-                      >
-                        Nenhum item
-                        cadastrado.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                            <TableCell className="text-right">
+                              {formatBRL(
+                                orcamento.valorTotal,
+                              )}
+                            </TableCell>
+
+                            {podeMutarOrcamento && item.id && (
+                              <TableCell className="whitespace-nowrap">
+                                <AcoesOrcamento
+                                  orcamento={orcamento}
+                                  isBusy={isMutatingOrcamento}
+                                  podeDefinirVencedor={podeDefinirVencedor}
+                                  onDefinirVencedor={async () => {
+                                    await escolherVencedor({
+                                      itemId: item.id as string,
+                                      orcamentoId: orcamento.id,
+                                    });
+                                  }}
+                                  onCorrigir={async (valorUnitario) => {
+                                    await atualizarOrcamento({
+                                      itemId: item.id as string,
+                                      orcamentoId: orcamento.id,
+                                      valorUnitario,
+                                    });
+                                  }}
+                                  onApagar={async () => {
+                                    await apagarOrcamento({
+                                      itemId: item.id as string,
+                                      orcamentoId: orcamento.id,
+                                    });
+                                  }}
+                                />
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        ))}
+
+                        {orcamentos.length === 0 && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={podeMutarOrcamento ? 4 : 3}
+                              className="h-16 text-center text-muted-foreground"
+                            >
+                              <div className="flex flex-col items-center gap-2">
+                                <span>Nenhum orçamento lançado.</span>
+                                {podeMutarOrcamento && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled
+                                  >
+                                    <Trophy className="h-4 w-4" />
+                                    Definir vencedor
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              );
+            })}
+
+            {cotacao.itens.length === 0 && (
+              <p className="text-center text-muted-foreground">
+                Nenhum item cadastrado.
+              </p>
+            )}
           </CardContent>
         </Card>
 

@@ -28,14 +28,7 @@ import TableActions, {
   TableActionLink,
 } from "@/components/ui/table-actions";
 import { StatusBadge } from "@/components/shared/status-badge";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-} from "@/components/ui/pagination";
+import { ListPagination } from "@/components/shared/list-pagination";
 import { Empty } from "@/components/ui/empty";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -244,32 +237,11 @@ export default function PacientesPage() {
               Exibindo {displayedPacientes.length} de {pacientesFiltrados.length}{" "}
               pacientes
             </div>
-            {pageCount > 1 && (
-              <Pagination aria-label="Pagination">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    />
-                  </PaginationItem>
-                  {Array.from({ length: pageCount }).map((_, i) => (
-                    <PaginationItem key={i}>
-                      <PaginationLink
-                        onClick={() => setPage(i + 1)}
-                        isActive={page === i + 1}
-                      >
-                        {i + 1}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            )}
+            <ListPagination
+              page={page}
+              pageCount={pageCount}
+              onPageChange={setPage}
+            />
           </div>
         )}
       </div>

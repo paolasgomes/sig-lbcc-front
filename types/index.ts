@@ -43,6 +43,10 @@ export enum StatusCotacao {
   ABERTA = "aberta",
   EM_ANDAMENTO = "em_andamento",
   PRONTA_PARA_ANALISE = "pronta_para_analise",
+  /**
+   * Todos os itens têm um vencedor.
+   * O vencedor é por item; não há vencedor da cotação inteira.
+   */
   FINALIZADA = "finalizada",
   CANCELADA = "cancelada",
 }
@@ -227,10 +231,11 @@ export interface Cotacao {
    * Já possui pelo menos um orçamento.
    *
    * pronta_para_analise:
-   * Quantidade suficiente de orçamentos para análise.
+   * Todos os itens têm pelo menos três orçamentos.
    *
    * finalizada:
-   * Um fornecedor vencedor foi selecionado.
+   * Todos os itens têm um vencedor. O vencedor é por item,
+   * não da cotação inteira.
    *
    * cancelada:
    * Cotação cancelada com motivo obrigatório.
@@ -242,6 +247,12 @@ export interface Cotacao {
    */
   motivoCancelamento?: string | null;
 
+  /**
+   * Eixo separado do status de progresso.
+   * Cotação inativa não recebe orçamento novo.
+   */
+  ativo?: boolean;
+
   criadoEm: string;
   atualizadoEm?: string;
 
@@ -249,6 +260,21 @@ export interface Cotacao {
   areaNome?: string;
 
   itens: ItemCotacao[];
+}
+
+export interface Orcamento {
+  id: string;
+  fornecedorId: string;
+  fornecedorNome: string;
+  valorUnitario: number;
+  valorTotal: number;
+  selecionada: boolean;
+}
+
+export interface OrcamentoBlocoInput {
+  fornecedorId: string;
+  valorUnitario: number;
+  observacoes?: string;
 }
 
 export interface ItemCotacao {
@@ -260,6 +286,7 @@ export interface ItemCotacao {
   unidade: string;
   especificacoes?: string;
   ordem?: number;
+  orcamentos?: Orcamento[];
 }
 
 export interface ItemCotacaoInput {

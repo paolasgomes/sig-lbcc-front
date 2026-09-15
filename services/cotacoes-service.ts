@@ -8,6 +8,8 @@ import type {
   CotacaoStatusInput,
   CotacaoUpdateInput,
   ItemCotacao,
+  Orcamento,
+  OrcamentoBlocoInput,
 } from "@/types";
 
 export interface ApiCotacaoDTO {
@@ -20,6 +22,7 @@ export interface ApiCotacaoDTO {
   status: string;
   motivo_cancelamento?: string | null;
   numero?: string | null;
+  ativo?: boolean;
   created_at: string;
   updated_at?: string;
 
@@ -36,6 +39,15 @@ export interface ApiCotacaoDTO {
   cotacao_itens?: ApiItemCotacaoDTO[];
 }
 
+export interface ApiOrcamentoDTO {
+  id: string;
+  fornecedor_id: string;
+  fornecedor_nome: string;
+  valor_unitario: number;
+  valor_total: number;
+  selecionada: boolean;
+}
+
 export interface ApiItemCotacaoDTO {
   id: string;
   cotacao_id: string;
@@ -45,6 +57,7 @@ export interface ApiItemCotacaoDTO {
   unidade: string;
   especificacoes?: string | null;
   ordem?: number | null;
+  orcamentos?: ApiOrcamentoDTO[];
 }
 
 interface ApiErrorBody {
@@ -84,6 +97,19 @@ function getApiErrorMessage(
 // MAPEADORES
 // =========================
 
+export function mapApiOrcamentoToOrcamento(
+  dto: ApiOrcamentoDTO,
+): Orcamento {
+  return {
+    id: dto.id,
+    fornecedorId: dto.fornecedor_id,
+    fornecedorNome: dto.fornecedor_nome ?? "",
+    valorUnitario: Number(dto.valor_unitario),
+    valorTotal: Number(dto.valor_total),
+    selecionada: dto.selecionada === true,
+  };
+}
+
 export function mapApiItemToItemCotacao(
   dto: ApiItemCotacaoDTO,
 ): ItemCotacao {
@@ -98,6 +124,10 @@ export function mapApiItemToItemCotacao(
     especificacoes:
       dto.especificacoes ?? undefined,
     ordem: dto.ordem ?? undefined,
+    orcamentos:
+      dto.orcamentos?.map(
+        mapApiOrcamentoToOrcamento,
+      ) ?? [],
   };
 }
 
@@ -131,6 +161,8 @@ export function mapApiCotacaoToCotacao(
 
     motivoCancelamento:
       dto.motivo_cancelamento ?? null,
+
+    ativo: dto.ativo !== false,
 
     criadoEm:
       dto.created_at ??
@@ -454,6 +486,120 @@ export async function atualizarCotacao(
       getApiErrorMessage(
         error,
         "Erro ao atualizar cotação.",
+      ),
+    );
+  }
+}
+
+// =========================
+// ORÇAMENTOS DO ITEM
+// =========================
+
+export async function criarOrcamentosItem(
+  cotacaoId: string,
+  itemId: string,
+  blocos: OrcamentoBlocoInput[],
+): Promise<Cotacao> {
+  try {
+    const response =
+      await api.post<ApiCotacaoDTO>(
+        `/cotacoes/${cotacaoId}/itens/${itemId}/orcamentos`,
+        blocos.map((bloco) => ({
+          fornecedor_id: bloco.fornecedorId,
+          valor_unitario: bloco.valorUnitario,
+          ...(bloco.observacoes !== undefined && {
+            observacoes: bloco.observacoes,
+          }),
+        })),
+      );
+
+    return mapApiCotacaoToCotacao(
+      response.data,
+    );
+  } catch (error) {
+    throw new Error(
+      getApiErrorMessage(
+        error,
+        "Erro ao registrar orçamento.",
+      ),
+    );
+  }
+}
+
+export async function atualizarOrcamentoItem(
+  cotacaoId: string,
+  itemId: string,
+  orcamentoId: string,
+  valorUnitario: number,
+): Promise<Cotacao> {
+  try {
+    const response =
+      await api.put<ApiCotacaoDTO>(
+        `/cotacoes/${cotacaoId}/itens/${itemId}/orcamentos/${orcamentoId}`,
+        {
+          valor_unitario: valorUnitario,
+        },
+      );
+
+    return mapApiCotacaoToCotacao(
+      response.data,
+    );
+  } catch (error) {
+    throw new Error(
+      getApiErrorMessage(
+        error,
+        "Erro ao corrigir orçamento.",
+      ),
+    );
+  }
+}
+
+export async function excluirOrcamentoItem(
+  cotacaoId: string,
+  itemId: string,
+  orcamentoId: string,
+): Promise<Cotacao> {
+  try {
+    const response =
+      await api.delete<ApiCotacaoDTO>(
+        `/cotacoes/${cotacaoId}/itens/${itemId}/orcamentos/${orcamentoId}`,
+      );
+
+    return mapApiCotacaoToCotacao(
+      response.data,
+    );
+  } catch (error) {
+    throw new Error(
+      getApiErrorMessage(
+        error,
+        "Erro ao apagar orçamento.",
+      ),
+    );
+  }
+}
+
+export async function escolherVencedorItem(
+  cotacaoId: string,
+  itemId: string,
+  orcamentoId: string,
+): Promise<Cotacao> {
+  try {
+    const response =
+      await api.patch<ApiCotacaoDTO>(
+        `/cotacoes/${cotacaoId}/itens/${itemId}/vencedor`,
+        {
+          orcamento_id: orcamentoId,
+        },
+      );
+
+    return mapApiCotacaoToCotacao(
+      response.data,
+    );
+  } catch (error) {
+    throw new Error(
+      getApiErrorMessage(
+        error,
+        "Erro ao definir vencedor.",
       ),
     );
   }
