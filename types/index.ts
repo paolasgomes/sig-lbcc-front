@@ -441,4 +441,3 @@ export interface DashboardStats {
   pacientesSuspensos: number;
   pacientesEncerrados: number;
 }
-
