@@ -56,6 +56,8 @@ import {
 
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Spinner } from "@/components/ui/spinner";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 import {
   ArrowLeft,
@@ -63,6 +65,7 @@ import {
   FileText,
   AlertTriangle,
   XCircle,
+  Trophy,
 } from "lucide-react";
 
 import { format } from "date-fns";
@@ -125,6 +128,8 @@ export default function CotacaoDetailPage({
     isUpdatingOrcamento,
     apagarOrcamento,
     isDeletingOrcamento,
+    escolherVencedor,
+    isEscolhendoVencedor,
   } = useCotacao(id);
 
   const { isGestor } = useUsuario();
@@ -181,7 +186,8 @@ export default function CotacaoDetailPage({
   const isMutatingOrcamento =
     isCreatingOrcamentos ||
     isUpdatingOrcamento ||
-    isDeletingOrcamento;
+    isDeletingOrcamento ||
+    isEscolhendoVencedor;
 
   const formatDateTime = (
     dateStr: string,
@@ -507,6 +513,7 @@ export default function CotacaoDetailPage({
           <CardContent className="space-y-6">
             {cotacao.itens.map((item, index) => {
               const orcamentos = item.orcamentos ?? [];
+              const podeDefinirVencedor = orcamentos.length >= 3;
 
               return (
                 <div
@@ -570,7 +577,7 @@ export default function CotacaoDetailPage({
                           </TableHead>
 
                           {podeMutarOrcamento && (
-                            <TableHead className="w-24 text-right">
+                            <TableHead className="w-48 text-right">
                               Ações
                             </TableHead>
                           )}
@@ -579,9 +586,22 @@ export default function CotacaoDetailPage({
 
                       <TableBody>
                         {orcamentos.map((orcamento) => (
-                          <TableRow key={orcamento.id}>
+                          <TableRow
+                            key={orcamento.id}
+                            className={cn(
+                              orcamento.selecionada &&
+                                "bg-primary/10 hover:bg-primary/15",
+                            )}
+                          >
                             <TableCell className="font-medium">
-                              {orcamento.fornecedorNome}
+                              <div className="flex flex-wrap items-center gap-2">
+                                {orcamento.fornecedorNome}
+                                {orcamento.selecionada && (
+                                  <Badge variant="secondary">
+                                    Vencedor
+                                  </Badge>
+                                )}
+                              </div>
                             </TableCell>
 
                             <TableCell className="text-right">
@@ -597,10 +617,17 @@ export default function CotacaoDetailPage({
                             </TableCell>
 
                             {podeMutarOrcamento && item.id && (
-                              <TableCell>
+                              <TableCell className="whitespace-nowrap">
                                 <AcoesOrcamento
                                   orcamento={orcamento}
                                   isBusy={isMutatingOrcamento}
+                                  podeDefinirVencedor={podeDefinirVencedor}
+                                  onDefinirVencedor={async () => {
+                                    await escolherVencedor({
+                                      itemId: item.id as string,
+                                      orcamentoId: orcamento.id,
+                                    });
+                                  }}
                                   onCorrigir={async (valorUnitario) => {
                                     await atualizarOrcamento({
                                       itemId: item.id as string,
@@ -626,7 +653,20 @@ export default function CotacaoDetailPage({
                               colSpan={podeMutarOrcamento ? 4 : 3}
                               className="h-16 text-center text-muted-foreground"
                             >
-                              Nenhum orçamento lançado.
+                              <div className="flex flex-col items-center gap-2">
+                                <span>Nenhum orçamento lançado.</span>
+                                {podeMutarOrcamento && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled
+                                  >
+                                    <Trophy className="h-4 w-4" />
+                                    Definir vencedor
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         )}

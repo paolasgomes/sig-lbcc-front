@@ -43,6 +43,10 @@ export enum StatusCotacao {
   ABERTA = "aberta",
   EM_ANDAMENTO = "em_andamento",
   PRONTA_PARA_ANALISE = "pronta_para_analise",
+  /**
+   * Todos os itens têm um vencedor.
+   * O vencedor é por item; não há vencedor da cotação inteira.
+   */
   FINALIZADA = "finalizada",
   CANCELADA = "cancelada",
 }
@@ -230,7 +234,8 @@ export interface Cotacao {
    * Todos os itens têm pelo menos três orçamentos.
    *
    * finalizada:
-   * Todos os itens têm um vencedor.
+   * Todos os itens têm um vencedor. O vencedor é por item,
+   * não da cotação inteira.
    *
    * cancelada:
    * Cotação cancelada com motivo obrigatório.

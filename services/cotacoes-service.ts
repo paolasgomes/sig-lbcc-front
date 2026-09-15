@@ -578,6 +578,33 @@ export async function excluirOrcamentoItem(
   }
 }
 
+export async function escolherVencedorItem(
+  cotacaoId: string,
+  itemId: string,
+  orcamentoId: string,
+): Promise<Cotacao> {
+  try {
+    const response =
+      await api.patch<ApiCotacaoDTO>(
+        `/cotacoes/${cotacaoId}/itens/${itemId}/vencedor`,
+        {
+          orcamento_id: orcamentoId,
+        },
+      );
+
+    return mapApiCotacaoToCotacao(
+      response.data,
+    );
+  } catch (error) {
+    throw new Error(
+      getApiErrorMessage(
+        error,
+        "Erro ao definir vencedor.",
+      ),
+    );
+  }
+}
+
 // =========================
 // STATUS DO PROCESSO
 // =========================

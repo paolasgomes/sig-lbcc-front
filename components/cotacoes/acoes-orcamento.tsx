@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Trophy } from "lucide-react";
 
 import type { Orcamento } from "@/types";
 
@@ -32,6 +32,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 interface AcoesOrcamentoProps {
   orcamento: Orcamento;
   isBusy?: boolean;
+  podeDefinirVencedor: boolean;
+  onDefinirVencedor: () => Promise<void>;
   onCorrigir: (valorUnitario: number) => Promise<void>;
   onApagar: () => Promise<void>;
 }
@@ -39,11 +41,14 @@ interface AcoesOrcamentoProps {
 export function AcoesOrcamento({
   orcamento,
   isBusy = false,
+  podeDefinirVencedor,
+  onDefinirVencedor,
   onCorrigir,
   onApagar,
 }: AcoesOrcamentoProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [vencedorError, setVencedorError] = useState<string | null>(null);
   const [valorUnitario, setValorUnitario] = useState(
     String(orcamento.valorUnitario),
   );
@@ -114,8 +119,36 @@ export function AcoesOrcamento({
     }
   };
 
+  const handleDefinirVencedor = async () => {
+    setVencedorError(null);
+
+    try {
+      await onDefinirVencedor();
+    } catch (error) {
+      setVencedorError(
+        error instanceof Error
+          ? error.message
+          : "Erro ao definir vencedor.",
+      );
+    }
+  };
+
   return (
-    <div className="flex justify-end gap-1">
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex justify-end gap-1">
+        {!orcamento.selecionada && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={isBusy || !podeDefinirVencedor}
+            onClick={() => void handleDefinirVencedor()}
+            aria-label={`Definir ${orcamento.fornecedorNome} como vencedor`}
+          >
+            <Trophy className="h-4 w-4" />
+            Definir vencedor
+          </Button>
+        )}
       <Dialog open={editOpen} onOpenChange={handleEditOpenChange}>
         <DialogTrigger asChild>
           <Button
@@ -237,6 +270,15 @@ export function AcoesOrcamento({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
+
+      {vencedorError && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {vencedorError}
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }

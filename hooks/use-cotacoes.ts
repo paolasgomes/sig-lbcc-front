@@ -16,6 +16,7 @@ import {
   criarOrcamentosItem,
   atualizarOrcamentoItem,
   excluirOrcamentoItem,
+  escolherVencedorItem,
 } from "@/services/cotacoes-service";
 
 import type {
@@ -260,6 +261,23 @@ export function useCotacao(id: string) {
     onSuccess: onOrcamentoSuccess,
   });
 
+  const escolherVencedorMutation = useMutation({
+    mutationFn: ({
+      itemId,
+      orcamentoId,
+    }: {
+      itemId: string;
+      orcamentoId: string;
+    }) =>
+      escolherVencedorItem(
+        id,
+        itemId,
+        orcamentoId,
+      ),
+
+    onSuccess: onOrcamentoSuccess,
+  });
+
   return {
     cotacao: query.data ?? null,
 
@@ -307,6 +325,12 @@ export function useCotacao(id: string) {
 
     isDeletingOrcamento:
       deleteOrcamentoMutation.isPending,
+
+    escolherVencedor:
+      escolherVencedorMutation.mutateAsync,
+
+    isEscolhendoVencedor:
+      escolherVencedorMutation.isPending,
 
     query,
   };

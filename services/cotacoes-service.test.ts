@@ -142,6 +142,68 @@ describe("mapApiCotacaoToCotacao", () => {
     expect(result.itens[1].orcamentos).toEqual([]);
   });
 
+  it("maps selecionada true on the nested orcamento line", () => {
+    const result = mapApiCotacaoToCotacao({
+      id: "uuid-5",
+      descricao: "Cotação com vencedor",
+      paciente_id: "p-1",
+      area_id: "a-1",
+      data_validade: "2026-12-31",
+      observacoes: null,
+      status: "finalizada",
+      motivo_cancelamento: null,
+      ativo: true,
+      created_at: "2026-06-01T00:00:00Z",
+      cotacao_itens: [
+        {
+          id: "item-1",
+          cotacao_id: "uuid-5",
+          descricao: "Seringa",
+          quantidade: 2,
+          unidade: "UN",
+          orcamentos: [
+            {
+              id: "orc-1",
+              fornecedor_id: "forn-1",
+              fornecedor_nome: "Farmacia Central",
+              valor_unitario: 10,
+              valor_total: 20,
+              selecionada: true,
+            },
+            {
+              id: "orc-2",
+              fornecedor_id: "forn-2",
+              fornecedor_nome: "Distribuidora Norte",
+              valor_unitario: 11,
+              valor_total: 22,
+              selecionada: false,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(result.status).toBe("finalizada");
+    expect(result.itens[0].orcamentos).toEqual([
+      {
+        id: "orc-1",
+        fornecedorId: "forn-1",
+        fornecedorNome: "Farmacia Central",
+        valorUnitario: 10,
+        valorTotal: 20,
+        selecionada: true,
+      },
+      {
+        id: "orc-2",
+        fornecedorId: "forn-2",
+        fornecedorNome: "Distribuidora Norte",
+        valorUnitario: 11,
+        valorTotal: 22,
+        selecionada: false,
+      },
+    ]);
+  });
+
   it("maps motivo de cancelamento", () => {
     const result = mapApiCotacaoToCotacao({
       id: "uuid-3",
