@@ -77,6 +77,11 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import type { StatusCotacao } from "@/types";
 
 type FiltroStatus = "todos" | StatusCotacao;
+type OrdenacaoCotacao =
+  | "mais_recentes"
+  | "mais_antigas"
+  | "numero_crescente"
+  | "numero_decrescente";
 
 export default function CotacoesPage() {
   const {
@@ -91,43 +96,77 @@ export default function CotacoesPage() {
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] =
     useState<FiltroStatus>("todos");
+  
+  const [ordenacao, setOrdenacao] =
+  useState<OrdenacaoCotacao>("mais_recentes");
 
   const [page, setPage] = useState(1);
 
   const pageSize = 10;
 
-  const cotacoesFiltradas = useMemo(() => {
-    return cotacoes.filter((cotacao) => {
-      const matchStatus =
-        filtroStatus === "todos" ||
-        cotacao.status === filtroStatus;
+const cotacoesFiltradas = useMemo(() => {
+  const filtradas = cotacoes.filter((cotacao) => {
+    const matchStatus =
+      filtroStatus === "todos" ||
+      cotacao.status === filtroStatus;
 
-      const termo = busca.trim().toLowerCase();
+    const termo = busca.trim().toLowerCase();
 
-      const matchBusca =
-        !termo ||
-        cotacao.descricao
-          .toLowerCase()
-          .includes(termo) ||
-        (cotacao.pacienteNome
-          ?.toLowerCase()
-          .includes(termo) ??
-          false) ||
-        (cotacao.numero
-          ?.toLowerCase()
-          .includes(termo) ??
-          false) ||
-        cotacao.id
-          .toLowerCase()
-          .includes(termo) ||
-        cotacao.id
-          .slice(0, 8)
-          .toUpperCase()
-          .includes(termo.toUpperCase());
+    const matchBusca =
+      !termo ||
+      cotacao.descricao
+        .toLowerCase()
+        .includes(termo) ||
+      (cotacao.pacienteNome
+        ?.toLowerCase()
+        .includes(termo) ??
+        false) ||
+      (cotacao.numero
+        ?.toLowerCase()
+        .includes(termo) ??
+        false) ||
+      cotacao.id
+        .toLowerCase()
+        .includes(termo) ||
+      cotacao.id
+        .slice(0, 8)
+        .toUpperCase()
+        .includes(termo.toUpperCase());
 
-      return matchStatus && matchBusca;
-    });
-  }, [cotacoes, busca, filtroStatus]);
+    return matchStatus && matchBusca;
+  });
+
+  return [...filtradas].sort((a, b) => {
+    switch (ordenacao) {
+      case "mais_antigas":
+        return (
+          new Date(a.criadoEm).getTime() -
+          new Date(b.criadoEm).getTime()
+        );
+
+      case "numero_crescente":
+        return (a.numero ?? "").localeCompare(
+          b.numero ?? "",
+          undefined,
+          { numeric: true }
+        );
+
+      case "numero_decrescente":
+        return (b.numero ?? "").localeCompare(
+          a.numero ?? "",
+          undefined,
+          { numeric: true }
+        );
+
+      case "mais_recentes":
+      default:
+        return (
+          new Date(b.criadoEm).getTime() -
+          new Date(a.criadoEm).getTime()
+        );
+    }
+  });
+}, [cotacoes, busca, filtroStatus, ordenacao]);
 
   const total = cotacoesFiltradas.length;
 
@@ -248,6 +287,36 @@ export default function CotacoesPage() {
 
                   <SelectItem value="cancelada">
                     Cancelada
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={ordenacao}
+                onValueChange={(value) => {
+                  setOrdenacao(value as OrdenacaoCotacao);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-56">
+                  <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value="mais_recentes">
+                    Mais recentes
+                  </SelectItem>
+
+                  <SelectItem value="mais_antigas">
+                    Mais antigas
+                  </SelectItem>
+
+                  <SelectItem value="numero_crescente">
+                    Número crescente
+                  </SelectItem>
+
+                  <SelectItem value="numero_decrescente">
+                    Número decrescente
                   </SelectItem>
                 </SelectContent>
               </Select>

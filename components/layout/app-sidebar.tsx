@@ -10,7 +10,6 @@ import {
   Package,
   FileText,
   ClipboardList,
-  DollarSign,
   // BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -66,11 +65,11 @@ const navItems: NavItem[] = [
     allowedRoles: ROLES_ATENDIMENTOS_E_COTACOES,
   },
   {
-    label: "Orçamentos",
-    href: "/orcamentos",
-    icon: DollarSign,
-    allowedRoles: ROLES_ATENDIMENTOS_E_COTACOES,
-  },
+  label: "Ordem de Fornecimento",
+  href: "/fornecimento",
+  icon: FileText,
+  allowedRoles: ROLES_ATENDIMENTOS_E_COTACOES,
+},
   {
     label: "Áreas",
     href: "/areas",
