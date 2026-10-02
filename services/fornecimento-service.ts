@@ -74,3 +74,12 @@ export async function gerarOrdensDeFornecimento(
 
     return response.data;
     }
+export async function confirmarRecebimentoOrdemDeFornecimento(
+    id: string
+): Promise<OrdemFornecimento> {
+    const response = await api.patch(
+        `/fornecimento/${id}/confirmar-recebimento`
+    );
+
+    return response.data.data;
+}
