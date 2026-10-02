@@ -24,6 +24,19 @@ export interface FornecedorOrdemFornecimento {
     telefone: string | null;
 }
 
+export type StatusPrazo =
+    | "normal"
+    | "proxima_expiracao"
+    | "atrasada";
+
+export interface GestorResponsavel {
+    id: string;
+    nome: string;
+    email: string;
+    perfil: string;
+    ativo: boolean;
+}
+
 export interface OrdemFornecimento {
     id: string;
     numero: string;
@@ -37,6 +50,9 @@ export interface OrdemFornecimento {
     data_previsao_entrega: string | null;
     data_entrega: string | null;
     data_finalizacao: string | null;
+    prazo_ciclo: number;
+    status_prazo: StatusPrazo;
+    prazo_atualizado_em: string | null;
     valor_total: number;
     observacoes: string | null;
     criado_por: string | null;
@@ -45,6 +61,7 @@ export interface OrdemFornecimento {
     updated_at: string;
     fornecedores: FornecedorOrdemFornecimento | null;
     ordem_fornecimento_itens: OrdemFornecimentoItem[];
+    gestores_responsaveis: GestorResponsavel[];
 }
 
 export async function listarOrdensDeFornecimento(): Promise<
@@ -82,4 +99,20 @@ export async function confirmarRecebimentoOrdemDeFornecimento(
     );
 
     return response.data.data;
+}
+
+export async function listarGestoresResponsaveis(): Promise<GestorResponsavel[]> {
+    const response = await api.get("/fornecimento/gestores-responsaveis");
+    return response.data;
+}
+
+export async function atualizarPrazoOrdemDeFornecimento(
+    id: string,
+    dados: {
+        data_previsao_entrega: string | null;
+        responsavel_ids: string[];
+    },
+): Promise<OrdemFornecimento> {
+    const response = await api.patch(`/fornecimento/${id}/prazo`, dados);
+    return response.data;
 }

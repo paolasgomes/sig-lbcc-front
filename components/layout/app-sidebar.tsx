@@ -10,6 +10,7 @@ import {
   Package,
   FileText,
   ClipboardList,
+  CalendarDays,
   // BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -87,6 +88,12 @@ const navItems: NavItem[] = [
     href: "/produtos",
     icon: Package,
     perfilMinimo: PERFIS_GESTAO_BASE,
+  },
+  {
+    label: "Calendário útil",
+    href: "/calendario",
+    icon: CalendarDays,
+    perfilMinimo: [PerfilUsuario.GESTOR],
   },
   // {
   //   label: "Relatórios",

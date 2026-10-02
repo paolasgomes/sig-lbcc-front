@@ -35,6 +35,9 @@ import {
 import { Empty } from "@/components/ui/empty";
 import { Badge } from "@/components/ui/badge";
 import { TableActions } from "@/components/ui/table-actions";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { formatDateOnly } from "@/lib/prazo-utils";
+import type { OrdemFornecimento } from "@/services/fornecimento-service";
 
 import {
     useOrdensDeFornecimento,
@@ -58,7 +61,7 @@ function formatCurrency(value: number) {
     }).format(value);
 }
 
-function getFornecedorNome(ordem: any) {
+function getFornecedorNome(ordem: OrdemFornecimento) {
     return (
         ordem.fornecedores?.nome_fantasia ||
         ordem.fornecedores?.razao_social ||
@@ -100,6 +103,7 @@ export default function FornecimentoPage() {
 
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("todos");
+    const [statusPrazoFilter, setStatusPrazoFilter] = useState("todos");
 
     const [ordenacao, setOrdenacao] =
         useState<OrdenacaoOrdem>("mais_recentes");
@@ -130,7 +134,11 @@ export default function FornecimentoPage() {
                 ordem.status.toLowerCase() ===
                     statusFilter.toLowerCase();
 
-            return matchesSearch && matchesStatus;
+            const matchesStatusPrazo =
+                statusPrazoFilter === "todos" ||
+                (ordem.status_prazo ?? "normal") === statusPrazoFilter;
+
+            return matchesSearch && matchesStatus && matchesStatusPrazo;
         });
 
         return [...filtradas].sort((a, b) => {
@@ -167,6 +175,7 @@ export default function FornecimentoPage() {
         ordens,
         search,
         statusFilter,
+        statusPrazoFilter,
         ordenacao,
     ]);
 
@@ -299,6 +308,18 @@ export default function FornecimentoPage() {
                                 </SelectContent>
                             </Select>
 
+                            <Select value={statusPrazoFilter} onValueChange={setStatusPrazoFilter}>
+                                <SelectTrigger className="w-full md:w-[220px]">
+                                    <SelectValue placeholder="Filtrar por prazo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="todos">Todos os prazos</SelectItem>
+                                    <SelectItem value="normal">Normal</SelectItem>
+                                    <SelectItem value="proxima_expiracao">Próxima à expiração</SelectItem>
+                                    <SelectItem value="atrasada">Atrasada</SelectItem>
+                                </SelectContent>
+                            </Select>
+
                         </div>
                     </CardContent>
                 </Card>
@@ -321,9 +342,7 @@ export default function FornecimentoPage() {
                         <CardContent className="pt-6">
                             <p className="text-sm text-destructive">
                                 Erro ao confirmar recebimento:{" "}
-                                {confirmError instanceof Error
-                                    ? confirmError.message
-                                    : String(confirmError)}
+                                {String(confirmError)}
                             </p>
                         </CardContent>
                     </Card>
@@ -357,6 +376,10 @@ export default function FornecimentoPage() {
                                         Status
                                     </TableHead>
 
+                                    <TableHead>
+                                        Prazo
+                                    </TableHead>
+
                                     <TableHead className="text-right">
                                         Ações
                                     </TableHead>
@@ -369,7 +392,7 @@ export default function FornecimentoPage() {
                                 {isLoading ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={6}
+                                            colSpan={7}
                                             className="py-8 text-center"
                                         >
                                             Carregando ordens de
@@ -380,7 +403,7 @@ export default function FornecimentoPage() {
                                 ) : filteredOrdens.length === 0 ? (
 
                                     <TableRow>
-                                        <TableCell colSpan={6}>
+                                        <TableCell colSpan={7}>
                                             <Empty
                                                 title="Nenhuma ordem de fornecimento encontrada"
                                                 description={
@@ -449,6 +472,14 @@ export default function FornecimentoPage() {
                                                             ordem.status,
                                                         )}
                                                     </Badge>
+                                                </TableCell>
+
+                                                {/* Prazo */}
+                                                <TableCell>
+                                                    <div className="flex flex-col gap-1">
+                                                        <span>{formatDateOnly(ordem.data_previsao_entrega)}</span>
+                                                        <StatusBadge status={ordem.status_prazo ?? "normal"} />
+                                                    </div>
                                                 </TableCell>
 
                                                 {/* Ações */}

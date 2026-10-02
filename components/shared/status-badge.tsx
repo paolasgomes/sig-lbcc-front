@@ -82,6 +82,21 @@ const statusConfig: Record<
     className:
       "bg-success/15 text-success border-success/30",
   },
+
+  normal: {
+    label: "Normal",
+    className: "bg-success/15 text-success border-success/30",
+  },
+
+  proxima_expiracao: {
+    label: "Próxima à expiração",
+    className: "bg-warning/15 text-warning border-warning/30",
+  },
+
+  atrasada: {
+    label: "Atrasada",
+    className: "bg-destructive/15 text-destructive border-destructive/30",
+  },
 };
 
 export function StatusBadge({

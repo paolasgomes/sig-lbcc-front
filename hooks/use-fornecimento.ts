@@ -11,6 +11,8 @@ import {
     obterOrdemDeFornecimento,
     gerarOrdensDeFornecimento,
     confirmarRecebimentoOrdemDeFornecimento,
+    atualizarPrazoOrdemDeFornecimento,
+    listarGestoresResponsaveis,
 } from "@/services/fornecimento-service";
 
 export function useOrdensDeFornecimento() {
@@ -105,5 +107,48 @@ export function useConfirmarRecebimentoOrdemDeFornecimento() {
             mutation.error instanceof Error
                 ? mutation.error.message
                 : mutation.error ?? null,
+    };
+}
+
+export function useAtualizarPrazoOrdemDeFornecimento() {
+    const queryClient = useQueryClient();
+
+    const mutation = useMutation({
+        mutationFn: ({
+            id,
+            data_previsao_entrega,
+            responsavel_ids,
+        }: {
+            id: string;
+            data_previsao_entrega: string | null;
+            responsavel_ids: string[];
+        }) => atualizarPrazoOrdemDeFornecimento(id, {
+            data_previsao_entrega,
+            responsavel_ids,
+        }),
+        onSuccess: (ordem) => {
+            queryClient.invalidateQueries({ queryKey: ["fornecimento"] });
+            queryClient.setQueryData(["fornecimento", ordem.id], ordem);
+        },
+    });
+
+    return {
+        atualizarPrazo: mutation.mutateAsync,
+        isUpdating: mutation.isPending,
+        error: mutation.error instanceof Error ? mutation.error.message : mutation.error ?? null,
+    };
+}
+
+export function useGestoresResponsaveis() {
+    const query = useQuery({
+        queryKey: ["gestores-responsaveis"],
+        queryFn: listarGestoresResponsaveis,
+        staleTime: 1000 * 60 * 5,
+    });
+
+    return {
+        gestores: query.data ?? [],
+        isLoading: query.isLoading,
+        error: query.error instanceof Error ? query.error.message : query.error ?? null,
     };
 }
