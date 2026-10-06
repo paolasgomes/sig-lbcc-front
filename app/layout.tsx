@@ -1,3 +1,4 @@
+import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
@@ -31,6 +32,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="bg-background">
       <body className="font-sans antialiased">
+        <Toaster />
         <QueryProvider>
           <AuthProvider>
             <DataProvider>{children}</DataProvider>

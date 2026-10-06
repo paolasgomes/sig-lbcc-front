@@ -10,6 +10,9 @@ import {
   Package,
   FileText,
   ClipboardList,
+  CalendarDays,
+  Bell,
+  Activity,
   // BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -65,6 +68,12 @@ const navItems: NavItem[] = [
     allowedRoles: ROLES_ATENDIMENTOS_E_COTACOES,
   },
   {
+  label: "Ordem de Fornecimento",
+  href: "/fornecimento",
+  icon: FileText,
+  allowedRoles: ROLES_ATENDIMENTOS_E_COTACOES,
+},
+  {
     label: "Áreas",
     href: "/areas",
     icon: MapPin,
@@ -81,6 +90,23 @@ const navItems: NavItem[] = [
     href: "/produtos",
     icon: Package,
     perfilMinimo: PERFIS_GESTAO_BASE,
+  },
+  {
+    label: "Calendário útil",
+    href: "/calendario",
+    icon: CalendarDays,
+    perfilMinimo: [PerfilUsuario.GESTOR],
+  },
+  {
+    label: "Notificações",
+    href: "/notificacoes",
+    icon: Bell,
+  },
+  {
+    label: "Operação da automação",
+    href: "/operacao",
+    icon: Activity,
+    perfilMinimo: [PerfilUsuario.GESTOR],
   },
   // {
   //   label: "Relatórios",
@@ -103,9 +129,15 @@ export function AppSidebar() {
 
   return (
     <aside className="flex h-screen w-64 flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6 ">
+      <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6">
         <div className="flex items-center justify-center rounded-xl mx-auto">
-          <Image src={Logo} alt="Logo LBCC" width={108} height={108} loading="eager" />
+          <Image
+            src={Logo}
+            alt="Logo LBCC"
+            width={108}
+            height={108}
+            loading="eager"
+          />
         </div>
       </div>
 
@@ -113,7 +145,9 @@ export function AppSidebar() {
         <ul className="flex flex-col gap-1">
           {filteredItems.map((item) => {
             const isActive =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
+              pathname === item.href ||
+              pathname.startsWith(`${item.href}/`);
+
             const Icon = item.icon;
 
             return (
@@ -138,8 +172,12 @@ export function AppSidebar() {
 
       <div className="border-t border-sidebar-border p-4">
         <div className="rounded-lg bg-sidebar-accent/50 p-3">
-          <p className="text-xs text-sidebar-foreground/70">Bataguassu - MS</p>
-          <p className="text-xs text-sidebar-foreground/50">Versão 1.0.0</p>
+          <p className="text-xs text-sidebar-foreground/70">
+            Bataguassu - MS
+          </p>
+          <p className="text-xs text-sidebar-foreground/50">
+            Versão 1.0.0
+          </p>
         </div>
       </div>
     </aside>
