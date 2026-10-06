@@ -1,6 +1,7 @@
 import axios from "axios";
 
 interface ApiErrorResponse {
+  erro?: unknown;
   error?: unknown;
   message?: unknown;
   detail?: unknown;
@@ -94,6 +95,7 @@ export function getFriendlyApiError(error: unknown, fallback: string) {
   if (axios.isAxiosError<ApiErrorResponse>(error)) {
     const response = error.response;
     const candidate =
+      asMessage(response?.data?.erro) ??
       asMessage(response?.data?.error) ??
       asMessage(response?.data?.message) ??
       asMessage(response?.data?.detail) ??
