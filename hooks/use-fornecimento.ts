@@ -11,9 +11,15 @@ import {
     obterOrdemDeFornecimento,
     gerarOrdensDeFornecimento,
     confirmarRecebimentoOrdemDeFornecimento,
+    reenviarEmailOrdemDeFornecimento,
+    finalizarOrdemDeFornecimento,
     atualizarPrazoOrdemDeFornecimento,
     listarGestoresResponsaveis,
 } from "@/services/fornecimento-service";
+import {
+    obterLembreteFornecedor,
+    reenviarLembreteFornecedor,
+} from "@/services/lembretes-fornecedor-service";
 
 export function useOrdensDeFornecimento() {
     const query = useQuery({
@@ -110,6 +116,46 @@ export function useConfirmarRecebimentoOrdemDeFornecimento() {
     };
 }
 
+export function useFinalizarOrdemDeFornecimento() {
+    const queryClient = useQueryClient();
+    const mutation = useMutation({
+        mutationFn: (id: string) => finalizarOrdemDeFornecimento(id),
+        onSuccess: (ordem) => {
+            queryClient.invalidateQueries({ queryKey: ["fornecimento"] });
+            queryClient.setQueryData(["fornecimento", ordem.id], ordem);
+        },
+    });
+
+    return {
+        finalizar: mutation.mutateAsync,
+        isFinalizing: mutation.isPending,
+        error:
+            mutation.error instanceof Error
+                ? mutation.error.message
+                : mutation.error ?? null,
+    };
+}
+
+export function useReenviarEmailOrdemDeFornecimento() {
+    const queryClient = useQueryClient();
+    const mutation = useMutation({
+        mutationFn: (id: string) => reenviarEmailOrdemDeFornecimento(id),
+        onSuccess: (_envio, id) => {
+            queryClient.invalidateQueries({ queryKey: ["fornecimento"] });
+            queryClient.invalidateQueries({ queryKey: ["fornecimento", id] });
+        },
+    });
+
+    return {
+        reenviarEmail: mutation.mutateAsync,
+        isReenviandoEmail: mutation.isPending,
+        error:
+            mutation.error instanceof Error
+                ? mutation.error.message
+                : mutation.error ?? null,
+    };
+}
+
 export function useAtualizarPrazoOrdemDeFornecimento() {
     const queryClient = useQueryClient();
 
@@ -134,6 +180,42 @@ export function useAtualizarPrazoOrdemDeFornecimento() {
 
     return {
         atualizarPrazo: mutation.mutateAsync,
+        isUpdating: mutation.isPending,
+        error: mutation.error instanceof Error ? mutation.error.message : mutation.error ?? null,
+    };
+}
+
+export function useLembreteFornecedor(id: string) {
+    const query = useQuery({
+        queryKey: ["lembrete-fornecedor", id],
+        queryFn: () => obterLembreteFornecedor(id),
+        enabled: Boolean(id),
+        staleTime: 1000 * 30,
+        refetchInterval: 1000 * 60,
+    });
+
+    return {
+        lembrete: query.data ?? null,
+        isLoading: query.isLoading,
+        error: query.error instanceof Error ? query.error.message : query.error ?? null,
+        refetch: query.refetch,
+    };
+}
+
+export function useReenviarLembreteFornecedor() {
+    const queryClient = useQueryClient();
+    const mutation = useMutation({
+        mutationFn: reenviarLembreteFornecedor,
+        onSuccess: (lembrete) => {
+            queryClient.setQueryData(
+                ["lembrete-fornecedor", lembrete.ordemFornecimentoId],
+                lembrete,
+            );
+        },
+    });
+
+    return {
+        reenviar: mutation.mutateAsync,
         isUpdating: mutation.isPending,
         error: mutation.error instanceof Error ? mutation.error.message : mutation.error ?? null,
     };

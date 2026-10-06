@@ -172,6 +172,12 @@ export default function NovoOrcamentoPage() {
       return;
     }
 
+    const prazoEmDias = prazoEntrega.match(/^\s*(\d+)\s*/);
+    if (!prazoEmDias || Number(prazoEmDias[1]) <= 0) {
+      setErroSalvar("Informe o prazo de entrega em dias úteis.");
+      return;
+    }
+
     if (itens.length === 0) {
       setErroSalvar(
         "Carregue pelo menos um item da cotação.",
@@ -436,7 +442,7 @@ export default function NovoOrcamentoPage() {
                 htmlFor="prazoEntrega"
                 className="text-sm font-medium"
               >
-                Prazo de entrega
+                Prazo de entrega (dias úteis)
               </label>
 
               <Input

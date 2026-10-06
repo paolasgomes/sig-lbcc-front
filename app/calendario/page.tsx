@@ -19,6 +19,11 @@ import { PerfilUsuario } from "@/types";
 import { useCalendario } from "@/hooks/use-calendario";
 import { formatDateOnly } from "@/lib/prazo-utils";
 
+function formatDateForInput(value: string | null | undefined) {
+  const match = value?.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] ?? "";
+}
+
 export default function CalendarioPage() {
   const { feriados, isLoading, error, refetch, criar, editar, alternar } = useCalendario();
   const [data, setData] = useState("");
@@ -34,7 +39,7 @@ export default function CalendarioPage() {
 
   function iniciarEdicao(feriado: (typeof feriados)[number]) {
     setEditandoId(feriado.id);
-    setData(feriado.data.slice(0, 10));
+    setData(formatDateForInput(feriado.data));
     setNome(feriado.nome);
     setMensagem(null);
   }
@@ -140,16 +145,36 @@ export default function CalendarioPage() {
                 ) : feriados.length === 0 ? (
                   <TableRow><TableCell colSpan={4} className="py-8 text-center text-muted-foreground">Nenhum feriado cadastrado.</TableCell></TableRow>
                 ) : feriados.map((feriado) => (
-                  <TableRow key={feriado.id}>
+                  <TableRow
+                    key={feriado.id}
+                    className={feriado.ativo ? undefined : "bg-muted/40 text-muted-foreground"}
+                  >
                     <TableCell>{formatDateOnly(feriado.data)}</TableCell>
                     <TableCell className="font-medium">{feriado.nome}</TableCell>
-                    <TableCell><Badge variant="outline">{feriado.ativo ? "Ativo" : "Inativo"}</Badge></TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={feriado.ativo
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                          : "border-muted-foreground/30 bg-muted text-muted-foreground"}
+                      >
+                        {feriado.ativo ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" title="Editar feriado" onClick={() => iniciarEdicao(feriado)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" title={feriado.ativo ? "Inativar feriado" : "Ativar feriado"} disabled={alternar.isPending} onClick={() => void alternarStatus(feriado.id, feriado.ativo)}>
+                      <Button
+                        variant={feriado.ativo ? "ghost" : "outline"}
+                        size="sm"
+                        title={feriado.ativo ? "Inativar feriado" : "Ativar feriado"}
+                        aria-label={feriado.ativo ? "Inativar feriado" : "Ativar feriado"}
+                        disabled={alternar.isPending}
+                        onClick={() => void alternarStatus(feriado.id, feriado.ativo)}
+                      >
                         <Power className="h-4 w-4" />
+                        {feriado.ativo ? "Inativar" : "Ativar"}
                       </Button>
                     </TableCell>
                   </TableRow>

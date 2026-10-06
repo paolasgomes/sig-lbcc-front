@@ -1,6 +1,6 @@
 'use client'
 
-import { LogOut, User, Bell } from 'lucide-react'
+import { LogOut, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import {
 import { useAuth } from '@/contexts/auth-context'
 import { useRouter } from 'next/navigation'
 import { PerfilUsuario } from '@/types'
+import { NotificationPopover } from './notification-popover'
 
 const perfilLabels: Record<PerfilUsuario, string> = {
   [PerfilUsuario.OPERADOR]: 'Operador',
@@ -38,12 +39,7 @@ export function AppHeader() {
       </div>
 
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
-            3
-          </span>
-        </Button>
+        <NotificationPopover />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

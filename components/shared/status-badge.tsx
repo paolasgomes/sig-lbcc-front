@@ -68,6 +68,40 @@ const statusConfig: Record<
   },
 
   // =========================
+  // STATUS DE ORDEM DE FORNECIMENTO
+  // =========================
+
+  rascunho: {
+    label: "Rascunho",
+    className: "bg-muted text-muted-foreground border-border",
+  },
+
+  enviada: {
+    label: "Enviada",
+    className: "bg-info/15 text-info border-info/30",
+  },
+
+  em_entrega: {
+    label: "Em entrega",
+    className: "bg-warning/15 text-warning border-warning/30",
+  },
+
+  entregue: {
+    label: "Entregue",
+    className: "bg-purple-500/15 text-purple-600 border-purple-500/30",
+  },
+
+  finalizada: {
+    label: "Finalizada",
+    className: "bg-success/15 text-success border-success/30",
+  },
+
+  cancelada: {
+    label: "Cancelada",
+    className: "bg-destructive/15 text-destructive border-destructive/30",
+  },
+
+  // =========================
   // OUTROS STATUS
   // =========================
 
