@@ -15,6 +15,7 @@ import {
     finalizarOrdemDeFornecimento,
     atualizarPrazoOrdemDeFornecimento,
     listarGestoresResponsaveis,
+    atualizarObservacoesOrdemDeFornecimento,
 } from "@/services/fornecimento-service";
 import {
     obterLembreteFornecedor,
@@ -232,5 +233,39 @@ export function useGestoresResponsaveis() {
         gestores: query.data ?? [],
         isLoading: query.isLoading,
         error: query.error instanceof Error ? query.error.message : query.error ?? null,
+    };
+}
+
+export function useAtualizarObservacoesOrdemDeFornecimento() {
+    const queryClient = useQueryClient();
+
+    const mutation = useMutation({
+        mutationFn: ({
+            id,
+            observacoes,
+        }: {
+            id: string;
+            observacoes: string | null;
+        }) => atualizarObservacoesOrdemDeFornecimento(id, observacoes),
+
+        onSuccess: async (_data, variables) => {
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ["fornecimento"],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ["fornecimento", variables.id],
+                }),
+            ]);
+        },
+    });
+
+    return {
+        atualizarObservacoes: mutation.mutateAsync,
+        isUpdating: mutation.isPending,
+        error:
+            mutation.error instanceof Error
+                ? mutation.error.message
+                : mutation.error ?? null,
     };
 }

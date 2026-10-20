@@ -38,7 +38,7 @@ export default function OperacaoPage() {
   async function processarAgora() {
     setMensagem(null);
     try {
-      const resultado = await processar(undefined);
+      const resultado = await processar(["atraso"]);
       setMensagem(
         `${resultado.resumo.ordensAfetadas} ordem(ns) afetada(s), ${resultado.resumo.notificacoesCriadas} notificação(ões) e ${resultado.resumo.emailsEnviados} e-mail(s) enviado(s).`,
       );
@@ -87,7 +87,13 @@ export default function OperacaoPage() {
                   <div key={execucao.id} className="flex flex-col gap-2 border-b pb-3 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="font-medium">{jobLabels[execucao.job_nome]} · {execucao.origem === "manual" ? "Manual" : "Automática"}</p>
-                      <p className="text-xs text-muted-foreground">Início: {formatDateTime(execucao.iniciado_em)} · Ordens afetadas: {execucao.ordens_afetadas} · Notificações: {execucao.notificacoes_criadas} · E-mails: {execucao.emails_enviados}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Início: {formatDateTime(execucao.iniciado_em)} ·
+                        Ordens examinadas: {execucao.ordens_examinadas} ·
+                        Ordens afetadas: {execucao.ordens_afetadas} ·
+                        Notificações: {execucao.notificacoes_criadas} ·
+                        E-mails: {execucao.emails_enviados}
+                      </p>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-muted-foreground">{execucao.falhas} falha(s) · {execucao.retentativas} retentativa(s)</span>
@@ -109,7 +115,11 @@ export default function OperacaoPage() {
                   <div key={pendencia.id} className="border-b pb-3 last:border-0 last:pb-0">
                     <p className="font-medium">{pendencia.tipo}</p>
                     <p className="text-sm text-muted-foreground">{pendencia.descricao}</p>
-                    <p className="text-xs text-muted-foreground">Ocorrências: {pendencia.ocorrencias} · Última: {formatDateTime(pendencia.ultima_ocorrencia_em)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Ordem relacionada: {pendencia.ordem_fornecimento_id ?? "Não identificada"} ·
+                      Ocorrências: {pendencia.ocorrencias} ·
+                      Última: {formatDateTime(pendencia.ultima_ocorrencia_em)}
+                    </p>
                   </div>
                 ))}
               </div>

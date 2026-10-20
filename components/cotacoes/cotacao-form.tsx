@@ -55,6 +55,15 @@ import { useCotacoes } from "@/hooks/use-cotacoes";
 
 import type { Cotacao } from "@/types";
 
+function obterDataLocalISO(): string {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = String(hoje.getMonth() + 1).padStart(2, "0");
+  const dia = String(hoje.getDate()).padStart(2, "0");
+
+  return `${ano}-${mes}-${dia}`;
+}
+
 interface CotacaoFormProps {
   cotacao?: Cotacao;
   isEditing?: boolean;
@@ -282,6 +291,10 @@ export function CotacaoForm({
 
     if (!dataValidade) {
       return "Informe a data de validade.";
+    }
+
+    if (dataValidade < obterDataLocalISO()) {
+      return "A data de validade deve ser igual ou posterior à data atual.";
     }
 
     if (itens.length === 0) {
@@ -557,11 +570,10 @@ export function CotacaoForm({
 
               <Input
                 type="date"
+                min={obterDataLocalISO()}
                 value={dataValidade}
                 onChange={(e) =>
-                  setDataValidade(
-                    e.target.value,
-                  )
+                  setDataValidade(e.target.value)
                 }
               />
             </Field>
