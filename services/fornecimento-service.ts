@@ -198,3 +198,12 @@ export async function atualizarPrazoOrdemDeFornecimento(
     const response = await api.patch(`/fornecimento/${id}/prazo`, dados);
     return response.data;
 }
+
+export async function atualizarObservacoesOrdemDeFornecimento(
+    id: string,
+    observacoes: string | null,
+): Promise<void> {
+    await api.patch(`/fornecimento/${id}/observacoes`, {
+        observacoes,
+    });
+}

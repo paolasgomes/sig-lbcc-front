@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty } from "@/components/ui/empty";
 import { useArquivarNotificacao, useMarcarNotificacaoComoLida, useNotificacoes } from "@/hooks/use-notificacoes";
-import { formatDateOnly } from "@/lib/prazo-utils";
+import { formatDateOnly, getStatusPrazoLabel } from "@/lib/prazo-utils";
 
 function formatCreatedAt(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -89,7 +89,12 @@ export default function NotificacoesPage() {
                       <div><p className="text-muted-foreground">Fornecedor</p><p className="font-medium">{fornecedor}</p></div>
                       <div><p className="text-muted-foreground">Cotação</p><p className="font-medium">{cotacao}</p></div>
                       <div><p className="text-muted-foreground">Data limite</p><p className="font-medium">{formatDateOnly(notificacao.dataLimite)}</p></div>
-                      <div><p className="text-muted-foreground">Status</p><p className="font-medium">Próxima à expiração</p></div>
+                      <div>
+                          <p className="text-muted-foreground">Status</p>
+                          <p className="font-medium">
+                            {getStatusPrazoLabel(notificacao.statusPrazo)}
+                          </p>
+                        </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {notificacao.link && (

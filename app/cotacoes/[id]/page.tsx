@@ -205,6 +205,15 @@ export default function CotacaoDetailPage({
     cotacao.status === "finalizada" ||
     cotacao.status === "cancelada";
 
+  const cotacaoExpirada =
+    isCotacaoVencida(cotacao.dataValidade);
+
+  const podeGerarOrdem =
+    cotacao.status === "finalizada" &&
+    !cotacaoExpirada &&
+    !!cotacao.pacienteId &&
+    !!cotacao.areaId;
+
   const podeMutarOrcamento =
     isGestor &&
     !bloqueada &&
@@ -345,8 +354,7 @@ export default function CotacaoDetailPage({
             <div className="flex flex-wrap gap-2">
 
               {/* Gerar Ordem de Fornecimento */}
-              {cotacao.status ===
-                "finalizada" && (
+              {cotacao.status === "finalizada" && (
                 ordemDeFornecimento ? (
                   <Button
                     variant="outline"
@@ -360,14 +368,11 @@ export default function CotacaoDetailPage({
                     </Link>
                   </Button>
                 ) : (
+                podeGerarOrdem ? (
                   <Button
                     variant="outline"
-                    onClick={
-                      handleGerarOrdem
-                    }
-                    disabled={
-                      isGenerating
-                    }
+                    onClick={handleGerarOrdem}
+                    disabled={isGenerating}
                   >
                     <FileText className="mr-2 h-4 w-4" />
 
@@ -375,7 +380,16 @@ export default function CotacaoDetailPage({
                       ? "Gerando..."
                       : "Gerar Ordem de Fornecimento"}
                   </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    disabled
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Cotação vencida ou incompleta
+                  </Button>
                 )
+              )
               )}
 
               {/* Editar */}
@@ -508,8 +522,11 @@ export default function CotacaoDetailPage({
             </AlertTitle>
 
             <AlertDescription>
-              A data de validade desta cotação
-              já foi ultrapassada.
+              <AlertDescription>
+                A data de validade desta cotação já foi ultrapassada.
+                Atualize a validade para adicionar fornecedores ou definir
+                um fornecedor vencedor.
+              </AlertDescription>
             </AlertDescription>
           </Alert>
         )}
@@ -628,7 +645,7 @@ export default function CotacaoDetailPage({
       item.orcamentos ?? [];
 
     const podeDefinirVencedor =
-      orcamentos.length >= 3;
+      orcamentos.length >= 3 && !vencida;
 
     const formularioAberto =
       item.id === itemOrcamentoAberto;
@@ -805,6 +822,7 @@ export default function CotacaoDetailPage({
 
                 {/* Formulário de novo orçamento */}
                 {podeMutarOrcamento &&
+                  !vencida &&
                   item.id &&
                   formularioAberto && (
                     <LancarOrcamentoInline
@@ -859,6 +877,7 @@ export default function CotacaoDetailPage({
 
                 {/* Botão para lançar orçamento */}
                 {podeMutarOrcamento &&
+                  !vencida &&
                   item.id &&
                   !formularioAberto && (
                     <TableRow className="hover:bg-transparent">

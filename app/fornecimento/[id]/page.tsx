@@ -28,12 +28,14 @@ useGestoresResponsaveis,
 useOrdemDeFornecimento,
     useReenviarLembreteFornecedor,
     useReenviarEmailOrdemDeFornecimento,
+    useAtualizarObservacoesOrdemDeFornecimento,
 } from "@/hooks/use-fornecimento";
 import { baixarPdfOrdemDeFornecimento } from "@/services/fornecimento-service";
 import { useAuth } from "@/contexts/auth-context";
 import { PerfilUsuario } from "@/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatDateOnly, getStatusPrazoLabel } from "@/lib/prazo-utils";
+import { Textarea } from "@/components/ui/textarea";
 
 function formatDate(date: string | null) {
 if (!date) return "-";
@@ -124,6 +126,15 @@ const [emailReenvioConcluido, setEmailReenvioConcluido] = useState(false);
 const [baixandoPdf, setBaixandoPdf] = useState(false);
 
 const ehGestor = usuario?.perfil === PerfilUsuario.GESTOR;
+const {
+    atualizarObservacoes,
+    isUpdating: isUpdatingObservacoes,
+    error: observacoesError,
+} = useAtualizarObservacoesOrdemDeFornecimento();
+
+const [editandoObservacoes, setEditandoObservacoes] = useState(false);
+const [observacoesEditadas, setObservacoesEditadas] = useState("");
+const [observacoesSalvas, setObservacoesSalvas] = useState(false);
 
 function iniciarEdicaoPrazo() {
     if (!ordem) return;
@@ -136,6 +147,38 @@ function alternarResponsavel(id: string) {
     setResponsavelIds((atual) =>
         atual.includes(id) ? atual.filter((item) => item !== id) : [...atual, id],
     );
+}
+
+function iniciarEdicaoObservacoes() {
+    if (!ordem) return;
+
+    setObservacoesEditadas(ordem.observacoes ?? "");
+    setObservacoesSalvas(false);
+    setEditandoObservacoes(true);
+}
+
+function cancelarEdicaoObservacoes() {
+    setObservacoesEditadas(ordem?.observacoes ?? "");
+    setEditandoObservacoes(false);
+    setObservacoesSalvas(false);
+}
+
+async function salvarObservacoes() {
+    if (!ordem) return;
+
+    setObservacoesSalvas(false);
+
+    try {
+        await atualizarObservacoes({
+            id: ordem.id,
+            observacoes: observacoesEditadas.trim() || null,
+        });
+
+        setEditandoObservacoes(false);
+        setObservacoesSalvas(true);
+    } catch {
+        // O erro da mutation será exibido na interface.
+    }
 }
 
 async function salvarPrazo() {
@@ -383,8 +426,10 @@ return (
                         <p className="font-medium break-all">{ordem.fornecedores?.email || "-"}</p>
                     </div>
                     <div>
-                        <p className="text-sm text-muted-foreground">Tentativas</p>
-                        <p className="font-medium">{ordem.email_envio_tentativas ?? 0}</p>
+                        <p className="text-sm text-muted-foreground">Tentativas totais</p>
+                        <p className="font-medium">
+                            {ordem.envios_email?.length ?? ordem.email_envio_tentativas ?? 0}
+                        </p>
                     </div>
                     <div>
                         <p className="text-sm text-muted-foreground">Último sucesso</p>
@@ -404,13 +449,15 @@ return (
                     {!ordem.envios_email?.length ? (
                         <p className="text-sm text-muted-foreground">Nenhuma tentativa registrada.</p>
                     ) : (
-                        ordem.envios_email.map((envio) => (
+                        ordem.envios_email!.map((envio, index) => (
                             <div key={envio.id} className="flex flex-col gap-1 border-b pb-2 last:border-0">
                                 <div className="flex flex-wrap items-center gap-2">
                                     <Badge variant={envio.status === "falhou" ? "destructive" : "outline"}>
                                         {envio.status === "enviado" ? "Enviado" : envio.status === "falhou" ? "Falhou" : envio.status}
                                     </Badge>
-                                    <span className="text-sm">Ciclo {envio.ciclo} · tentativa {envio.tentativa}</span>
+                                    <span className="text-sm">
+                                        Ciclo {envio.ciclo} · tentativa {(ordem.envios_email?.length ?? 0) - index}
+                                    </span>
                                     <span className="text-xs text-muted-foreground">{formatDateTime(envio.enviado_em || envio.falhou_em || envio.created_at)}</span>
                                 </div>
                                 {envio.erro && <p className="text-xs text-destructive">{envio.erro}</p>}
@@ -713,19 +760,75 @@ return (
         </CardContent>
         </Card>
 
-        {ordem.observacoes && (
         <Card>
             <CardHeader>
-            <CardTitle>Observações</CardTitle>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <CardTitle>Observações</CardTitle>
+
+                    {ehGestor && !editandoObservacoes && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={iniciarEdicaoObservacoes}
+                        >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Editar observações
+                        </Button>
+                    )}
+                </div>
             </CardHeader>
 
-            <CardContent>
-            <p className="text-sm whitespace-pre-wrap">
-                {ordem.observacoes}
-            </p>
+            <CardContent className="space-y-4">
+                {editandoObservacoes ? (
+                    <>
+                        <Textarea
+                            value={observacoesEditadas}
+                            onChange={(event) =>
+                                setObservacoesEditadas(event.target.value)
+                            }
+                            placeholder="Digite as observações da ordem de fornecimento..."
+                            rows={5}
+                            disabled={isUpdatingObservacoes}
+                        />
+
+                        {observacoesError && (
+                            <p className="text-sm text-destructive">
+                                {observacoesError}
+                            </p>
+                        )}
+
+                        <div className="flex flex-wrap gap-2">
+                            <Button
+                                onClick={() => void salvarObservacoes()}
+                                disabled={isUpdatingObservacoes}
+                            >
+                                <Save className="mr-2 h-4 w-4" />
+                                {isUpdatingObservacoes ? "Salvando..." : "Salvar"}
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                onClick={cancelarEdicaoObservacoes}
+                                disabled={isUpdatingObservacoes}
+                            >
+                                <X className="mr-2 h-4 w-4" />
+                                Cancelar
+                            </Button>
+                        </div>
+                    </>
+                ) : (
+                    <p className="text-sm whitespace-pre-wrap">
+                        {ordem.observacoes || "Nenhuma observação cadastrada."}
+                    </p>
+                )}
+
+                {observacoesSalvas && (
+                    <p className="text-sm text-green-700">
+                        Observações atualizadas com sucesso.
+                    </p>
+                )}
             </CardContent>
-        </Card>
-        )}
+            </Card>
     </div>
     </DashboardLayout>
 );
