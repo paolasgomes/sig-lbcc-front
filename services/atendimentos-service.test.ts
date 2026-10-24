@@ -1,3 +1,4 @@
+
 import { describe, it, expect } from "vitest";
 import { mapApiAtendimentoToAtendimento } from "./atendimentos-service";
 
@@ -21,10 +22,10 @@ describe("mapApiAtendimentoToAtendimento", () => {
       tipo: "consulta",
       dataAtendimento: "2026-06-07",
       descricao: "Consulta de rotina",
+      transporte: "",
       criadoEm: "2026-06-07T10:00:00Z",
       atualizadoEm: "2026-06-08T10:00:00Z",
       pacienteNome: "Maria Silva",
-      criadoPorNome: undefined,
     });
   });
 });
