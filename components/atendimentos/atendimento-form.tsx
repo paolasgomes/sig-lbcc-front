@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -34,7 +35,10 @@ interface AtendimentoFormProps {
   isEditing?: boolean;
 }
 
-export function AtendimentoForm({ atendimento, isEditing }: AtendimentoFormProps) {
+export function AtendimentoForm({
+  atendimento,
+  isEditing,
+}: AtendimentoFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefillPacienteId = searchParams.get("pacienteId") ?? "";
@@ -48,10 +52,15 @@ export function AtendimentoForm({ atendimento, isEditing }: AtendimentoFormProps
     tipo: (atendimento?.tipo || "consulta") as TipoAtendimento,
     dataAtendimento: atendimento?.dataAtendimento || todayDateOnly(),
     descricao: atendimento?.descricao || "",
+    transporte: atendimento?.transporte ?? "",
   });
+
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const pacientesAtivos = pacientes.filter((p) => p.status === StatusPaciente.ATIVO);
+  const pacientesAtivos = pacientes.filter(
+    (p) => p.status === StatusPaciente.ATIVO,
+  );
+
   const pacienteLocked = Boolean(prefillPacienteId && !isEditing);
 
   const handleChange = (field: keyof typeof formData, value: string) => {
@@ -73,10 +82,15 @@ export function AtendimentoForm({ atendimento, isEditing }: AtendimentoFormProps
 
     try {
       if (isEditing && atendimento) {
-        await atualizarAtendimento({ id: atendimento.id, dados: formData });
+        await atualizarAtendimento({
+          id: atendimento.id,
+          dados: formData,
+        });
+
         router.push(`/atendimentos/${atendimento.id}`);
       } else {
         const criado = await criarAtendimento(formData);
+
         if (prefillPacienteId) {
           router.push(`/pacientes/${formData.pacienteId}`);
         } else {
@@ -98,10 +112,12 @@ export function AtendimentoForm({ atendimento, isEditing }: AtendimentoFormProps
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
+
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
             {isEditing ? "Editar Atendimento" : "Novo Atendimento"}
           </h1>
+
           <p className="text-muted-foreground">
             {isEditing
               ? "Atualize as informações do atendimento"
@@ -122,18 +138,23 @@ export function AtendimentoForm({ atendimento, isEditing }: AtendimentoFormProps
           <CardTitle>Informações do Atendimento</CardTitle>
           <CardDescription>Dados básicos do atendimento</CardDescription>
         </CardHeader>
+
         <CardContent>
           <FieldGroup className="grid gap-4 sm:grid-cols-2">
             <Field>
               <FieldLabel>Paciente *</FieldLabel>
+
               <select
                 value={formData.pacienteId}
-                onChange={(e) => handleChange("pacienteId", e.target.value)}
+                onChange={(e) =>
+                  handleChange("pacienteId", e.target.value)
+                }
                 disabled={pacienteLocked}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 required
               >
                 <option value="">Selecione um paciente...</option>
+
                 {pacientesAtivos.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.nomeCompleto || p.nome}
@@ -141,8 +162,10 @@ export function AtendimentoForm({ atendimento, isEditing }: AtendimentoFormProps
                 ))}
               </select>
             </Field>
+
             <Field>
               <FieldLabel>Tipo de Atendimento *</FieldLabel>
+
               <select
                 value={formData.tipo}
                 onChange={(e) => handleChange("tipo", e.target.value)}
@@ -156,17 +179,35 @@ export function AtendimentoForm({ atendimento, isEditing }: AtendimentoFormProps
                 ))}
               </select>
             </Field>
+
             <Field>
               <FieldLabel>Data *</FieldLabel>
+
               <Input
                 type="date"
                 value={formData.dataAtendimento}
-                onChange={(e) => handleChange("dataAtendimento", e.target.value)}
+                onChange={(e) =>
+                  handleChange("dataAtendimento", e.target.value)
+                }
                 required
               />
             </Field>
+
+            <Field>
+              <FieldLabel>Transporte</FieldLabel>
+
+              <Input
+                value={formData.transporte}
+                onChange={(e) =>
+                  handleChange("transporte", e.target.value)
+                }
+                placeholder="Ex.: veículo próprio, ambulância..."
+              />
+            </Field>
+
             <Field className="sm:col-span-2">
               <FieldLabel>Descrição *</FieldLabel>
+
               <Textarea
                 value={formData.descricao}
                 onChange={(e) => handleChange("descricao", e.target.value)}
@@ -183,6 +224,7 @@ export function AtendimentoForm({ atendimento, isEditing }: AtendimentoFormProps
         <Button type="button" variant="outline" asChild>
           <Link href="/atendimentos">Cancelar</Link>
         </Button>
+
         <Button
           type="button"
           onClick={() => void handleSubmit()}

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useState } from "react";
@@ -13,6 +14,7 @@ import {
   Calendar,
   FileText,
   AlertTriangle,
+  Truck,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { useAtendimento } from "@/hooks/use-atendimentos";
@@ -41,12 +43,17 @@ interface AtendimentoDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageProps) {
+export default function AtendimentoDetailPage({
+  params,
+}: AtendimentoDetailPageProps) {
   const { id } = use(params);
   const router = useRouter();
+
   const { atendimento, isLoading, error, excluirAtendimento, isDeleting } =
     useAtendimento(id);
+
   const { isGestor } = useUsuario();
+
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -64,7 +71,9 @@ export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageP
 
   const formatDateTime = (dateStr: string) => {
     try {
-      return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: ptBR });
+      return format(new Date(dateStr), "dd/MM/yyyy HH:mm", {
+        locale: ptBR,
+      });
     } catch {
       return dateStr;
     }
@@ -72,6 +81,7 @@ export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageP
 
   const handleDelete = async () => {
     setActionError(null);
+
     try {
       await excluirAtendimento(atendimento.pacienteId);
       router.push("/atendimentos");
@@ -93,14 +103,19 @@ export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageP
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
+
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Atendimento</h1>
+              <h1 className="text-2xl font-bold tracking-tight">
+                Atendimento
+              </h1>
+
               <p className="text-muted-foreground">
                 {getTipoAtendimentoLabel(atendimento.tipo)} —{" "}
                 {formatDataAtendimento(atendimento.dataAtendimento)}
               </p>
             </div>
           </div>
+
           <div className="flex gap-2">
             <Button variant="outline" asChild>
               <Link href={`/atendimentos/${atendimento.id}/editar`}>
@@ -108,6 +123,7 @@ export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageP
                 Editar
               </Link>
             </Button>
+
             {isGestor && (
               <Button
                 variant="outline"
@@ -138,6 +154,7 @@ export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageP
                 Paciente
               </CardTitle>
             </CardHeader>
+
             <CardContent>
               <Link
                 href={`/pacientes/${atendimento.pacienteId}`}
@@ -155,14 +172,31 @@ export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageP
                 Detalhes
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <div className="flex justify-between">
+
+            <CardContent className="flex flex-col gap-3">
+              <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground">Tipo:</span>
-                <span>{getTipoAtendimentoLabel(atendimento.tipo)}</span>
+                <span className="text-right">
+                  {getTipoAtendimentoLabel(atendimento.tipo)}
+                </span>
               </div>
-              <div className="flex justify-between">
+
+              <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground">Data:</span>
-                <span>{formatDataAtendimento(atendimento.dataAtendimento)}</span>
+                <span className="text-right">
+                  {formatDataAtendimento(atendimento.dataAtendimento)}
+                </span>
+              </div>
+
+              <div className="flex justify-between gap-4">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Truck className="h-4 w-4" />
+                  Transporte:
+                </span>
+
+                <span className="text-right">
+                  {atendimento.transporte?.trim() || "Não informado"}
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -174,11 +208,16 @@ export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageP
                 Descrição
               </CardTitle>
             </CardHeader>
+
             <CardContent>
               {atendimento.descricao ? (
-                <p className="whitespace-pre-wrap">{atendimento.descricao}</p>
+                <p className="whitespace-pre-wrap">
+                  {atendimento.descricao}
+                </p>
               ) : (
-                <p className="text-muted-foreground">Nenhuma descrição registrada.</p>
+                <p className="text-muted-foreground">
+                  Nenhuma descrição registrada.
+                </p>
               )}
             </CardContent>
           </Card>
@@ -187,33 +226,50 @@ export default function AtendimentoDetailPage({ params }: AtendimentoDetailPageP
             <CardHeader>
               <CardTitle>Metadados</CardTitle>
             </CardHeader>
+
             <CardContent className="flex flex-col gap-2">
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground">Criado em</span>
                 <span>{formatDateTime(atendimento.criadoEm)}</span>
               </div>
+
               {atendimento.atualizadoEm && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Atualizado em</span>
-                  <span>{formatDateTime(atendimento.atualizadoEm)}</span>
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">
+                    Atualizado em
+                  </span>
+                  <span>
+                    {formatDateTime(atendimento.atualizadoEm)}
+                  </span>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
 
-        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Excluir atendimento?</AlertDialogTitle>
+              <AlertDialogTitle>
+                Excluir atendimento?
+              </AlertDialogTitle>
+
               <AlertDialogDescription>
                 Esta ação não pode ser desfeita. O registro será removido
                 permanentemente.
               </AlertDialogDescription>
             </AlertDialogHeader>
+
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={() => void handleDelete()}>
+
+              <AlertDialogAction
+                onClick={() => void handleDelete()}
+                disabled={isDeleting}
+              >
                 Excluir
               </AlertDialogAction>
             </AlertDialogFooter>

@@ -1,4 +1,5 @@
-// Enums
+
+ // Enums
 export enum PerfilUsuario {
   OPERADOR = "operador",
   GESTOR = "gestor",
@@ -145,8 +146,7 @@ export interface AreaCreateInput {
   descricao: string;
 }
 
-export type AreaUpdateInput =
-  Partial<AreaCreateInput>;
+export type AreaUpdateInput = Partial<AreaCreateInput>;
 
 export interface ApiFornecedorDTO {
   id: string;
@@ -352,6 +352,7 @@ export interface Atendimento {
   tipo: TipoAtendimento;
   dataAtendimento: string;
   descricao: string;
+  transporte?: string | null;
   criadoEm: string;
   atualizadoEm?: string;
   pacienteNome?: string;
@@ -373,10 +374,10 @@ export interface AtendimentoCreateInput {
   tipo: TipoAtendimento;
   dataAtendimento: string;
   descricao: string;
+  transporte?: string | null;
 }
 
-export type AtendimentoUpdateInput =
-  AtendimentoCreateInput;
+export type AtendimentoUpdateInput = AtendimentoCreateInput;
 
 export interface Documento {
   id: string;
@@ -404,8 +405,7 @@ export type CotacaoFormData = Omit<
   itens: Omit<ItemCotacao, "id">[];
 };
 
-export type AtendimentoFormData =
-  AtendimentoCreateInput;
+export type AtendimentoFormData = AtendimentoCreateInput;
 
 // =========================
 // TYPES PARA FILTROS

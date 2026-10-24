@@ -1,3 +1,4 @@
+
 import axios from "axios";
 import { api } from "./api";
 import { getFriendlyApiError } from "@/lib/api-errors";
@@ -14,6 +15,7 @@ export interface ApiAtendimentoDTO {
   tipo: string;
   data_atendimento: string;
   descricao: string;
+  transporte?: string | null;
   created_at: string;
   updated_at?: string | null;
   created_by?: string | null;
@@ -52,6 +54,7 @@ export function mapApiAtendimentoToAtendimento(
     tipo: dto.tipo as TipoAtendimento,
     dataAtendimento: dto.data_atendimento,
     descricao: dto.descricao ?? "",
+    transporte: dto.transporte ?? "",
     criadoEm: dto.created_at,
     atualizadoEm: dto.updated_at ?? undefined,
     pacienteNome: dto.pacientes?.nome,
@@ -66,6 +69,7 @@ function mapAtendimentoToApiPayload(
     tipo: dados.tipo,
     data_atendimento: dados.dataAtendimento,
     descricao: dados.descricao,
+    transporte: dados.transporte ?? null,
   };
 }
 
