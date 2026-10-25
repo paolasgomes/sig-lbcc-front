@@ -157,6 +157,16 @@ export async function reenviarEmailOrdemDeFornecimento(
     return response.data.data;
 }
 
+export async function reenviarReciboFinalizacaoOrdemDeFornecimento(
+    id: string,
+): Promise<{ message: string; data: unknown }> {
+    const response = await api.post(
+        `/fornecimento/${id}/recibo/reenvio`,
+    );
+
+    return response.data;
+}
+
 export async function baixarPdfOrdemDeFornecimento(
     id: string,
 ): Promise<{ blob: Blob; filename: string; origem: string }> {

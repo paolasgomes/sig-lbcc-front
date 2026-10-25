@@ -3,12 +3,13 @@
 import { use, useMemo, useState } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { useCotacao } from "@/hooks/use-cotacoes";
 import { useProdutos } from "@/hooks/use-produtos";
 import { useUsuario } from "@/hooks/use-usuario";
 import { ROLES_ATENDIMENTOS_E_COTACOES } from "@/lib/access-control";
+import { EmissaoOrdemTransporte } from "@/components/transporte/emissao-ordem-transporte";
+
 
 import {
   isCotacaoVencida,
@@ -550,6 +551,19 @@ export default function CotacaoDetailPage({
             </AlertDescription>
           </Alert>
         )}
+        {/* RF_F11 - Ordem de Transporte */}
+        {isGestor &&
+          cotacao.status === "finalizada" &&
+          !cotacaoExpirada &&
+          cotacao.areaNome
+            ?.trim()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase() === "transporte urbano" && (
+            <EmissaoOrdemTransporte
+              cotacaoId={cotacao.id}
+            />
+          )}
 
         {/* Informações gerais */}
         <Card>

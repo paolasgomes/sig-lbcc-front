@@ -6,17 +6,20 @@ import {
     useQueryClient,
 } from "@tanstack/react-query";
 
+
 import {
     listarOrdensDeFornecimento,
     obterOrdemDeFornecimento,
     gerarOrdensDeFornecimento,
     confirmarRecebimentoOrdemDeFornecimento,
     reenviarEmailOrdemDeFornecimento,
+    reenviarReciboFinalizacaoOrdemDeFornecimento,
     finalizarOrdemDeFornecimento,
     atualizarPrazoOrdemDeFornecimento,
     listarGestoresResponsaveis,
     atualizarObservacoesOrdemDeFornecimento,
 } from "@/services/fornecimento-service";
+
 import {
     obterLembreteFornecedor,
     reenviarLembreteFornecedor,
@@ -263,6 +266,34 @@ export function useAtualizarObservacoesOrdemDeFornecimento() {
     return {
         atualizarObservacoes: mutation.mutateAsync,
         isUpdating: mutation.isPending,
+        error:
+            mutation.error instanceof Error
+                ? mutation.error.message
+                : mutation.error ?? null,
+    };
+}
+
+export function useReenviarReciboFinalizacaoOrdemDeFornecimento() {
+    const queryClient = useQueryClient();
+
+    const mutation = useMutation({
+        mutationFn: (id: string) =>
+            reenviarReciboFinalizacaoOrdemDeFornecimento(id),
+
+        onSuccess: (_resultado, id) => {
+            queryClient.invalidateQueries({
+                queryKey: ["fornecimento"],
+            });
+
+            queryClient.invalidateQueries({
+                queryKey: ["fornecimento", id],
+            });
+        },
+    });
+
+    return {
+        reenviarRecibo: mutation.mutateAsync,
+        isReenviandoRecibo: mutation.isPending,
         error:
             mutation.error instanceof Error
                 ? mutation.error.message
