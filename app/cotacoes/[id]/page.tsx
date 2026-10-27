@@ -840,6 +840,7 @@ export default function CotacaoDetailPage({
                   item.id &&
                   formularioAberto && (
                     <LancarOrcamentoInline
+                      produtoId={item.produtoId ?? ""}
                       disabled={
                         !podeMutarOrcamento
                       }

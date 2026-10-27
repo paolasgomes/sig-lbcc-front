@@ -188,14 +188,20 @@ export function CotacaoForm({
   );
 
   const produtosParaSelecao = useMemo(
-    () =>
-      produtos.filter(
-        (p) =>
-          p.ativo !== false ||
-          produtosVinculadosIds.has(p.id),
-      ),
-    [produtos, produtosVinculadosIds],
-  );
+  () =>
+    produtos.filter((produto) => {
+      const ativoOuJaVinculado =
+        produto.ativo !== false ||
+        produtosVinculadosIds.has(produto.id);
+
+      const pertenceArea =
+        !areaId ||
+        (produto.areas_ids ?? []).includes(areaId);
+
+      return ativoOuJaVinculado && pertenceArea;
+    }),
+  [produtos, produtosVinculadosIds, areaId],
+);
 
   const produtosPorId = useMemo(
     () =>
@@ -216,6 +222,35 @@ export function CotacaoForm({
     setPacienteId("");
     setPacienteBusca("");
   };
+
+  const handleSelecionarArea = (novaAreaId: string) => {
+  setAreaId(novaAreaId);
+
+  setItens((atuais) =>
+    atuais.map((item) => {
+      if (!item.produtoId) {
+        return item;
+      }
+
+      const produto = produtos.find(
+        (p) => p.id === item.produtoId,
+      );
+
+      const pertenceArea =
+        (produto?.areas_ids ?? []).includes(novaAreaId);
+
+      if (pertenceArea) {
+        return item;
+      }
+
+      return {
+        ...item,
+        produtoId: undefined,
+        descricao: "",
+      };
+    }),
+  );
+};
 
   const handleAddRow = () => {
     setItens([
@@ -528,7 +563,7 @@ export function CotacaoForm({
 
               <Select
                 value={areaId}
-                onValueChange={setAreaId}
+                onValueChange={handleSelecionarArea}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma área..." />

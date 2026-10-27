@@ -10,6 +10,7 @@ export interface ApiProdutoDTO {
   ativo: boolean;
   created_at: string;
   updated_at: string;
+  areas_ids?: string[];
 }
 
 export interface ProdutoCreateInput {
@@ -17,6 +18,7 @@ export interface ProdutoCreateInput {
   descricao: string;
   unidade: string;
   ativo?: boolean;
+  areas_ids?: string[];
 }
 
 export type ProdutoUpdateInput = Partial<ProdutoCreateInput>;
@@ -34,6 +36,7 @@ export function mapApiProdutoToProduto(apiProduto: ApiProdutoDTO): Produto {
     ativo: apiProduto.ativo ?? true,
     criadoEm: apiProduto.created_at ?? new Date().toISOString(),
     atualizadoEm: apiProduto.updated_at ?? new Date().toISOString(),
+    areas_ids: apiProduto.areas_ids ?? [],
   };
 }
 
@@ -43,6 +46,7 @@ export function mapProdutoToApiPayload(produto: Partial<Produto>): ProdutoCreate
     descricao: produto.descricao ?? "",
     unidade: produto.unidade ?? "UN",
     ativo: produto.ativo ?? true,
+    areas_ids: produto.areas_ids ?? [],
   };
 }
 

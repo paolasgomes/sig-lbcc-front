@@ -37,6 +37,7 @@
     disabled?: boolean;
     isSubmitting?: boolean;
     fornecedorIdsNoItem?: string[];
+    produtoId: string;
     onSubmit: (
         blocos: OrcamentoBlocoInput[],
     ) => Promise<void>;
@@ -57,6 +58,7 @@
     disabled = false,
     isSubmitting = false,
     fornecedorIdsNoItem = [],
+    produtoId,
     onSubmit,
     onCancel,
     }: LancarOrcamentoInlineProps) {
@@ -147,8 +149,12 @@
                 outro.fornecedorId,
             ),
         );
+        const fornecedoresDoProduto = fornecedoresAtivos.filter(
+        (fornecedor) =>
+            fornecedor.produtosIds?.includes(produtoId),
+        );
 
-        return fornecedoresAtivos.filter(
+        return fornecedoresDoProduto.filter(
         (fornecedor) => {
             if (
             fornecedor.id ===
@@ -188,13 +194,16 @@
         return ids;
     }, [blocos, idsJaNoItem]);
 
+    const fornecedoresDoProduto =
+    fornecedoresAtivos.filter((fornecedor) =>
+        fornecedor.produtosIds?.includes(produtoId),
+    );
+
     const podeAdicionarBloco =
-        fornecedoresAtivos.some(
+    fornecedoresDoProduto.some(
         (fornecedor) =>
-            !idsReservados.has(
-            fornecedor.id,
-            ),
-        );
+        !idsReservados.has(fornecedor.id),
+    );
 
     const blocosIncompletos =
         blocos.length === 0 ||

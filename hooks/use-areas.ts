@@ -32,6 +32,7 @@ export function useAreas() {
     const payload: AreaCreateInput = {
       nome: area.nome ?? "",
       descricao: area.descricao ?? "",
+      tipo_ordem: area.tipo_ordem ?? "OF",
     };
 
     const areaCriada = await criarAreaApi(payload);
@@ -49,6 +50,7 @@ export function useAreas() {
     const payload: AreaUpdateInput = {
       nome: dados.nome,
       descricao: dados.descricao,
+      tipo_ordem: dados.tipo_ordem,
     };
 
     const areaAtualizada = await atualizarAreaApi(id, payload);

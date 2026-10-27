@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFornecedores } from "@/hooks/use-fornecedores";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import type { Fornecedor } from "@/types";
 import { formatCnpj, formatPhone, onlyDigits } from "@/lib/formatters";
+import { useProdutos } from "@/hooks/use-produtos";
 
 interface FornecedorFormProps {
   fornecedor?: Fornecedor;
@@ -30,6 +31,15 @@ export function FornecedorForm({ fornecedor, isEditing }: FornecedorFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const { produtos, isLoading: isLoadingProdutos } = useProdutos();
+
+  const [produtosIds, setProdutosIds] = useState<string[]>(
+    fornecedor?.produtosIds ?? [],
+  );
+  useEffect(() => {
+    setProdutosIds(fornecedor?.produtosIds ?? []);
+  }, [fornecedor?.produtosIds]);
+
   const [formData, setFormData] = useState({
     razaoSocial: fornecedor?.razaoSocial ?? "",
     nomeFantasia: fornecedor?.nomeFantasia ?? "",
@@ -39,10 +49,36 @@ export function FornecedorForm({ fornecedor, isEditing }: FornecedorFormProps) {
     ativo: fornecedor?.ativo ?? true,
   });
 
+  useEffect(() => {
+    if (!fornecedor) return;
+
+    setFormData({
+      razaoSocial: fornecedor.razaoSocial ?? "",
+      nomeFantasia: fornecedor.nomeFantasia ?? "",
+      cnpj: fornecedor.cnpj ? formatCnpj(fornecedor.cnpj) : "",
+      telefone: fornecedor.telefone ? formatPhone(fornecedor.telefone) : "",
+      email: fornecedor.email ?? "",
+      ativo: fornecedor.ativo ?? true,
+    });
+  }, [fornecedor]);
+
+  const handleProdutoChange = (produtoId: string, selecionado: boolean) => {
+    setProdutosIds((atuais) =>
+      selecionado
+        ? [...new Set([...atuais, produtoId])]
+        : atuais.filter((id) => id !== produtoId),
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.razaoSocial.trim()) {
       setSubmitError("Razão social é obrigatória.");
+      return;
+    }
+
+    if (produtosIds.length === 0) {
+      setSubmitError("Selecione pelo menos um produto para o fornecedor.");
       return;
     }
 
@@ -57,6 +93,7 @@ export function FornecedorForm({ fornecedor, isEditing }: FornecedorFormProps) {
             nomeFantasia: formData.nomeFantasia || undefined,
             telefone: onlyDigits(formData.telefone) || undefined,
             email: formData.email || undefined,
+            produtosIds,
           },
         });
 
@@ -71,6 +108,7 @@ export function FornecedorForm({ fornecedor, isEditing }: FornecedorFormProps) {
           telefone: onlyDigits(formData.telefone) || undefined,
           email: formData.email || undefined,
           ativo: formData.ativo,
+          produtosIds,
         });
       }
 
@@ -174,6 +212,49 @@ export function FornecedorForm({ fornecedor, isEditing }: FornecedorFormProps) {
               </div>
             </Field>
           </FieldGroup>
+          <div className="mt-6 space-y-3">
+            <div>
+              <h3 className="text-sm font-medium">Produtos fornecidos *</h3>
+              <p className="text-sm text-muted-foreground">
+                Selecione os produtos que este fornecedor pode fornecer.
+              </p>
+            </div>
+
+            {isLoadingProdutos ? (
+              <p className="text-sm text-muted-foreground">
+                Carregando produtos...
+              </p>
+            ) : produtos.filter((produto) => produto.ativo !== false).length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Não há produtos ativos disponíveis para seleção.
+              </p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {produtos
+                  .filter((produto) => produto.ativo !== false)
+                  .map((produto) => (
+                    <label
+                      key={produto.id}
+                      className="flex cursor-pointer items-center gap-2 rounded-md border p-3"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={produtosIds.includes(produto.id)}
+                        onChange={(e) =>
+                          handleProdutoChange(produto.id, e.target.checked)
+                        }
+                        className="h-4 w-4 rounded border-border"
+                      />
+                      <span className="text-sm">{produto.nome}</span>
+                    </label>
+                  ))}
+              </div>
+            )}
+
+            <p className="text-sm text-muted-foreground">
+              {produtosIds.length} produto(s) selecionado(s).
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -188,7 +269,10 @@ export function FornecedorForm({ fornecedor, isEditing }: FornecedorFormProps) {
         <Button type="button" variant="outline" asChild>
           <Link href="/fornecedores">Cancelar</Link>
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        <Button
+          type="submit"
+          disabled={isSubmitting || isLoadingProdutos}
+        >
           <Save className="mr-2 h-4 w-4" />
           {isSubmitting
             ? "Salvando..."

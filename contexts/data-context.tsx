@@ -703,6 +703,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const payload: AreaCreateInput = {
       nome: area.nome ?? "",
       descricao: area.descricao ?? "",
+      tipo_ordem: area.tipo_ordem ?? "OF",
     };
 
     const areaCriada = await criarArea(payload);
@@ -728,6 +729,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const payload: AreaUpdateInput = {
         nome: dados.nome,
         descricao: dados.descricao,
+        tipo_ordem: dados.tipo_ordem,
       };
 
       const areaAtualizada = await atualizarAreaApi(id, payload);
@@ -791,6 +793,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ativo: (produtoMapeado.ativo || payload.ativo) ?? false,
       criadoEm: produtoMapeado.criadoEm || new Date().toISOString(),
       atualizadoEm: produtoMapeado.atualizadoEm || new Date().toISOString(),
+      areas_ids: produtoMapeado.areas_ids ?? produto.areas_ids ?? [],
     };
 
     setProdutos((prev) => [...prev, produtoCompleto]);
@@ -819,6 +822,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ativo: produtoMapeado.ativo ?? produtoAtual?.ativo ?? true,
         criadoEm: produtoMapeado.criadoEm || produtoAtual?.criadoEm,
         atualizadoEm: produtoMapeado.atualizadoEm || new Date().toISOString(),
+        areas_ids: produtoMapeado.areas_ids ?? dados.areas_ids ?? produtoAtual?.areas_ids ?? [],
       };
 
       setProdutos((prev) => prev.map((p) => (p.id === id ? produtoCompleto : p)));

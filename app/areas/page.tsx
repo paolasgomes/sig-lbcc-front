@@ -76,6 +76,7 @@ export default function AreasPage() {
     nome: "",
     descricao: "",
     ativa: true,
+    tipo_ordem: "OF" as "OF" | "OT" | "AMBOS"
   });
 
   const filteredAreas = useMemo(() => {
@@ -95,7 +96,12 @@ export default function AreasPage() {
 
   const resetForm = () => {
     setEditingArea(null);
-    setFormData({ nome: "", descricao: "", ativa: true });
+    setFormData({
+      nome: "",
+      descricao: "",
+      ativa: true,
+      tipo_ordem: "OF",
+    });
   };
 
   const handleOpenDialog = (area?: AreaAtendimento) => {
@@ -108,10 +114,11 @@ export default function AreasPage() {
         nome: area.nome,
         descricao: area.descricao,
         ativa: area.ativa,
+        tipo_ordem: area.tipo_ordem ?? "OF",
       });
     } else {
       setEditingArea(null);
-      setFormData({ nome: "", descricao: "", ativa: true });
+      setFormData({ nome: "", descricao: "", ativa: true, tipo_ordem: "OF" });
     }
     setIsDialogOpen(true);
   };
@@ -162,9 +169,9 @@ export default function AreasPage() {
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Areas de Atendimento</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Áreas de Atendimento</h1>
             <p className="text-muted-foreground">
-              Gerencie as areas de servico oferecidas pela Liga
+              Gerencie as áreas de serviço oferecidas pela Liga
             </p>
           </div>
           <Dialog
@@ -181,23 +188,23 @@ export default function AreasPage() {
             <DialogTrigger asChild>
               <Button onClick={() => handleOpenDialog()}>
                 <Plus className="mr-2 h-4 w-4" />
-                Nova Area
+                Nova Área
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>
-                  {editingArea ? "Editar Area" : "Nova Area de Atendimento"}
+                  {editingArea ? "Editar Área" : "Nova Área de Atendimento"}
                 </DialogTitle>
                 <DialogDescription>
                   {editingArea
-                    ? "Atualize as informacoes da area de atendimento"
-                    : "Cadastre uma nova area de atendimento"}
+                    ? "Atualize as informacoes da área de atendimento"
+                    : "Cadastre uma nova área de atendimento"}
                 </DialogDescription>
               </DialogHeader>
               <FieldGroup>
                 <Field>
-                  <FieldLabel>Nome da Area</FieldLabel>
+                  <FieldLabel>Nome da Área</FieldLabel>
                   <Input
                     value={formData.nome}
                     onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
@@ -211,10 +218,27 @@ export default function AreasPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, descricao: e.target.value })
                     }
-                    placeholder="Descreva os servicos oferecidos nesta area..."
+                    placeholder="Descreva os serviços oferecidos nesta área..."
                     rows={3}
                   />
                 </Field>
+                <Field>
+                <FieldLabel>Tipo de ordem</FieldLabel>
+                <select
+                  value={formData.tipo_ordem}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      tipo_ordem: e.target.value as "OF" | "OT" | "AMBOS",
+                    })
+                  }
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="OF">OF — Ordem de Fornecimento</option>
+                  <option value="OT">OT — Ordem de Transporte</option>
+                  <option value="AMBOS">Ambos</option>
+                </select>
+              </Field>
                 <Field className="flex flex-row items-center gap-2">
                   <input
                     type="checkbox"
@@ -226,7 +250,7 @@ export default function AreasPage() {
                     className="h-4 w-4 rounded border-border"
                   />
                   <FieldLabel htmlFor="ativa" className="mb-0">
-                    Area ativa
+                    Área ativa
                   </FieldLabel>
                 </Field>
               </FieldGroup>
@@ -285,16 +309,16 @@ export default function AreasPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5" />
-              Areas Cadastradas
+              Áreas Cadastradas
             </CardTitle>
-            <CardDescription>{areas.length} area(s) cadastrada(s)</CardDescription>
+            <CardDescription>{areas.length} área(s) cadastrada(s)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="mb-4">
               <div className="relative max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar areas..."
+                  placeholder="Buscar áreas..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -310,16 +334,17 @@ export default function AreasPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nome</TableHead>
-                      <TableHead>Descricao</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Tipo de ordem</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="w-17.5">Acoes</TableHead>
+                      <TableHead className="w-17.5">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {displayedAreas.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
-                          Nenhuma area encontrada.
+                        <TableCell colSpan={5} className="h-24 text-center">
+                          Nenhuma área encontrada.
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -328,6 +353,11 @@ export default function AreasPage() {
                           <TableCell className="font-medium">{area.nome}</TableCell>
                           <TableCell className="max-w-xs truncate">
                             {area.descricao}
+                          </TableCell>
+                          <TableCell>
+                            {area.tipo_ordem === "AMBOS"
+                              ? "OF e OT"
+                              : area.tipo_ordem ?? "OF"}
                           </TableCell>
                           <TableCell>
                             <StatusBadge status={area.ativa ? "ativo" : "inativo"} />

@@ -22,6 +22,7 @@ import {
   ROLES_ATENDIMENTOS_E_COTACOES,
   ROLES_GESTAO_COMPLETA,
   PERFIS_DASHBOARD_PACIENTES,
+  ROLES_ORDEM_FORNECIMENTO,
   PERFIS_GESTAO_BASE,
   usuarioTemAcessoAoModulo,
 } from "@/lib/access-control";
@@ -71,7 +72,7 @@ const navItems: NavItem[] = [
   label: "Ordem de Fornecimento",
   href: "/fornecimento",
   icon: FileText,
-  allowedRoles: ROLES_ATENDIMENTOS_E_COTACOES,
+  allowedRoles: ROLES_ORDEM_FORNECIMENTO,
 },
   {
     label: "Áreas",
