@@ -13,6 +13,7 @@ export function mapApiAreaToArea(apiArea: ApiAreaDTO, fallbackId = ""): AreaAten
     nome: apiArea.nome ?? "",
     descricao: apiArea.descricao ?? "",
     ativa: apiArea.ativa ?? true,
+    tipo_ordem: apiArea.tipo_ordem ?? "OF",
   };
 }
 

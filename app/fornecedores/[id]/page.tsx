@@ -12,7 +12,8 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Spinner } from "@/components/ui/spinner";
 import { PERFIS_GESTAO_BASE } from "@/lib/access-control";
 import { formatCnpj, formatPhone } from "@/lib/formatters";
-import { ArrowLeft, Pencil, Building2, Phone, Mail } from "lucide-react";
+import { ArrowLeft, Pencil, Building2, Phone, Mail, Package} from "lucide-react";
+import { useProdutos } from "@/hooks/use-produtos";
 
 interface FornecedorDetailPageProps {
   params: Promise<{ id: string }>;
@@ -21,6 +22,10 @@ interface FornecedorDetailPageProps {
 export default function FornecedorDetailPage({ params }: FornecedorDetailPageProps) {
   const { id } = use(params);
   const { fornecedor, isLoading, error } = useFornecedor(id);
+  const { produtos, isLoading: isLoadingProdutos, error: errorProdutos } = useProdutos();
+  const produtosVinculados = produtos.filter((produto) =>
+    fornecedor?.produtosIds?.includes(produto.id),
+  );
 
   if (isLoading) {
     return (
@@ -111,6 +116,45 @@ export default function FornecedorDetailPage({ params }: FornecedorDetailPagePro
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <span>{fornecedor.email}</span>
               </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Produtos vinculados
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent>
+            {isLoadingProdutos ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Spinner className="h-4 w-4" />
+                <span>Carregando produtos...</span>
+              </div>
+            ) : errorProdutos ? (
+              <p className="text-sm text-destructive">
+                Não foi possível carregar os produtos vinculados.
+              </p>
+            ) : produtosVinculados.length > 0 ? (
+              <ul className="space-y-3">
+                {produtosVinculados.map((produto) => (
+                  <li
+                    key={produto.id}
+                    className="flex items-center justify-between rounded-md border p-3"
+                  >
+                    <span className="font-medium">{produto.nome}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {produto.unidade}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Nenhum produto vinculado a este fornecedor.
+              </p>
             )}
           </CardContent>
         </Card>

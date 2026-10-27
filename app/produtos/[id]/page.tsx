@@ -19,7 +19,7 @@ interface ProdutoDetailPageProps {
 
 export default function ProdutoDetailPage({ params }: ProdutoDetailPageProps) {
   const { id } = use(params);
-  const { produtos } = useData();
+  const { produtos, areas, areasLoading } = useData();
   const [produtoCarregado, setProdutoCarregado] = useState<Produto | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -99,12 +99,39 @@ export default function ProdutoDetailPage({ params }: ProdutoDetailPageProps) {
               </div>
 
               <div>
-                <p className="text-sm text-muted-foreground">Preco Referencia</p>
+                <p className="text-sm text-muted-foreground">Preço Referência</p>
                 <p>
                   {produtoCarregado.precoReferencia
                     ? `R$ ${produtoCarregado.precoReferencia.toFixed(2)}`
                     : "-"}
                 </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Áreas associadas</p>
+
+                {areasLoading ? (
+                  <p className="text-sm text-muted-foreground">
+                    Carregando áreas...
+                  </p>
+                ) : produtoCarregado.areas_ids &&
+                  produtoCarregado.areas_ids.length > 0 ? (
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {produtoCarregado.areas_ids.map((areaId) => {
+                      const area = areas.find((a) => a.id === areaId);
+
+                      return (
+                        <span
+                          key={areaId}
+                          className="rounded-md bg-muted px-2 py-1 text-sm"
+                        >
+                          {area?.nome ?? "Área não encontrada"}
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm">Nenhuma área associada.</p>
+                )}
               </div>
             </CardContent>
           </Card>

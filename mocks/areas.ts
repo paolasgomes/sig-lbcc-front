@@ -5,30 +5,35 @@ export const areasMock: AreaAtendimento[] = [
     id: 'area-001',
     nome: 'Transporte',
     descricao: 'Transporte de pacientes para consultas e tratamentos',
-    ativa: true
+    ativa: true,
+    tipo_ordem: "OT",
   },
   {
     id: 'area-002',
     nome: 'Alimentação',
     descricao: 'Fornecimento de cestas básicas e alimentação durante tratamento',
-    ativa: true
+    ativa: true,
+    tipo_ordem: "OF",
   },
   {
     id: 'area-003',
     nome: 'Medicamentos',
     descricao: 'Fornecimento de medicamentos não disponíveis no SUS',
-    ativa: true
+    ativa: true,
+    tipo_ordem: "OF",
   },
   {
     id: 'area-004',
     nome: 'Exames',
     descricao: 'Realização de exames complementares',
-    ativa: true
+    ativa: true,
+    tipo_ordem: "OF",
   },
   {
     id: 'area-005',
     nome: 'Apoio Social',
     descricao: 'Assistência social e apoio psicológico',
-    ativa: true
+    ativa: true,
+    tipo_ordem: "OF",
   }
 ]

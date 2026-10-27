@@ -11,7 +11,13 @@ export const PERFIS_GESTAO_BASE: PerfilUsuario[] = [
   PerfilUsuario.GESTOR,
 ];
 
-export const ROLES_ATENDIMENTOS_E_COTACOES = ["admin", "gestor", "atendente"];
+export const ROLES_ATENDIMENTOS_E_COTACOES = ["admin", "gestor", "atendente", "operador"];
+export const ROLES_ORDEM_FORNECIMENTO = [
+  "admin",
+  "gestor",
+  "atendente",
+  "operador",
+];
 
 export const ROLES_GESTAO_COMPLETA = ["admin", "gestor"];
 

@@ -125,11 +125,14 @@ export interface Endereco {
   cep: string;
 }
 
+export type TipoOrdem = "OF" | "OT" | "AMBOS";
+
 export interface AreaAtendimento {
   id: string;
   nome: string;
   descricao: string;
   ativa: boolean;
+  tipo_ordem: TipoOrdem;
 }
 
 export interface ApiAreaDTO {
@@ -137,6 +140,7 @@ export interface ApiAreaDTO {
   nome: string;
   descricao: string;
   ativa: boolean;
+  tipo_ordem?: TipoOrdem;
   created_at: string;
   updated_at: string;
 }
@@ -144,6 +148,7 @@ export interface ApiAreaDTO {
 export interface AreaCreateInput {
   nome: string;
   descricao: string;
+  tipo_ordem: TipoOrdem;
 }
 
 export type AreaUpdateInput = Partial<AreaCreateInput>;
@@ -157,6 +162,7 @@ export interface ApiFornecedorDTO {
   email?: string | null;
   ativo?: boolean;
   fornecedorTemVinculos?: boolean;
+  produtos_ids?: string[];
 }
 
 export interface Fornecedor {
@@ -168,6 +174,7 @@ export interface Fornecedor {
   email?: string;
   ativo: boolean;
   fornecedorTemVinculos?: boolean;
+  produtosIds?: string[];
 }
 
 export interface FornecedorCreateInput {
@@ -177,11 +184,12 @@ export interface FornecedorCreateInput {
   telefone?: string;
   email?: string;
   ativo?: boolean;
+  produtosIds?: string[];
 }
 
 export type FornecedorUpdateInput = Pick<
   FornecedorCreateInput,
-  "nomeFantasia" | "telefone" | "email"
+  "nomeFantasia" | "telefone" | "email" | "produtosIds"
 >;
 
 export interface ApiProdutoDTO {
@@ -192,6 +200,7 @@ export interface ApiProdutoDTO {
   ativo: boolean;
   created_at: string;
   updated_at: string;
+  areas_ids?: string[];
 }
 
 export interface Produto {
@@ -206,6 +215,7 @@ export interface Produto {
   precoReferencia?: number;
   referenciaPreco?: number;
   fornecedorId?: string;
+  areas_ids?: string[];
 }
 
 // =========================

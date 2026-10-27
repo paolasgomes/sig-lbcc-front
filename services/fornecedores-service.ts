@@ -21,6 +21,7 @@ export function mapApiFornecedorToFornecedor(dto: ApiFornecedorDTO): Fornecedor 
     email: dto.email ?? undefined,
     ativo: dto.ativo ?? true,
     fornecedorTemVinculos: dto.fornecedorTemVinculos,
+    produtosIds: dto.produtos_ids ?? [],
   };
 }
 
@@ -32,6 +33,7 @@ export function mapFornecedorCreateToApi(dados: FornecedorCreateInput) {
     telefone: dados.telefone,
     email: dados.email,
     ativo: dados.ativo,
+    produtos_ids: dados.produtosIds,
   };
 }
 
@@ -40,6 +42,7 @@ export function mapFornecedorUpdateToApi(dados: FornecedorUpdateInput) {
     nome_fantasia: dados.nomeFantasia,
     telefone: dados.telefone,
     email: dados.email,
+    produtos_ids: dados.produtosIds,
   };
 }
 
