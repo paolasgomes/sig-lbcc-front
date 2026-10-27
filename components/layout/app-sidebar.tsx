@@ -68,7 +68,7 @@ const navItems: NavItem[] = [
     allowedRoles: ROLES_ATENDIMENTOS_E_COTACOES,
   },
   {
-  label: "Ordem de Fornecimento",
+  label: "Ordens",
   href: "/fornecimento",
   icon: FileText,
   allowedRoles: ROLES_ATENDIMENTOS_E_COTACOES,

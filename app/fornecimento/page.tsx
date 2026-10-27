@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -11,6 +12,14 @@ import {
     Download,
 } from "lucide-react";
 
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from "@/components/ui/tabs";
+
+import { ListaOrdensTransporte } from "@/components/transporte/lista-ordens-transporte";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,6 +53,7 @@ import {
     useConfirmarRecebimentoOrdemDeFornecimento,
     useReenviarEmailOrdemDeFornecimento,
 } from "@/hooks/use-fornecimento";
+
 import { baixarPdfOrdemDeFornecimento } from "@/services/fornecimento-service";
 import { useAuth } from "@/contexts/auth-context";
 
@@ -103,14 +113,16 @@ export default function FornecimentoPage() {
         isConfirming,
         error: confirmError,
     } = useConfirmarRecebimentoOrdemDeFornecimento();
+
     const {
         reenviarEmail,
         isReenviandoEmail,
         error: resendError,
     } = useReenviarEmailOrdemDeFornecimento();
-    const { usuario } = useAuth();
-    const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
+    const { usuario } = useAuth();
+
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("todos");
     const [statusPrazoFilter, setStatusPrazoFilter] = useState("todos");
@@ -123,27 +135,18 @@ export default function FornecimentoPage() {
         const searchValue = search.trim().toLowerCase();
 
         const filtradas = ordens.filter((ordem) => {
-            const fornecedor =
-                getFornecedorNome(ordem).toLowerCase();
-
-            const numeroCotacao =
-                ordem.cotacao_id?.toLowerCase() ?? "";
+            const fornecedor = getFornecedorNome(ordem).toLowerCase();
+            const numeroCotacao = ordem.cotacao_id?.toLowerCase() ?? "";
 
             const matchesSearch =
                 !searchValue ||
-                ordem.numero
-                    .toLowerCase()
-                    .includes(searchValue) ||
+                ordem.numero.toLowerCase().includes(searchValue) ||
                 fornecedor.includes(searchValue) ||
-                numeroCotacao.includes(searchValue) ||
-                ordem.cotacao_id
-                    .toLowerCase()
-                    .includes(searchValue);
+                numeroCotacao.includes(searchValue);
 
             const matchesStatus =
                 statusFilter === "todos" ||
-                ordem.status.toLowerCase() ===
-                    statusFilter.toLowerCase();
+                ordem.status.toLowerCase() === statusFilter.toLowerCase();
 
             const matchesStatusPrazo =
                 statusPrazoFilter === "todos" ||
@@ -153,7 +156,12 @@ export default function FornecimentoPage() {
                 statusEnvioFilter === "todos" ||
                 (ordem.status_envio ?? "nao_enviado") === statusEnvioFilter;
 
-            return matchesSearch && matchesStatus && matchesStatusPrazo && matchesStatusEnvio;
+            return (
+                matchesSearch &&
+                matchesStatus &&
+                matchesStatusPrazo &&
+                matchesStatusEnvio
+            );
         });
 
         return [...filtradas].sort((a, b) => {
@@ -199,40 +207,43 @@ export default function FornecimentoPage() {
         setStatusFilter(value);
     }
 
-    function handleOrdenacaoChange(
-        value: OrdenacaoOrdem,
-    ) {
+    function handleOrdenacaoChange(value: OrdenacaoOrdem) {
         setOrdenacao(value);
     }
 
-    async function handleConfirmarRecebimento(
-        id: string,
-    ) {
-        if (!window.confirm("Confirmar que o fornecedor recebeu esta ordem? A ordem passará para Em entrega.")) {
+    async function handleConfirmarRecebimento(id: string) {
+        if (
+            !window.confirm(
+                "Confirmar que o fornecedor recebeu esta ordem? A ordem passará para Em entrega.",
+            )
+        ) {
             return;
         }
 
         try {
             await confirmarRecebimento(id);
         } catch (error) {
-            console.error(
-                "Erro ao confirmar recebimento:",
-                error,
-            );
+            console.error("Erro ao confirmar recebimento:", error);
         }
     }
 
     async function handleDownloadPdf(id: string) {
         setDownloadingId(id);
+
         try {
-            const { blob, filename } = await baixarPdfOrdemDeFornecimento(id);
+            const { blob, filename } =
+                await baixarPdfOrdemDeFornecimento(id);
+
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
+
             link.href = url;
             link.download = filename;
+
             document.body.appendChild(link);
             link.click();
             link.remove();
+
             URL.revokeObjectURL(url);
         } catch (error) {
             console.error("Erro ao baixar PDF da ordem:", error);
@@ -242,7 +253,11 @@ export default function FornecimentoPage() {
     }
 
     async function handleReenviarEmail(id: string) {
-        if (!window.confirm("Reenviar o email da ordem com o PDF anexado?")) {
+        if (
+            !window.confirm(
+                "Reenviar o email da ordem com o PDF anexado?",
+            )
+        ) {
             return;
         }
 
@@ -255,410 +270,411 @@ export default function FornecimentoPage() {
 
     return (
         <DashboardLayout>
-            <div className="space-y-6">
-
-                {/* Cabeçalho */}
-                <div>
-                    <h1 className="text-2xl font-semibold">
+            <Tabs defaultValue="fornecimento" className="space-y-6">
+                <TabsList>
+                    <TabsTrigger value="fornecimento">
                         Ordens de Fornecimento
-                    </h1>
+                    </TabsTrigger>
 
-                    <p className="text-sm text-muted-foreground">
-                        Acompanhe as ordens de fornecimento
-                        geradas a partir das cotações.
-                    </p>
-                </div>
+                    <TabsTrigger value="transporte">
+                        Ordens de Transporte
+                    </TabsTrigger>
+                </TabsList>
 
-                {/* Filtros */}
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex flex-col gap-4 md:flex-row">
+                <TabsContent value="fornecimento">
+                    <div className="space-y-6">
+                        {/* Filtros */}
+                        <Card>
+                            <CardContent className="pt-6">
+                                <div className="flex flex-col gap-4 md:flex-row">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
-                            <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                        <Input
+                                            placeholder="Buscar por ordem, fornecedor ou cotação..."
+                                            value={search}
+                                            onChange={(event) =>
+                                                setSearch(event.target.value)
+                                            }
+                                            className="pl-9"
+                                        />
+                                    </div>
 
-                                <Input
-                                    placeholder="Buscar por ordem, fornecedor ou cotação..."
-                                    value={search}
-                                    onChange={(event) =>
-                                        setSearch(
-                                            event.target.value,
-                                        )
-                                    }
-                                    className="pl-9"
-                                />
-                            </div>
+                                    <Select
+                                        value={statusFilter}
+                                        onValueChange={handleStatusChange}
+                                    >
+                                        <SelectTrigger className="w-full md:w-[220px]">
+                                            <SelectValue placeholder="Filtrar por status" />
+                                        </SelectTrigger>
 
-                            <Select
-                                value={statusFilter}
-                                onValueChange={
-                                    handleStatusChange
-                                }
-                            >
-                                <SelectTrigger className="w-full md:w-[220px]">
-                                    <SelectValue placeholder="Filtrar por status" />
-                                </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="todos">
+                                                Todos os status
+                                            </SelectItem>
+                                            <SelectItem value="rascunho">
+                                                Rascunho
+                                            </SelectItem>
+                                            <SelectItem value="enviada">
+                                                Enviada
+                                            </SelectItem>
+                                            <SelectItem value="em_entrega">
+                                                Em entrega
+                                            </SelectItem>
+                                            <SelectItem value="entregue">
+                                                Entregue
+                                            </SelectItem>
+                                            <SelectItem value="finalizada">
+                                                Finalizada
+                                            </SelectItem>
+                                            <SelectItem value="cancelada">
+                                                Cancelada
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
 
-                                <SelectContent>
-                                    <SelectItem value="todos">
-                                        Todos os status
-                                    </SelectItem>
+                                    <Select
+                                        value={ordenacao}
+                                        onValueChange={handleOrdenacaoChange}
+                                    >
+                                        <SelectTrigger className="w-full md:w-[220px]">
+                                            <SelectValue placeholder="Ordenar por" />
+                                        </SelectTrigger>
 
-                                    <SelectItem value="rascunho">
-                                        Rascunho
-                                    </SelectItem>
+                                        <SelectContent>
+                                            <SelectItem value="mais_recentes">
+                                                Mais recentes
+                                            </SelectItem>
+                                            <SelectItem value="mais_antigas">
+                                                Mais antigas
+                                            </SelectItem>
+                                            <SelectItem value="numero_crescente">
+                                                Número crescente
+                                            </SelectItem>
+                                            <SelectItem value="numero_decrescente">
+                                                Número decrescente
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
 
-                                    <SelectItem value="enviada">
-                                        Enviada
-                                    </SelectItem>
+                                    <Select
+                                        value={statusPrazoFilter}
+                                        onValueChange={setStatusPrazoFilter}
+                                    >
+                                        <SelectTrigger className="w-full md:w-[220px]">
+                                            <SelectValue placeholder="Filtrar por prazo" />
+                                        </SelectTrigger>
 
-                                    <SelectItem value="em_entrega">
-                                        Em entrega
-                                    </SelectItem>
+                                        <SelectContent>
+                                            <SelectItem value="todos">
+                                                Todos os prazos
+                                            </SelectItem>
+                                            <SelectItem value="normal">
+                                                Normal
+                                            </SelectItem>
+                                            <SelectItem value="proxima_expiracao">
+                                                Próxima à expiração
+                                            </SelectItem>
+                                            <SelectItem value="atrasada">
+                                                Atrasada
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
 
-                                    <SelectItem value="entregue">
-                                        Entregue
-                                    </SelectItem>
+                                    <Select
+                                        value={statusEnvioFilter}
+                                        onValueChange={setStatusEnvioFilter}
+                                    >
+                                        <SelectTrigger className="w-full md:w-[220px]">
+                                            <SelectValue placeholder="Filtrar por envio" />
+                                        </SelectTrigger>
 
-                                    <SelectItem value="finalizada">
-                                        Finalizada
-                                    </SelectItem>
+                                        <SelectContent>
+                                            <SelectItem value="todos">
+                                                Todos os envios
+                                            </SelectItem>
+                                            <SelectItem value="nao_enviado">
+                                                Não enviado
+                                            </SelectItem>
+                                            <SelectItem value="pendente">
+                                                Envio pendente
+                                            </SelectItem>
+                                            <SelectItem value="enviando">
+                                                Enviando
+                                            </SelectItem>
+                                            <SelectItem value="enviado">
+                                                Email enviado
+                                            </SelectItem>
+                                            <SelectItem value="falhou_retentando">
+                                                Falha — retentando
+                                            </SelectItem>
+                                            <SelectItem value="falhou_definitivo">
+                                                Falha no envio
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                                    <SelectItem value="cancelada">
-                                        Cancelada
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
+                        {/* Erro ao carregar */}
+                        {error && (
+                            <Card>
+                                <CardContent className="pt-6">
+                                    <p className="text-sm text-destructive">
+                                        Erro ao carregar as ordens de
+                                        fornecimento: {String(error)}
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        )}
 
-                            <Select
-                                value={ordenacao}
-                                onValueChange={
-                                    handleOrdenacaoChange
-                                }
-                            >
-                                <SelectTrigger className="w-full md:w-[220px]">
-                                    <SelectValue placeholder="Ordenar por" />
-                                </SelectTrigger>
+                        {/* Erro ao confirmar recebimento */}
+                        {confirmError && (
+                            <Card>
+                                <CardContent className="pt-6">
+                                    <p className="text-sm text-destructive">
+                                        Erro ao confirmar recebimento:{" "}
+                                        {String(confirmError)}
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        )}
 
-                                <SelectContent>
-                                    <SelectItem value="mais_recentes">
-                                        Mais recentes
-                                    </SelectItem>
+                        {/* Erro ao reenviar email */}
+                        {resendError && (
+                            <Card>
+                                <CardContent className="pt-6">
+                                    <p className="text-sm text-destructive">
+                                        Erro ao reenviar o email:{" "}
+                                        {String(resendError)}
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        )}
 
-                                    <SelectItem value="mais_antigas">
-                                        Mais antigas
-                                    </SelectItem>
+                        {/* Listagem */}
+                        <Card>
+                            <CardContent className="p-0">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Ordem</TableHead>
+                                            <TableHead>Fornecedor</TableHead>
+                                            <TableHead>Data de emissão</TableHead>
+                                            <TableHead>Valor total</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Prazo</TableHead>
+                                            <TableHead className="text-right">
+                                                Ações
+                                            </TableHead>
+                                        </TableRow>
+                                    </TableHeader>
 
-                                    <SelectItem value="numero_crescente">
-                                        Número crescente
-                                    </SelectItem>
-
-                                    <SelectItem value="numero_decrescente">
-                                        Número decrescente
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            <Select value={statusPrazoFilter} onValueChange={setStatusPrazoFilter}>
-                                <SelectTrigger className="w-full md:w-[220px]">
-                                    <SelectValue placeholder="Filtrar por prazo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="todos">Todos os prazos</SelectItem>
-                                    <SelectItem value="normal">Normal</SelectItem>
-                                    <SelectItem value="proxima_expiracao">Próxima à expiração</SelectItem>
-                                    <SelectItem value="atrasada">Atrasada</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            <Select value={statusEnvioFilter} onValueChange={setStatusEnvioFilter}>
-                                <SelectTrigger className="w-full md:w-[220px]">
-                                    <SelectValue placeholder="Filtrar por envio" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="todos">Todos os envios</SelectItem>
-                                    <SelectItem value="nao_enviado">Não enviado</SelectItem>
-                                    <SelectItem value="pendente">Envio pendente</SelectItem>
-                                    <SelectItem value="enviando">Enviando</SelectItem>
-                                    <SelectItem value="enviado">Email enviado</SelectItem>
-                                    <SelectItem value="falhou_retentando">Falha — retentando</SelectItem>
-                                    <SelectItem value="falhou_definitivo">Falha no envio</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Erro ao carregar */}
-                {error && (
-                    <Card>
-                        <CardContent className="pt-6">
-                            <p className="text-sm text-destructive">
-                                Erro ao carregar as ordens de
-                                fornecimento: {error}
-                            </p>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Erro ao confirmar recebimento */}
-                {confirmError && (
-                    <Card>
-                        <CardContent className="pt-6">
-                            <p className="text-sm text-destructive">
-                                Erro ao confirmar recebimento:{" "}
-                                {String(confirmError)}
-                            </p>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {resendError && (
-                    <Card>
-                        <CardContent className="pt-6">
-                            <p className="text-sm text-destructive">
-                                Erro ao reenviar o email: {String(resendError)}
-                            </p>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Listagem */}
-                <Card>
-                    <CardContent className="p-0">
-                        <Table>
-
-                            <TableHeader>
-                                <TableRow>
-
-                                    <TableHead>
-                                        Ordem
-                                    </TableHead>
-
-                                    <TableHead>
-                                        Fornecedor
-                                    </TableHead>
-
-                                    <TableHead>
-                                        Data de emissão
-                                    </TableHead>
-
-                                    <TableHead>
-                                        Valor total
-                                    </TableHead>
-
-                                    <TableHead>
-                                        Status
-                                    </TableHead>
-
-                                    <TableHead>
-                                        Prazo
-                                    </TableHead>
-
-                                    <TableHead className="text-right">
-                                        Ações
-                                    </TableHead>
-
-                                </TableRow>
-                            </TableHeader>
-
-                            <TableBody>
-
-                                {isLoading ? (
-                                    <TableRow>
-                                        <TableCell
-                                            colSpan={7}
-                                            className="py-8 text-center"
-                                        >
-                                            Carregando ordens de
-                                            fornecimento...
-                                        </TableCell>
-                                    </TableRow>
-
-                                ) : filteredOrdens.length === 0 ? (
-
-                                    <TableRow>
-                                        <TableCell colSpan={7}>
-                                            <Empty
-                                                title="Nenhuma ordem de fornecimento encontrada"
-                                                description={
-                                                    search ||
-                                                    statusFilter !== "todos" ||
-                                                    statusPrazoFilter !== "todos" ||
-                                                    statusEnvioFilter !== "todos"
-                                                        ? "Tente alterar os filtros utilizados."
-                                                        : "Ainda não existem ordens de fornecimento."
-                                                }
-                                            />
-                                        </TableCell>
-                                    </TableRow>
-
-                                ) : (
-
-                                    filteredOrdens.map(
-                                        (ordem) => (
-                                            <TableRow
-                                                key={ordem.id}
-                                            >
-
-                                                {/* Ordem + Cotação */}
-                                                <TableCell>
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium">
-                                                            {ordem.numero}
-                                                        </span>
-
-                                                        <span className="text-xs text-muted-foreground">
-                                                            Cotação #
-                                                            {ordem.cotacao_id.slice(
-                                                                0,
-                                                                8,
-                                                            )}
-                                                        </span>
-                                                    </div>
+                                    <TableBody>
+                                        {isLoading ? (
+                                            <TableRow>
+                                                <TableCell
+                                                    colSpan={7}
+                                                    className="py-8 text-center"
+                                                >
+                                                    Carregando ordens de
+                                                    fornecimento...
                                                 </TableCell>
-
-                                                {/* Fornecedor */}
-                                                <TableCell>
-                                                    {getFornecedorNome(
-                                                        ordem,
-                                                    )}
+                                            </TableRow>
+                                        ) : filteredOrdens.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={7}>
+                                                    <Empty
+                                                        title="Nenhuma ordem de fornecimento encontrada"
+                                                        description={
+                                                            search ||
+                                                            statusFilter !== "todos" ||
+                                                            statusPrazoFilter !== "todos" ||
+                                                            statusEnvioFilter !== "todos"
+                                                                ? "Tente alterar os filtros utilizados."
+                                                                : "Ainda não existem ordens de fornecimento."
+                                                        }
+                                                    />
                                                 </TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            filteredOrdens.map((ordem) => (
+                                                <TableRow key={ordem.id}>
+                                                    <TableCell>
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium">
+                                                                {ordem.numero}
+                                                            </span>
 
-                                                {/* Data */}
-                                                <TableCell>
-                                                    {formatDate(
-                                                        ordem.data_emissao,
-                                                    )}
-                                                </TableCell>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                Cotação #
+                                                                {ordem.cotacao_id.slice(
+                                                                    0,
+                                                                    8,
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    </TableCell>
 
-                                                {/* Valor */}
-                                                <TableCell>
-                                                    {formatCurrency(
-                                                        Number(
-                                                            ordem.valor_total,
-                                                        ),
-                                                    )}
-                                                </TableCell>
+                                                    <TableCell>
+                                                        {getFornecedorNome(ordem)}
+                                                    </TableCell>
 
-                                                {/* Status */}
-                                                <TableCell>
-                                                    <div className="flex flex-col items-start gap-1">
-                                                        <StatusBadge status={ordem.status} />
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {formatStatusEnvio(ordem.status_envio)}
-                                                        </span>
-                                                    </div>
-                                                </TableCell>
+                                                    <TableCell>
+                                                        {formatDate(ordem.data_emissao)}
+                                                    </TableCell>
 
-                                                {/* Prazo */}
-                                                <TableCell>
-                                                    <div className="flex flex-col gap-1">
-                                                        <span>{formatDateOnly(ordem.data_previsao_entrega)}</span>
-                                                        <StatusBadge status={ordem.status_prazo ?? "normal"} />
-                                                    </div>
-                                                </TableCell>
+                                                    <TableCell>
+                                                        {formatCurrency(
+                                                            Number(ordem.valor_total),
+                                                        )}
+                                                    </TableCell>
 
-                                                {/* Ações */}
-                                                <TableCell className="text-right">
+                                                    <TableCell>
+                                                        <div className="flex flex-col items-start gap-1">
+                                                            <StatusBadge
+                                                                status={ordem.status}
+                                                            />
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {formatStatusEnvio(
+                                                                    ordem.status_envio,
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    </TableCell>
 
-                                                    <TableActions>
+                                                    <TableCell>
+                                                        <div className="flex flex-col gap-1">
+                                                            <span>
+                                                                {formatDateOnly(
+                                                                    ordem.data_previsao_entrega,
+                                                                )}
+                                                            </span>
+                                                            <StatusBadge
+                                                                status={
+                                                                    ordem.status_prazo ??
+                                                                    "normal"
+                                                                }
+                                                            />
+                                                        </div>
+                                                    </TableCell>
 
-                                                        {/* Visualizar */}
-                                                        <Button
-                                                            asChild
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            title="Visualizar ordem"
-                                                        >
-                                                            <Link
-                                                                href={`/fornecimento/${ordem.id}`}
-                                                            >
-                                                                <Eye className="h-4 w-4" />
-                                                            </Link>
-                                                        </Button>
-
-                                                        {/* Confirmar recebimento */}
-                                                        {ordem.status
-                                                            .toLowerCase() ===
-                                                            "enviada" && (
+                                                    <TableCell className="text-right">
+                                                        <TableActions>
+                                                            {/* Visualizar */}
                                                             <Button
-                                                                type="button"
+                                                                asChild
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                title="Confirmar recebimento"
-                                                                disabled={
-                                                                    isConfirming
-                                                                }
-                                                                onClick={() =>
-                                                                    handleConfirmarRecebimento(
-                                                                        ordem.id,
-                                                                    )
-                                                                }
+                                                                title="Visualizar ordem"
                                                             >
-                                                                <CheckCircle
-                                                                    className={`h-4 w-4 ${
-                                                                        isConfirming
-                                                                            ? "animate-pulse"
-                                                                            : ""
-                                                                    }`}
-                                                                />
+                                                                <Link
+                                                                    href={`/fornecimento/${ordem.id}`}
+                                                                >
+                                                                    <Eye className="h-4 w-4" />
+                                                                </Link>
                                                             </Button>
-                                                        )}
 
-                                                        {/* Gerar PDF */}
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            title="Baixar PDF da ordem"
-                                                            aria-label="Baixar PDF da ordem"
-                                                            disabled={downloadingId === ordem.id}
-                                                            onClick={() => void handleDownloadPdf(ordem.id)}
-                                                        >
-                                                            {downloadingId === ordem.id ? (
-                                                                <FileText className="h-4 w-4 animate-pulse" />
-                                                            ) : (
-                                                                <Download className="h-4 w-4" />
-                                                            )}
-                                                        </Button>
-
-                                                        {/* Reenviar ordem */}
-                                                        {usuario?.perfil === "gestor" &&
-                                                            ["rascunho", "enviada"].includes(ordem.status) && (
+                                                            {/* Confirmar recebimento */}
+                                                            {ordem.status.toLowerCase() ===
+                                                                "enviada" && (
                                                                 <Button
                                                                     type="button"
                                                                     variant="ghost"
                                                                     size="icon"
-                                                                    title="Reenviar email com PDF"
-                                                                    aria-label="Reenviar email com PDF"
-                                                                    disabled={
-                                                                        isReenviandoEmail ||
-                                                                        ["pendente", "enviando"].includes(ordem.status_envio)
+                                                                    title="Confirmar recebimento"
+                                                                    disabled={isConfirming}
+                                                                    onClick={() =>
+                                                                        handleConfirmarRecebimento(
+                                                                            ordem.id,
+                                                                        )
                                                                     }
-                                                                    onClick={() => void handleReenviarEmail(ordem.id)}
                                                                 >
-                                                                    <Mail className="h-4 w-4" />
+                                                                    <CheckCircle
+                                                                        className={`h-4 w-4 ${
+                                                                            isConfirming
+                                                                                ? "animate-pulse"
+                                                                                : ""
+                                                                        }`}
+                                                                    />
                                                                 </Button>
                                                             )}
 
-                                                    </TableActions>
+                                                            {/* Gerar PDF */}
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                title="Baixar PDF da ordem"
+                                                                aria-label="Baixar PDF da ordem"
+                                                                disabled={
+                                                                    downloadingId ===
+                                                                    ordem.id
+                                                                }
+                                                                onClick={() =>
+                                                                    void handleDownloadPdf(
+                                                                        ordem.id,
+                                                                    )
+                                                                }
+                                                            >
+                                                                {downloadingId ===
+                                                                ordem.id ? (
+                                                                    <FileText className="h-4 w-4 animate-pulse" />
+                                                                ) : (
+                                                                    <Download className="h-4 w-4" />
+                                                                )}
+                                                            </Button>
 
-                                                </TableCell>
+                                                            {/* Reenviar ordem */}
+                                                            {usuario?.perfil ===
+                                                                "gestor" &&
+                                                                [
+                                                                    "rascunho",
+                                                                    "enviada",
+                                                                ].includes(
+                                                                    ordem.status,
+                                                                ) && (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        title="Reenviar email com PDF"
+                                                                        aria-label="Reenviar email com PDF"
+                                                                        disabled={
+                                                                            isReenviandoEmail ||
+                                                                            [
+                                                                                "pendente",
+                                                                                "enviando",
+                                                                            ].includes(
+                                                                                ordem.status_envio,
+                                                                            )
+                                                                        }
+                                                                        onClick={() =>
+                                                                            void handleReenviarEmail(
+                                                                                ordem.id,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <Mail className="h-4 w-4" />
+                                                                    </Button>
+                                                                )}
+                                                        </TableActions>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
 
-                                            </TableRow>
-                                        ),
-                                    )
-                                )}
-
-                            </TableBody>
-
-                        </Table>
-                    </CardContent>
-                </Card>
-
-            </div>
+                <TabsContent value="transporte">
+                    <ListaOrdensTransporte />
+                </TabsContent>
+            </Tabs>
         </DashboardLayout>
     );
 }
