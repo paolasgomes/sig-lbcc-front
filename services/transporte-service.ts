@@ -12,6 +12,8 @@ export interface VoucherTransporte {
   destinatario: string | null;
 }
 
+
+
 export interface OrdemTransporte {
   id: string;
   numero: string;
@@ -19,16 +21,22 @@ export interface OrdemTransporte {
   paciente_id: string;
   fornecedor_id: string;
   veiculo_placa: string | null;
-  tipo_combustivel: string;
-  quantidade_autorizada: number;
-  posto_abastecimento: string;
-  data_emissao: string;
-  validade_ate: string;
+  tipo_combustivel: string | null;
+  quantidade_autorizada: number | null;
+  posto_abastecimento: string | null;
+  data_emissao: string | null;
+  validade_ate: string | null;
   observacoes: string | null;
   status: string;
+  created_at?: string;
+  cotacao?: Record<string, unknown> | null;
+  paciente?: Record<string, unknown> | null;
+  fornecedor?: Record<string, unknown> | null;
   vouchers?: VoucherTransporte[];
   voucher?: VoucherTransporte;
 }
+
+
 
 export interface EmitirOrdemTransporteInput {
   cotacao_id: string;
@@ -48,6 +56,44 @@ export async function emitirOrdemTransporte(
     dados,
   );
 
+  return response.data;
+}
+
+export interface AtualizarOrdemTransporteInput {
+  veiculo_placa: string | null;
+  tipo_combustivel: string | null;
+  quantidade_autorizada: number | null;
+  posto_abastecimento: string | null;
+  validade_ate: string | null;
+  observacoes: string | null;
+}
+
+export async function listarOrdensDeTransporte(): Promise<OrdemTransporte[]> {
+  const response = await api.get("/transporte/ordens");
+  return response.data;
+}
+
+export async function obterOrdemDeTransporte(
+  id: string,
+): Promise<OrdemTransporte> {
+  const response = await api.get(`/transporte/ordens/${id}`);
+  return response.data;
+}
+
+export async function listarVouchersTransporte(
+  ordemId: string,
+): Promise<VoucherTransporte[]> {
+  const response = await api.get(
+    `/transporte/ordens/${ordemId}/vouchers`,
+  );
+
+  return response.data;
+}
+export async function atualizarOrdemDeTransporte(
+  id: string,
+  dados: Partial<AtualizarOrdemTransporteInput>,
+): Promise<OrdemTransporte> {
+  const response = await api.patch(`/transporte/ordens/${id}`, dados);
   return response.data;
 }
 
