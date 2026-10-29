@@ -65,7 +65,6 @@ import {
   FileText,
   AlertTriangle,
   XCircle,
-  Trophy,
   Plus,
 } from "lucide-react";
 
