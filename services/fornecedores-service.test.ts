@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+﻿import { describe, it, expect } from "vitest";
 import {
   mapApiFornecedorToFornecedor,
   mapFornecedorCreateToApi,
@@ -27,10 +27,11 @@ describe("mapApiFornecedorToFornecedor", () => {
       email: "contato@acme.com",
       ativo: true,
       fornecedorTemVinculos: true,
+      produtosIds: [],
     });
   });
 
-  it("defaults ativo to true and omits optional fields", () => {
+  it("defaults ativo to true and optional fields to undefined", () => {
     expect(
       mapApiFornecedorToFornecedor({
         id: "uuid-2",
@@ -39,7 +40,13 @@ describe("mapApiFornecedorToFornecedor", () => {
     ).toEqual({
       id: "uuid-2",
       razaoSocial: "Solo Razão",
+      nomeFantasia: undefined,
+      cnpj: undefined,
+      telefone: undefined,
+      email: undefined,
       ativo: true,
+      fornecedorTemVinculos: undefined,
+      produtosIds: [],
     });
   });
 });
@@ -62,6 +69,7 @@ describe("mapFornecedorCreateToApi", () => {
       telefone: "43999999999",
       email: "x@email.com",
       ativo: false,
+      produtos_ids: undefined,
     });
   });
 });
@@ -78,6 +86,7 @@ describe("mapFornecedorUpdateToApi", () => {
       nome_fantasia: "Novo Nome",
       telefone: "43988888888",
       email: "novo@email.com",
+      produtos_ids: undefined,
     });
   });
 });
