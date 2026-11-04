@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFinalizarOrdemTransporte, useRegistrarUtilizacaoOT, useUtilizacoesOT } from "@/hooks/use-comprovacoes";
-import { useVouchersTransporte } from "@/hooks/use-transporte";
+import { useRegistrarEntregaVoucher, useVouchersTransporte } from "@/hooks/use-transporte";
 import { DivergenciasDaOrdemPanel } from "@/components/divergencias/divergencias-da-ordem-panel";
 import { obterUrlEvidencia, type EvidenciaOrdem } from "@/services/comprovacoes-service";
 import type { OrdemTransporte, VoucherTransporte } from "@/services/transporte-service";
@@ -49,11 +49,14 @@ interface Props {
 
 export function ComprovacaoOTPanel({ ordem, podeRegistrar }: Props) {
   const router = useRouter();
-  const { vouchers = [] as VoucherTransporte[] } = useVouchersTransporte(ordem.id);
+  const { vouchers = [] as VoucherTransporte[], isLoading: isLoadingVouchers, refetch: refetchVouchers } = useVouchersTransporte(ordem.id);
   const { utilizacoes, isLoading, error, refetch } = useUtilizacoesOT(ordem.id);
   const { registrar, isSubmitting } = useRegistrarUtilizacaoOT(ordem.id);
+  const { registrarEntrega: salvarEntregaVoucher, isRegistering: isRegisteringDelivery } = useRegistrarEntregaVoucher();
   const { finalizar, isFinalizing } = useFinalizarOrdemTransporte(ordem.id);
   const [voucherId, setVoucherId] = useState("");
+  const [voucherEntregaId, setVoucherEntregaId] = useState("");
+  const [destinatario, setDestinatario] = useState("");
   const [dataUtilizacao, setDataUtilizacao] = useState(() => {
     const date = new Date();
     const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
@@ -64,10 +67,32 @@ export function ComprovacaoOTPanel({ ordem, podeRegistrar }: Props) {
   const [arquivos, setArquivos] = useState<File[]>([]);
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const vouchersUtilizaveis = vouchers.filter((voucher) => !voucher.invalidado_em);
+  const vouchersEntregues = vouchersUtilizaveis.filter((voucher) => voucher.entregue_em);
+  const vouchersPendentesEntrega = vouchersUtilizaveis.filter((voucher) => !voucher.entregue_em);
   const totalUtilizado = useMemo(() => utilizacoes.reduce((total, item) => total + Number(item.quantidade), 0), [utilizacoes]);
   const saldo = Math.max(Number(ordem.quantidade_autorizada ?? 0) - totalUtilizado, 0);
-  const elegivel = podeRegistrar && ["entregue", "utilizacao_comprovada"].includes(ordem.status);
-  const pendente = ordem.status === "entregue" && utilizacoes.length === 0;
+  const status = ordem.status.toLowerCase();
+  const elegivel = podeRegistrar && ["entregue", "utilizacao_comprovada"].includes(status);
+  const precisaRegistrarEntrega = podeRegistrar && ["emitida", "entregue"].includes(status) && vouchersEntregues.length === 0;
+  const pendente = status === "entregue" && utilizacoes.length === 0;
+
+  async function registrarEntrega(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!voucherEntregaId || !destinatario.trim()) {
+      toast.error("Selecione o voucher e informe quem recebeu.");
+      return;
+    }
+    try {
+      await salvarEntregaVoucher({ ordemId: ordem.id, voucherId: voucherEntregaId, destinatario: destinatario.trim() });
+      toast.success("Entrega do voucher registrada. Agora você pode informar a utilização.");
+      setDestinatario("");
+      setVoucherEntregaId("");
+      await refetchVouchers();
+    } catch (error) {
+      const response = erroDaApi(error);
+      toast.error(response.erro || response.message || "Não foi possível registrar a entrega do voucher.");
+    }
+  }
 
   async function salvar(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -129,9 +154,40 @@ export function ComprovacaoOTPanel({ ordem, podeRegistrar }: Props) {
           <span>Utilizado: <strong>{formatarQuantidade(totalUtilizado)}</strong></span>
           <span>Saldo: <strong>{formatarQuantidade(saldo)}</strong></span>
           {pendente ? <Badge variant="secondary">Utilização pendente</Badge> : null}
-          {ordem.status === "utilizacao_comprovada" ? <Badge>Utilização registrada · aguardando finalização</Badge> : null}
-          {ordem.status === "finalizada" ? <Badge>Finalizada</Badge> : null}
+          {status === "utilizacao_comprovada" ? <Badge>{saldo > 0.0005 ? "Utilização parcial · saldo pendente" : "Saldo comprovado · finalização pendente"}</Badge> : null}
+          {status === "finalizada" ? <Badge>Finalizada</Badge> : null}
         </div>
+
+        {isLoadingVouchers ? <p className="text-sm text-muted-foreground">Carregando vouchers…</p> : null}
+
+        {precisaRegistrarEntrega && vouchersPendentesEntrega.length > 0 ? (
+          <form onSubmit={registrarEntrega} className="space-y-4 rounded-lg border p-4">
+            <div>
+              <h3 className="font-semibold">Registrar entrega do voucher</h3>
+              <p className="text-sm text-muted-foreground">A utilização só pode ser registrada depois de informar quem recebeu o voucher.</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={`ot-voucher-entrega-${ordem.id}`}>Voucher emitido</Label>
+                <select id={`ot-voucher-entrega-${ordem.id}`} className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={voucherEntregaId} onChange={(event) => setVoucherEntregaId(event.target.value)} required>
+                  <option value="">Selecione</option>
+                  {vouchersPendentesEntrega.map((voucher) => <option key={voucher.id} value={voucher.id}>Via {voucher.numero_via} · {voucher.codigo}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`ot-destinatario-${ordem.id}`}>Quem recebeu o voucher</Label>
+                <Input id={`ot-destinatario-${ordem.id}`} value={destinatario} onChange={(event) => setDestinatario(event.target.value)} maxLength={200} required />
+              </div>
+            </div>
+            <Button type="submit" disabled={isRegisteringDelivery || isLoadingVouchers}>
+              {isRegisteringDelivery ? "Registrando entrega…" : "Registrar entrega e continuar"}
+            </Button>
+          </form>
+        ) : null}
+
+        {precisaRegistrarEntrega && !isLoadingVouchers && vouchersPendentesEntrega.length === 0 ? (
+          <Alert><AlertDescription>Não há voucher disponível para entrega nesta OT. Verifique se o voucher foi emitido e tente atualizar a tela.</AlertDescription></Alert>
+        ) : null}
 
         {error ? <Alert variant="destructive"><AlertDescription>Não foi possível carregar o histórico. <Button variant="link" onClick={() => void refetch()}>Tentar novamente</Button></AlertDescription></Alert> : null}
         {isLoading ? <p className="text-sm text-muted-foreground">Carregando utilizações…</p> : null}
@@ -149,11 +205,11 @@ export function ComprovacaoOTPanel({ ordem, podeRegistrar }: Props) {
             <Button type="submit" disabled={isSubmitting || saldo <= 0}>{isSubmitting ? <><RefreshCw className="mr-2 h-4 w-4 animate-spin" />Registrando…</> : "Salvar utilização"}</Button>
           </form>
         ) : null}
-        {elegivel && vouchersUtilizaveis.filter((voucher) => voucher.entregue_em).length === 0 ? <p className="text-sm text-muted-foreground">É necessário registrar a entrega de um voucher antes de informar a utilização.</p> : null}
+        {elegivel && vouchersEntregues.length === 0 && !precisaRegistrarEntrega ? <p className="text-sm text-muted-foreground">É necessário registrar a entrega de um voucher antes de informar a utilização.</p> : null}
 
         {utilizacoes.length > 0 ? <div className="space-y-3"><h3 className="font-semibold">Histórico de utilizações</h3>{utilizacoes.map((item) => <div key={item.id} className="rounded-lg border p-4"><div className="flex flex-wrap justify-between gap-2"><p className="font-medium">{new Date(item.data_utilizacao).toLocaleString("pt-BR")} · {formatarQuantidade(Number(item.quantidade))}</p><span className="text-xs text-muted-foreground">Registrada em {new Date(item.created_at).toLocaleString("pt-BR")}</span></div><p className="text-sm text-muted-foreground">Posto: {item.posto_abastecimento} · Voucher: {item.voucher ? `via ${item.voucher.numero_via}` : "não identificado"} · Registrado por {item.registrado_por}</p>{item.evidencias.map((file) => <Button key={file.id} className="mt-3 mr-2" variant="outline" size="sm" onClick={() => void abrirEvidencia(file)}><FileText className="mr-2 h-4 w-4" />{file.nome_arquivo}</Button>)}</div>)}</div> : !isLoading ? <p className="text-sm text-muted-foreground">Nenhuma utilização comprovada. A OT continua pendente de uso.</p> : null}
 
-        {podeRegistrar && ordem.status === "utilizacao_comprovada" ? <Button type="button" variant="outline" disabled={isFinalizing} onClick={() => void finalizarOT()}>{isFinalizing ? "Finalizando…" : "Finalizar Ordem de Transporte"}</Button> : null}
+        {podeRegistrar && status === "utilizacao_comprovada" && saldo <= 0.0005 ? <Button type="button" variant="outline" disabled={isFinalizing} onClick={() => void finalizarOT()}>{isFinalizing ? "Finalizando…" : "Finalizar Ordem de Transporte"}</Button> : null}
         <DivergenciasDaOrdemPanel tipoOrdem="OT" ordemId={ordem.id} podeRegistrar={podeRegistrar} />
       </CardContent>
     </Card>
