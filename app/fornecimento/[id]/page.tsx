@@ -46,6 +46,8 @@ import { PerfilUsuario } from "@/types";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatDateOnly, getStatusPrazoLabel } from "@/lib/prazo-utils";
 import { Textarea } from "@/components/ui/textarea";
+import { ComprovacaoOFPanel } from "@/components/comprovacoes/comprovacao-of-panel";
+import { DivergenciasDaOrdemPanel } from "@/components/divergencias/divergencias-da-ordem-panel";
 
 function formatDate(date: string | null) {
     if (!date) return "-";
@@ -124,6 +126,8 @@ export default function OrdemDeFornecimentoPage({
         finalizar,
         isFinalizing,
         error: finalizeError,
+        divergencias: divergenciasBloqueadoras,
+        itensPendentes: itensPendentesFinalizacao,
     } = useFinalizarOrdemDeFornecimento();
 
     const { lembrete, error: lembreteError } = useLembreteFornecedor(id);
@@ -537,9 +541,22 @@ export default function OrdemDeFornecimentoPage({
                     </Card>
 
                     {(finalizeError || updateError) && (
-                        <p className="text-sm text-destructive">
-                            {finalizeError || updateError}
-                        </p>
+                        <div className="space-y-2 text-sm text-destructive">
+                            <p>{finalizeError || updateError}</p>
+                            {divergenciasBloqueadoras.map((divergencia) => (
+                                <p key={divergencia.id}>
+                                    Divergência impeditiva: {divergencia.descricao} —{" "}
+                                    <Link className="underline" href={`/divergencias/${divergencia.id}`}>
+                                        acompanhar RF_F13
+                                    </Link>
+                                </p>
+                            ))}
+                            {itensPendentesFinalizacao.map((item) => (
+                                <p key={item.item_id}>
+                                    {item.descricao}: saldo pendente de {item.saldo}.
+                                </p>
+                            ))}
+                        </div>
                     )}
 
                     {confirmError && (
@@ -1073,6 +1090,25 @@ export default function OrdemDeFornecimentoPage({
                         </Table>
                     </CardContent>
                 </Card>
+
+                <ComprovacaoOFPanel
+                    ordemId={ordem.id}
+                    status={ordem.status}
+                    podeRegistrar={usuario?.perfil === PerfilUsuario.GESTOR || usuario?.perfil === PerfilUsuario.OPERADOR}
+                    itensOrdem={ordem.ordem_fornecimento_itens.map((item) => ({
+                        id: item.id,
+                        descricao: item.descricao,
+                        unidade: item.unidade,
+                        quantidade_solicitada: Number(item.quantidade_solicitada),
+                    }))}
+                    nomeUsuario={usuario?.nome ?? usuario?.email ?? "usuário conectado"}
+                />
+
+                <DivergenciasDaOrdemPanel
+                    tipoOrdem="OF"
+                    ordemId={ordem.id}
+                    podeRegistrar={usuario?.perfil === PerfilUsuario.GESTOR || usuario?.perfil === PerfilUsuario.OPERADOR}
+                />
 
                 <Card>
                     <CardContent className="pt-6">

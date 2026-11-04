@@ -10,6 +10,10 @@ export interface VoucherTransporte {
   emitido_em: string;
   entregue_em: string | null;
   destinatario: string | null;
+  invalidado_em?: string | null;
+  invalidado_por?: string | null;
+  motivo_invalidacao?: string | null;
+  substitui_voucher_id?: string | null;
 }
 
 

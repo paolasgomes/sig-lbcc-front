@@ -130,13 +130,19 @@ export function useFinalizarOrdemDeFornecimento() {
         },
     });
 
+    const payload = (mutation.error as {
+        response?: { data?: { divergencias?: Array<{ id: string; tipo: string; descricao: string; status: string }>; itens_pendentes?: Array<{ item_id: string; descricao: string; saldo: number }> } };
+    } | null)?.response?.data;
+
     return {
         finalizar: mutation.mutateAsync,
         isFinalizing: mutation.isPending,
         error:
             mutation.error instanceof Error
                 ? mutation.error.message
-                : mutation.error ?? null,
+                : mutation.error ? String(mutation.error) : null,
+        divergencias: payload?.divergencias ?? [],
+        itensPendentes: payload?.itens_pendentes ?? [],
     };
 }
 
