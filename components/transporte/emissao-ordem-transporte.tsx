@@ -550,6 +550,7 @@ export function EmissaoOrdemTransporte({
                 const processando =
                   voucherEmProcessamento === voucher.id;
                 const entregue = Boolean(voucher.entregue_em);
+                const invalidado = Boolean(voucher.invalidado_em);
 
                 return (
                   <div
@@ -567,8 +568,10 @@ export function EmissaoOrdemTransporte({
                         <p className="text-sm text-muted-foreground">
                           Código: {voucher.codigo}
                         </p>
-                        <p className="text-sm">
-                          {entregue
+                        <p className={`text-sm ${invalidado ? "text-destructive" : ""}`}>
+                          {invalidado
+                            ? `Voucher invalidado${voucher.invalidado_em ? ` em ${new Date(voucher.invalidado_em).toLocaleString("pt-BR")}` : ""}${voucher.motivo_invalidacao ? `: ${voucher.motivo_invalidacao}` : "."}`
+                            : entregue
                             ? `Entregue a: ${
                                 voucher.destinatario ??
                                 "Destinatário informado"
@@ -594,7 +597,7 @@ export function EmissaoOrdemTransporte({
                       </Button>
                     </div>
 
-                    {!entregue && (
+                    {!entregue && !invalidado && (
                       <div className="flex flex-col gap-2 sm:flex-row">
                         <Input
                           value={destinatarios[voucher.id] ?? ""}

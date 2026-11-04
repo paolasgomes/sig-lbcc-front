@@ -28,6 +28,7 @@ import type {
   OrdemTransporte,
 } from "@/services/transporte-service";
 import { useAuth } from "@/contexts/auth-context";
+import { ComprovacaoOTPanel } from "@/components/comprovacoes/comprovacao-ot-panel";
 
 type CamposEdicao = {
   veiculo_placa: string;
@@ -82,6 +83,8 @@ function formatarStatus(status: string): string {
   const nomes: Record<string, string> = {
     pendente: "Pendente",
     emitida: "Emitida",
+    entregue: "Entregue · utilização pendente",
+    utilizacao_comprovada: "Utilização comprovada",
     finalizada: "Finalizada",
     cancelada: "Cancelada",
   };
@@ -102,6 +105,7 @@ export function ListaOrdensTransporte() {
     useState<OrdemTransporte | null>(null);
   const [campos, setCampos] = useState<CamposEdicao | null>(null);
   const [erroFormulario, setErroFormulario] = useState("");
+  const [ordemUtilizacaoId, setOrdemUtilizacaoId] = useState<string | null>(null);
 
   const ehGestor = usuario?.perfil === "gestor";
 
@@ -359,23 +363,18 @@ export function ListaOrdensTransporte() {
                       </TableCell>
                       <TableCell>{ordem.posto_abastecimento ?? "-"}</TableCell>
                       <TableCell>
-                        {ehGestor && ordem.status.toLowerCase() === "pendente" ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => iniciarEdicao(ordem)}
-                          >
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Editar
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            {ordem.status.toLowerCase() === "pendente"
-                              ? "Somente gestor pode editar"
-                              : "Edição indisponível"}
-                          </span>
-                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {ehGestor && ordem.status.toLowerCase() === "pendente" ? (
+                            <Button type="button" size="sm" variant="outline" onClick={() => iniciarEdicao(ordem)}>
+                              <Pencil className="mr-2 h-4 w-4" />Editar
+                            </Button>
+                          ) : null}
+                          {!['finalizada', 'cancelada', 'vencida'].includes(ordem.status.toLowerCase()) ? (
+                            <Button type="button" size="sm" variant={ordemUtilizacaoId === ordem.id ? "default" : "outline"} onClick={() => setOrdemUtilizacaoId((current) => current === ordem.id ? null : ordem.id)}>
+                              {ordemUtilizacaoId === ordem.id ? "Fechar utilização" : "Registrar comprovação"}
+                            </Button>
+                          ) : null}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -383,6 +382,10 @@ export function ListaOrdensTransporte() {
               </Table>
             </div>
           )}
+          {ordemUtilizacaoId ? (() => {
+            const selecionada = ordens.find((item) => item.id === ordemUtilizacaoId);
+            return selecionada ? <div className="mt-5"><ComprovacaoOTPanel ordem={selecionada} podeRegistrar={ehGestor || usuario?.perfil === "operador"} /></div> : null;
+          })() : null}
         </CardContent>
       </Card>
     </div>

@@ -13,6 +13,7 @@ import {
   CalendarDays,
   Bell,
   Activity,
+  AlertTriangle,
   // BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -74,6 +75,12 @@ const navItems: NavItem[] = [
   icon: FileText,
   allowedRoles: ROLES_ORDEM_FORNECIMENTO,
 },
+  {
+    label: "Divergências",
+    href: "/divergencias",
+    icon: AlertTriangle,
+    allowedRoles: ROLES_ORDEM_FORNECIMENTO,
+  },
   {
     label: "Áreas",
     href: "/areas",
