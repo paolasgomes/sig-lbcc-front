@@ -371,7 +371,7 @@ export function ListaOrdensTransporte() {
                           ) : null}
                           {!['finalizada', 'cancelada', 'vencida'].includes(ordem.status.toLowerCase()) ? (
                             <Button type="button" size="sm" variant={ordemUtilizacaoId === ordem.id ? "default" : "outline"} onClick={() => setOrdemUtilizacaoId((current) => current === ordem.id ? null : ordem.id)}>
-                              {ordemUtilizacaoId === ordem.id ? "Fechar utilização" : "Registrar comprovação"}
+                              {ordemUtilizacaoId === ordem.id ? "Ocultar painel" : "Registrar utilização"}
                             </Button>
                           ) : null}
                         </div>
