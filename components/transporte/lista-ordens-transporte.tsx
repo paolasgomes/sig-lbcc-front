@@ -29,6 +29,8 @@ import type {
 } from "@/services/transporte-service";
 import { useAuth } from "@/contexts/auth-context";
 import { ComprovacaoOTPanel } from "@/components/comprovacoes/comprovacao-ot-panel";
+import { CancelamentoOrdemModal } from "@/components/cancelamento/cancelamento-ordem-modal";
+import { useListarCancelamentosDiretos } from "@/hooks/use-cancelamento";
 
 type CamposEdicao = {
   veiculo_placa: string;
@@ -96,6 +98,7 @@ export function ListaOrdensTransporte() {
   const { usuario } = useAuth();
   const { ordens, isLoading, error, refetch } =
     useOrdensDeTransporte();
+  const { solicitacoes: cancelamentos } = useListarCancelamentosDiretos();
   const {
     atualizarOrdem,
     isUpdating,
@@ -374,6 +377,25 @@ export function ListaOrdensTransporte() {
                               {ordemUtilizacaoId === ordem.id ? "Ocultar painel" : "Registrar utilização"}
                             </Button>
                           ) : null}
+                            {(usuario?.perfil === "gestor" ||
+                            usuario?.perfil === "operador") &&
+                            !["finalizada", "cancelada", "vencida"].includes(
+                              ordem.status.toLowerCase()
+                            ) &&
+                            (cancelamentos.some(
+                              (solicitacao) =>
+                                solicitacao.status === "solicitada" &&
+                                solicitacao.ordem_transporte_id === ordem.id
+                            ) ? (
+                              <Button variant="outline" size="sm" disabled>
+                                Aguardando decisão do gestor
+                              </Button>
+                            ) : (
+                              <CancelamentoOrdemModal
+                                ordemId={ordem.id}
+                                tipoOrdem="OT"
+                              />
+                            ))}
                         </div>
                       </TableCell>
                     </TableRow>

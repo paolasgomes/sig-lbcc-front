@@ -76,7 +76,7 @@ const navItems: NavItem[] = [
   allowedRoles: ROLES_ORDEM_FORNECIMENTO,
 },
   {
-    label: "Divergências",
+    label: "Divergências e Cancelamentos",
     href: "/divergencias",
     icon: AlertTriangle,
     allowedRoles: ROLES_ORDEM_FORNECIMENTO,

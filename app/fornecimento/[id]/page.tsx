@@ -48,6 +48,8 @@ import { formatDateOnly, getStatusPrazoLabel } from "@/lib/prazo-utils";
 import { Textarea } from "@/components/ui/textarea";
 import { ComprovacaoOFPanel } from "@/components/comprovacoes/comprovacao-of-panel";
 import { DivergenciasDaOrdemPanel } from "@/components/divergencias/divergencias-da-ordem-panel";
+import { CancelamentoOrdemModal } from "@/components/cancelamento/cancelamento-ordem-modal";
+import { useListarCancelamentosDiretos } from "@/hooks/use-cancelamento";
 
 function formatDate(date: string | null) {
     if (!date) return "-";
@@ -115,6 +117,14 @@ export default function OrdemDeFornecimentoPage({
     const { id } = use(params);
 
     const { ordem, isLoading, error } = useOrdemDeFornecimento(id);
+
+    const { solicitacoes: cancelamentos } = useListarCancelamentosDiretos();
+
+    const cancelamentoPendente = cancelamentos.some(
+        (solicitacao) =>
+            solicitacao.status === "solicitada" &&
+            solicitacao.ordem_fornecimento_id === id,
+    );
 
     const {
         confirmarRecebimento: confirmarRecebimentoMutation,
@@ -418,6 +428,11 @@ export default function OrdemDeFornecimentoPage({
 
                     <div className="flex flex-wrap items-center gap-2">
                         <StatusBadge status={ordem.status} />
+                        {cancelamentoPendente && (
+                        <Badge variant="destructive">
+                            Cancelamento aguardando decisão
+                        </Badge>
+                    )}
 
                         {(usuario?.perfil === PerfilUsuario.OPERADOR || ehGestor) &&
                             ordem.status === "enviada" && (
@@ -500,6 +515,20 @@ export default function OrdemDeFornecimentoPage({
                                     : "Reenviar recibo"}
                             </Button>
                         )}
+
+                        {(usuario?.perfil === PerfilUsuario.GESTOR ||
+                            usuario?.perfil === PerfilUsuario.OPERADOR) &&
+                            !["cancelada", "finalizada"].includes(ordem.status.toLowerCase()) &&
+                            (cancelamentoPendente ? (
+                                <Button variant="outline" size="sm" disabled>
+                                    Aguardando decisão do gestor
+                                </Button>
+                            ) : (
+                                <CancelamentoOrdemModal
+                                    ordemId={ordem.id}
+                                    tipoOrdem="OF"
+                                />
+                            ))}
                     </div>
                 </div>
 
@@ -914,6 +943,7 @@ export default function OrdemDeFornecimentoPage({
                                     variant="outline"
                                     size="sm"
                                     onClick={iniciarEdicaoPrazo}
+                                    disabled={ordem.status === "cancelada"}
                                 >
                                     <Pencil className="mr-2 h-4 w-4" />
                                     Editar prazo e responsáveis
@@ -1107,7 +1137,11 @@ export default function OrdemDeFornecimentoPage({
                 <DivergenciasDaOrdemPanel
                     tipoOrdem="OF"
                     ordemId={ordem.id}
-                    podeRegistrar={usuario?.perfil === PerfilUsuario.GESTOR || usuario?.perfil === PerfilUsuario.OPERADOR}
+                    podeRegistrar={
+                        ordem.status !== "cancelada" &&
+                        (usuario?.perfil === PerfilUsuario.GESTOR ||
+                            usuario?.perfil === PerfilUsuario.OPERADOR)
+                    }
                 />
 
                 <Card>
