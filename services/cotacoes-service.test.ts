@@ -36,6 +36,8 @@ describe("mapApiCotacaoToCotacao", () => {
       observacoes: "obs",
       status: "aberta",
       motivoCancelamento: null,
+      cotacaoOrigemId: null,
+      ordemFornecimentoOrigemId: null,
       numero: "COT-001",
       criadoEm: "2026-06-01T00:00:00Z",
       atualizadoEm: undefined,
