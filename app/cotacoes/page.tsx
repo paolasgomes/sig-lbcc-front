@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -77,6 +78,9 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import type { StatusCotacao } from "@/types";
 
 type FiltroStatus = "todos" | StatusCotacao;
+
+type FiltroRelacao = "todas" | "substitutas";
+
 type OrdenacaoCotacao =
   | "mais_recentes"
   | "mais_antigas"
@@ -96,77 +100,88 @@ export default function CotacoesPage() {
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] =
     useState<FiltroStatus>("todos");
-  
+
+  const [filtroRelacao, setFiltroRelacao] =
+    useState<FiltroRelacao>("todas");
+
   const [ordenacao, setOrdenacao] =
-  useState<OrdenacaoCotacao>("mais_recentes");
+    useState<OrdenacaoCotacao>("mais_recentes");
 
   const [page, setPage] = useState(1);
 
   const pageSize = 10;
 
-const cotacoesFiltradas = useMemo(() => {
-  const filtradas = cotacoes.filter((cotacao) => {
-    const matchStatus =
-      filtroStatus === "todos" ||
-      cotacao.status === filtroStatus;
+  const cotacoesFiltradas = useMemo(() => {
+    const filtradas = cotacoes.filter((cotacao) => {
+      const matchStatus =
+        filtroStatus === "todos" ||
+        cotacao.status === filtroStatus;
 
-    const termo = busca.trim().toLowerCase();
+      const matchRelacao =
+        filtroRelacao === "todas" ||
+        Boolean(cotacao.cotacaoOrigemId);
 
-    const matchBusca =
-      !termo ||
-      cotacao.descricao
-        .toLowerCase()
-        .includes(termo) ||
-      (cotacao.pacienteNome
-        ?.toLowerCase()
-        .includes(termo) ??
-        false) ||
-      (cotacao.numero
-        ?.toLowerCase()
-        .includes(termo) ??
-        false) ||
-      cotacao.id
-        .toLowerCase()
-        .includes(termo) ||
-      cotacao.id
-        .slice(0, 8)
-        .toUpperCase()
-        .includes(termo.toUpperCase());
+      const termo = busca.trim().toLowerCase();
 
-    return matchStatus && matchBusca;
-  });
+      const matchBusca =
+        !termo ||
+        cotacao.descricao
+          .toLowerCase()
+          .includes(termo) ||
+        (cotacao.pacienteNome
+          ?.toLowerCase()
+          .includes(termo) ?? false) ||
+        (cotacao.numero
+          ?.toLowerCase()
+          .includes(termo) ?? false) ||
+        cotacao.id
+          .toLowerCase()
+          .includes(termo) ||
+        cotacao.id
+          .slice(0, 8)
+          .toUpperCase()
+          .includes(termo.toUpperCase());
 
-  return [...filtradas].sort((a, b) => {
-    switch (ordenacao) {
-      case "mais_antigas":
-        return (
-          new Date(a.criadoEm).getTime() -
-          new Date(b.criadoEm).getTime()
-        );
+      return matchStatus && matchBusca && matchRelacao;
+    });
 
-      case "numero_crescente":
-        return (a.numero ?? "").localeCompare(
-          b.numero ?? "",
-          undefined,
-          { numeric: true }
-        );
+    return [...filtradas].sort((a, b) => {
+      switch (ordenacao) {
+        case "mais_antigas":
+          return (
+            new Date(a.criadoEm).getTime() -
+            new Date(b.criadoEm).getTime()
+          );
 
-      case "numero_decrescente":
-        return (b.numero ?? "").localeCompare(
-          a.numero ?? "",
-          undefined,
-          { numeric: true }
-        );
+        case "numero_crescente":
+          return (a.numero ?? "").localeCompare(
+            b.numero ?? "",
+            undefined,
+            { numeric: true }
+          );
 
-      case "mais_recentes":
-      default:
-        return (
-          new Date(b.criadoEm).getTime() -
-          new Date(a.criadoEm).getTime()
-        );
-    }
-  });
-}, [cotacoes, busca, filtroStatus, ordenacao]);
+        case "numero_decrescente":
+          return (b.numero ?? "").localeCompare(
+            a.numero ?? "",
+            undefined,
+            { numeric: true }
+          );
+
+        case "mais_recentes":
+        default:
+          return (
+            new Date(b.criadoEm).getTime() -
+            new Date(a.criadoEm).getTime()
+          );
+      }
+    });
+  }, [
+    cotacoes,
+    busca,
+    filtroStatus,
+    filtroRelacao,
+    ordenacao,
+  ]);
 
   const total = cotacoesFiltradas.length;
 
@@ -269,6 +284,10 @@ const cotacoesFiltradas = useMemo(() => {
                     Todos os status
                   </SelectItem>
 
+                  <SelectItem value="rascunho">
+                    Rascunho
+                  </SelectItem>
+
                   <SelectItem value="aberta">
                     Aberta
                   </SelectItem>
@@ -287,6 +306,28 @@ const cotacoesFiltradas = useMemo(() => {
 
                   <SelectItem value="cancelada">
                     Cancelada
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filtroRelacao}
+                onValueChange={(value) => {
+                  setFiltroRelacao(value as FiltroRelacao);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-56">
+                  <SelectValue placeholder="Tipo de cotação" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value="todas">
+                    Todas as cotações
+                  </SelectItem>
+
+                  <SelectItem value="substitutas">
+                    Somente substitutas
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -349,7 +390,7 @@ const cotacoesFiltradas = useMemo(() => {
                         Status
                       </TableHead>
 
-                      <TableHead >
+                      <TableHead>
                         Itens
                       </TableHead>
 
@@ -370,7 +411,8 @@ const cotacoesFiltradas = useMemo(() => {
 
                             <EmptyDescription>
                               {busca ||
-                              filtroStatus !== "todos"
+                              filtroStatus !== "todos" ||
+                              filtroRelacao !== "todas"
                                 ? "Tente ajustar os filtros de busca."
                                 : isGestor
                                   ? "Crie a primeira cotação para começar."
@@ -379,7 +421,8 @@ const cotacoesFiltradas = useMemo(() => {
 
                             {isGestor &&
                               !busca &&
-                              filtroStatus === "todos" && (
+                              filtroStatus === "todos" &&
+                              filtroRelacao === "todas" && (
                                 <Button
                                   asChild
                                   className="mt-4"
@@ -405,6 +448,11 @@ const cotacoesFiltradas = useMemo(() => {
                         const bloqueada =
                           cotacao.status === "finalizada" ||
                           cotacao.status === "cancelada";
+
+                        const substitutas = cotacoes.filter(
+                          (item) =>
+                            item.cotacaoOrigemId === cotacao.id,
+                        );
 
                         return (
                           <TableRow key={cotacao.id}>
@@ -453,6 +501,31 @@ const cotacoesFiltradas = useMemo(() => {
                                       Visualizar
                                     </span>
                                   </TableActionLink>
+
+                                  {cotacao.cotacaoOrigemId && (
+                                    <TableActionLink
+                                      href={`/cotacoes/${cotacao.cotacaoOrigemId}`}
+                                    >
+                                      Ver cotação original
+                                    </TableActionLink>
+                                  )}
+
+                                  {cotacao.ordemFornecimentoOrigemId && (
+                                    <TableActionLink
+                                      href={`/fornecimento/${cotacao.ordemFornecimentoOrigemId}`}
+                                    >
+                                      Ver OF de origem
+                                    </TableActionLink>
+                                  )}
+
+                                  {substitutas.map((substituta) => (
+                                    <TableActionLink
+                                      key={substituta.id}
+                                      href={`/cotacoes/${substituta.id}`}
+                                    >
+                                      Ver cotação substituta
+                                    </TableActionLink>
+                                  ))}
 
                                   {isGestor && !bloqueada && (
                                     <TableActionLink

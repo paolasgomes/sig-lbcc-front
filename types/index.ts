@@ -41,6 +41,7 @@ export enum StatusPaciente {
 }
 
 export enum StatusCotacao {
+  RASCUNHO = "rascunho",
   ABERTA = "aberta",
   EM_ANDAMENTO = "em_andamento",
   PRONTA_PARA_ANALISE = "pronta_para_analise",
@@ -256,7 +257,11 @@ export interface Cotacao {
    * Motivo informado quando a cotação é cancelada.
    */
   motivoCancelamento?: string | null;
-
+  /**
+   * Relacionamentos de recotação gerados após cancelamento de OF.
+   */
+  cotacaoOrigemId?: string | null;
+  ordemFornecimentoOrigemId?: string | null;
   /**
    * Eixo separado do status de progresso.
    * Cotação inativa não recebe orçamento novo.
@@ -410,7 +415,7 @@ export type PacienteFormData = Omit<
 
 export type CotacaoFormData = Omit<
   Cotacao,
-  "id" | "criadoEm" | "atualizadoEm" | "status" | "itens"
+  "id" | "criadoEm" | "atualizadoEm" | "status" | "itens" | "cotacaoOrigemId" | "ordemFornecimentoOrigemId"
 > & {
   itens: Omit<ItemCotacao, "id">[];
 };

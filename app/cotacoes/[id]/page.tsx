@@ -4,7 +4,10 @@ import { use, useMemo, useState } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { useCotacao } from "@/hooks/use-cotacoes";
+import {
+  useCotacao,
+  useCotacoes,
+} from "@/hooks/use-cotacoes";
 import { useProdutos } from "@/hooks/use-produtos";
 import { useUsuario } from "@/hooks/use-usuario";
 import { ROLES_ATENDIMENTOS_E_COTACOES } from "@/lib/access-control";
@@ -141,6 +144,7 @@ export default function CotacaoDetailPage({
     isEscolhendoVencedor,
   } = useCotacao(id);
 
+  const { cotacoes } = useCotacoes();
   const { isGestor } = useUsuario();
   const { produtos } = useProdutos();
 
@@ -155,7 +159,16 @@ export default function CotacaoDetailPage({
       (ordem) =>
         ordem.cotacao_id === cotacao?.id,
     );
+const cotacoesSubstitutas = cotacoes.filter(
+  (item) => item.cotacaoOrigemId === cotacao?.id,
+);
 
+const possuiHistoricoCotacao =
+  Boolean(
+    cotacao?.cotacaoOrigemId ||
+    cotacao?.ordemFornecimentoOrigemId ||
+    cotacoesSubstitutas.length > 0
+  );
   const [actionError, setActionError] =
     useState<string | null>(null);
 
@@ -207,12 +220,19 @@ export default function CotacaoDetailPage({
 
   const cotacaoExpirada =
     isCotacaoVencida(cotacao.dataValidade);
+const isTransporteUrbano =
+  cotacao.areaNome
+    ?.trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase() === "transporte urbano";
 
   const podeGerarOrdem =
-    cotacao.status === "finalizada" &&
-    !cotacaoExpirada &&
-    !!cotacao.pacienteId &&
-    !!cotacao.areaId;
+  cotacao.status === "finalizada" &&
+  !cotacaoExpirada &&
+  !!cotacao.pacienteId &&
+  !!cotacao.areaId &&
+  !isTransporteUrbano;
 
   const podeMutarOrcamento =
     isGestor &&
@@ -354,7 +374,8 @@ export default function CotacaoDetailPage({
             <div className="flex flex-wrap gap-2">
 
               {/* Gerar Ordem de Fornecimento */}
-              {cotacao.status === "finalizada" && (
+              {cotacao.status === "finalizada" &&
+  !isTransporteUrbano &&  (
                 ordemDeFornecimento ? (
                   <Button
                     variant="outline"
@@ -552,17 +573,13 @@ export default function CotacaoDetailPage({
         )}
         {/* RF_F11 - Ordem de Transporte */}
         {isGestor &&
-          cotacao.status === "finalizada" &&
-          !cotacaoExpirada &&
-          cotacao.areaNome
-            ?.trim()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .toLowerCase() === "transporte urbano" && (
-            <EmissaoOrdemTransporte
-              cotacaoId={cotacao.id}
-            />
-          )}
+  cotacao.status === "finalizada" &&
+  !cotacaoExpirada &&
+  isTransporteUrbano && (
+    <EmissaoOrdemTransporte
+      cotacaoId={cotacao.id}
+    />
+  )}
 
         {/* Informações gerais */}
         <Card>
@@ -636,6 +653,72 @@ export default function CotacaoDetailPage({
             )}
           </CardContent>
         </Card>
+
+{/* RF_S3 - Histórico e relacionamentos da cotação */}
+{possuiHistoricoCotacao && (
+  <Card>
+    <CardHeader>
+      <CardTitle>
+        Histórico da cotação
+      </CardTitle>
+      <CardDescription>
+        Relações entre esta cotação, sua origem e eventuais substituições.
+      </CardDescription>
+    </CardHeader>
+
+    <CardContent className="space-y-4">
+      {cotacao.cotacaoOrigemId && (
+        <div className="flex flex-col gap-1">
+          <span className="text-sm text-muted-foreground">
+            Cotação original
+          </span>
+
+          <Link
+            href={`/cotacoes/${cotacao.cotacaoOrigemId}`}
+            className="font-medium text-primary hover:underline"
+          >
+            Consultar cotação original
+          </Link>
+        </div>
+      )}
+
+      {cotacao.ordemFornecimentoOrigemId && (
+        <div className="flex flex-col gap-1">
+          <span className="text-sm text-muted-foreground">
+            Ordem de fornecimento que originou a recotação
+          </span>
+
+          <Link
+            href={`/fornecimento/${cotacao.ordemFornecimentoOrigemId}`}
+            className="font-medium text-primary hover:underline"
+          >
+            Consultar ordem de fornecimento
+          </Link>
+        </div>
+      )}
+
+      {cotacoesSubstitutas.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <span className="text-sm text-muted-foreground">
+            Cotações substitutas
+          </span>
+
+          {cotacoesSubstitutas.map((substituta) => (
+            <Link
+              key={substituta.id}
+              href={`/cotacoes/${substituta.id}`}
+              className="font-medium text-primary hover:underline"
+            >
+              {formatCotacaoNumero(substituta)}
+              {" — "}
+              {substituta.descricao}
+            </Link>
+          ))}
+        </div>
+      )}
+    </CardContent>
+  </Card>
+)}
 
         {/* Itens */}
         <Card>

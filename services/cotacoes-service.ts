@@ -25,6 +25,9 @@ export interface ApiCotacaoDTO {
   ativo?: boolean;
   created_at: string;
   updated_at?: string;
+  cotacao_origem_id?: string | null;
+  ordem_fornecimento_origem_id?: string | null;
+
 
   pacientes?: {
     id: string;
@@ -181,6 +184,10 @@ export function mapApiCotacaoToCotacao(
       dto.cotacao_itens?.map(
         mapApiItemToItemCotacao,
       ) ?? itens,
+
+    cotacaoOrigemId: dto.cotacao_origem_id ?? null,
+    ordemFornecimentoOrigemId:
+      dto.ordem_fornecimento_origem_id ?? null,
   };
 }
 
