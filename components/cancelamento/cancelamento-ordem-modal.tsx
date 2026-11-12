@@ -58,7 +58,9 @@ export function CancelamentoOrdemModal({
         ordem_fornecimento_id: tipoOrdem === "OF" ? ordemId : null,
         ordem_transporte_id: tipoOrdem === "OT" ? ordemId : null,
         motivo: motivo.trim(),
-        necessidade_paciente: necessidadePaciente,
+        ...(tipoOrdem === "OF" && {
+            necessidade_paciente: necessidadePaciente,
+        }),
         });
 
         setMotivo("");
@@ -105,27 +107,29 @@ export function CancelamentoOrdemModal({
                 />
             </Field>
 
+            {tipoOrdem === "OF" && (
             <Field>
                 <FieldLabel>Necessidade do paciente</FieldLabel>
                 <Select
-                value={necessidadePaciente}
-                onValueChange={(value) =>
-                    setNecessidadePaciente(value as "continua" | "encerrada")
-                }
+                    value={necessidadePaciente}
+                    onValueChange={(value) =>
+                        setNecessidadePaciente(value as "continua" | "encerrada")
+                    }
                 >
-                <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma opção" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="continua">
-                    Continua precisando do atendimento
-                    </SelectItem>
-                    <SelectItem value="encerrada">
-                    Necessidade de atendimento encerrada
-                    </SelectItem>
-                </SelectContent>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma opção" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="continua">
+                            Continua precisando do atendimento
+                        </SelectItem>
+                        <SelectItem value="encerrada">
+                            Necessidade de atendimento encerrada
+                        </SelectItem>
+                    </SelectContent>
                 </Select>
             </Field>
+        )}
             </FieldGroup>
 
             {submitError && (

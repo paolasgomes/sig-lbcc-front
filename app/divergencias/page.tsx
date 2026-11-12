@@ -71,12 +71,30 @@ export default function DivergenciasPage() {
     id: string,
     aprovado: boolean,
     gerarRecotacaoOpcao = false,
+    validadeOriginal: string | null = null,
   ) {
     const justificativa = aprovado
       ? "Cancelamento aprovado."
       : justificativaRecusa.trim();
 
     if (!justificativa) return;
+
+    const hoje = new Date().toISOString().split("T")[0];
+    const cotacaoOriginalVencida = Boolean(
+      validadeOriginal && validadeOriginal < hoje,
+    );
+
+    if (aprovado && gerarRecotacaoOpcao) {
+      if (!validadeOriginal) {
+        window.alert("Não foi possível consultar a validade da cotação original.");
+        return;
+      }
+
+      if (cotacaoOriginalVencida && !dataValidadeRecotacao) {
+        window.alert("Informe a nova data de validade da recotação.");
+        return;
+      }
+    }
 
     try {
       await decidir({
@@ -85,7 +103,7 @@ export default function DivergenciasPage() {
           aprovado,
           justificativa,
           gerar_recotacao: aprovado && gerarRecotacaoOpcao,
-          ...(aprovado && gerarRecotacaoOpcao && dataValidadeRecotacao
+          ...(aprovado && gerarRecotacaoOpcao && cotacaoOriginalVencida
             ? { data_validade_recotacao: dataValidadeRecotacao }
             : {}),
         },
@@ -439,19 +457,36 @@ export default function DivergenciasPage() {
 
                         {gerarRecotacao && (
                           <div className="space-y-1">
-                            <label className="text-sm font-medium">
-                              Nova data de validade (se a cotação original já venceu)
-                            </label>
-                            <input
-                              type="date"
-                              value={dataValidadeRecotacao}
-                              onChange={(e) => setDataValidadeRecotacao(e.target.value)}
-                              min={new Date().toISOString().split("T")[0]}
-                              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                              Se a cotação original ainda estiver válida, a nova cotação manterá a validade original.
-                            </p>
+                            {!pedido.data_validade_cotacao_original ? (
+                              <p className="text-sm text-destructive">
+                                Não foi possível consultar a validade da cotação original.
+                                Não será possível gerar a recotação.
+                              </p>
+                            ) : pedido.data_validade_cotacao_original <
+                              new Date().toISOString().split("T")[0] ? (
+                              <>
+                                <label className="text-sm font-medium">
+                                  Nova data de validade da recotação
+                                </label>
+                                <input
+                                  type="date"
+                                  value={dataValidadeRecotacao}
+                                  onChange={(e) => setDataValidadeRecotacao(e.target.value)}
+                                  min={new Date().toISOString().split("T")[0]}
+                                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  A cotação original venceu. Informe uma nova data de validade.
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">
+                                A cotação original ainda está válida. A recotação manterá a validade de{" "}
+                                {new Date(
+                                  `${pedido.data_validade_cotacao_original}T00:00:00`,
+                                ).toLocaleDateString("pt-BR")}.
+                              </p>
+                            )}
                           </div>
                         )}
 
@@ -471,9 +506,25 @@ export default function DivergenciasPage() {
 
                           <Button
                             size="sm"
-                            disabled={isPending}
+                            disabled={
+                              isPending ||
+                              (gerarRecotacao &&
+                                (
+                                  !pedido.data_validade_cotacao_original ||
+                                  (
+                                    pedido.data_validade_cotacao_original <
+                                      new Date().toISOString().split("T")[0] &&
+                                    !dataValidadeRecotacao
+                                  )
+                                ))
+                            }
                             onClick={() =>
-                              void decidirCancelamento(pedido.id, true, gerarRecotacao)
+                              void decidirCancelamento(
+                                pedido.id,
+                                true,
+                                gerarRecotacao,
+                                pedido.data_validade_cotacao_original,
+                              )
                             }
                           >
                             Confirmar aprovação
