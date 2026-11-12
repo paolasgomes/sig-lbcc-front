@@ -4,7 +4,7 @@ export interface SolicitarCancelamentoPayload {
     ordem_fornecimento_id: string | null;
     ordem_transporte_id: string | null;
     motivo: string;
-    necessidade_paciente: "continua" | "encerrada";
+    necessidade_paciente?: "continua" | "encerrada";
 }
 
 export interface DecidirCancelamentoPayload {
@@ -42,6 +42,7 @@ export interface SolicitacaoCancelamentoDireto {
     divergencia_id: null;
     ordem_fornecimento_id: string | null;
     recotacao_id: string | null;
+    data_validade_cotacao_original: string | null;
     ordem_transporte_id: string | null;
     status: "solicitada" | "aprovada" | "recusada";
     motivo: string;
@@ -51,6 +52,7 @@ export interface SolicitacaoCancelamentoDireto {
     decidido_por: string | null;
     solicitado_em: string;
     decidido_em: string | null;
+    
 }
 
 export async function listarCancelamentosDiretos(): Promise<SolicitacaoCancelamentoDireto[]> {
