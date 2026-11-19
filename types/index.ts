@@ -364,9 +364,12 @@ export const TIPOS_ATENDIMENTO: TipoAtendimento[] = [
 export interface Atendimento {
   id: string;
   pacienteId: string;
+  areaId?: string;
+  areaNome?: string;
   tipo: TipoAtendimento;
   dataAtendimento: string;
   descricao: string;
+  observacoes?: string | null;
   transporte?: string | null;
   criadoEm: string;
   atualizadoEm?: string;
@@ -386,6 +389,7 @@ export interface HistoricoPaciente {
 
 export interface AtendimentoCreateInput {
   pacienteId: string;
+  areaId?: string | null;
   tipo: TipoAtendimento;
   dataAtendimento: string;
   descricao: string;
@@ -441,6 +445,7 @@ export interface FiltroCotacao {
 
 export interface FiltroAtendimento {
   pacienteId?: string;
+  areaId?: string;
   tipo?: TipoAtendimento;
   periodoInicio?: string;
   periodoFim?: string;

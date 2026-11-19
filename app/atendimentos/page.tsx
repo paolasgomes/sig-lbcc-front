@@ -47,6 +47,7 @@ import TableActions, {
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { TableLoading } from "@/components/ui/table-state";
 import { ROLES_ATENDIMENTOS_E_COTACOES } from "@/lib/access-control";
+import { useAreas } from "@/hooks/use-areas";
 import { useAtendimentos } from "@/hooks/use-atendimentos";
 import { useUsuario } from "@/hooks/use-usuario";
 import {
@@ -56,17 +57,29 @@ import {
 import { TIPOS_ATENDIMENTO } from "@/types";
 
 export default function AtendimentosPage() {
-  const { atendimentos, isLoading, error, refetch, excluirAtendimento, isDeleting } =
-    useAtendimentos();
-  const { isGestor } = useUsuario();
-
   const [busca, setBusca] = useState("");
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
+  const [filtroArea, setFiltroArea] = useState<string>("todas");
+  const [periodoInicio, setPeriodoInicio] = useState("");
+  const [periodoFim, setPeriodoFim] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
     pacienteId: string;
   } | null>(null);
+
+  const filtrosAtendimento = useMemo(
+    () => ({
+      areaId: filtroArea === "todas" ? undefined : filtroArea,
+      periodoInicio: periodoInicio || undefined,
+      periodoFim: periodoFim || undefined,
+    }),
+    [filtroArea, periodoInicio, periodoFim],
+  );
+  const { atendimentos, isLoading, error, refetch, excluirAtendimento, isDeleting } =
+    useAtendimentos(filtrosAtendimento);
+  const { areas, isLoading: areasLoading, error: areasError } = useAreas();
+  const { isGestor } = useUsuario();
 
   const atendimentosFiltrados = useMemo(() => {
     const sorted = [...atendimentos].sort((a, b) =>
@@ -145,8 +158,8 @@ export default function AtendimentosPage() {
             <CardTitle>Lista de Atendimentos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="relative flex-1 max-w-sm">
+            <div className="mb-4 flex flex-wrap items-end justify-start gap-3">
+              <div className="relative w-full max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por paciente ou descrição..."
@@ -156,7 +169,7 @@ export default function AtendimentosPage() {
                 />
               </div>
               <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                <SelectTrigger className="w-full sm:w-48">
+                <SelectTrigger className="h-10 w-full sm:w-48">
                   <SelectValue placeholder="Tipo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -168,12 +181,73 @@ export default function AtendimentosPage() {
                   ))}
                 </SelectContent>
               </Select>
+              <Select
+                value={filtroArea}
+                onValueChange={setFiltroArea}
+                disabled={areasLoading || Boolean(areasError)}
+              >
+                <SelectTrigger className="h-10 w-full sm:w-56">
+                  <SelectValue
+                    placeholder={areasLoading ? "Carregando áreas..." : "Área"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas as áreas</SelectItem>
+                  {areas.map((area) => (
+                    <SelectItem key={area.id} value={area.id}>
+                      {area.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="grid w-full grid-cols-2 gap-3 sm:w-[22rem]">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <label
+                    htmlFor="atendimento-periodo-inicio"
+                    className="text-xs text-muted-foreground"
+                  >
+                    Data inicial
+                  </label>
+                  <Input
+                    id="atendimento-periodo-inicio"
+                    type="date"
+                    value={periodoInicio}
+                    max={periodoFim || undefined}
+                    onChange={(event) => setPeriodoInicio(event.target.value)}
+                  />
+                </div>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <label
+                    htmlFor="atendimento-periodo-fim"
+                    className="text-xs text-muted-foreground"
+                  >
+                    Data final
+                  </label>
+                  <Input
+                    id="atendimento-periodo-fim"
+                    type="date"
+                    value={periodoFim}
+                    min={periodoInicio || undefined}
+                    onChange={(event) => setPeriodoFim(event.target.value)}
+                  />
+                </div>
+              </div>
             </div>
+
+            {areasError && (
+              <p className="mb-3 text-sm text-destructive">
+                Erro ao carregar áreas: {areasError}
+              </p>
+            )}
+            <p className="mb-4 text-sm text-muted-foreground" aria-live="polite">
+              Quantidade de atendimentos encontrados:{" "}
+              {isLoading ? "Carregando..." : atendimentosFiltrados.length}
+            </p>
 
             {isLoading ? (
               <TableLoading message="Carregando atendimentos..." />
             ) : (
-              <div className="rounded-md border">
+              <div className="overflow-x-auto rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -181,28 +255,37 @@ export default function AtendimentosPage() {
                       <TableHead>Paciente</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Descrição</TableHead>
+                      <TableHead>Observações</TableHead>
                       <TableHead className="w-[100px]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {atendimentosFiltrados.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5}>
+                        <TableCell colSpan={6}>
                           <Empty>
                             <EmptyTitle>Nenhum atendimento encontrado</EmptyTitle>
                             <EmptyDescription>
-                              {busca || filtroTipo !== "todos"
+                              {busca ||
+                              filtroTipo !== "todos" ||
+                              filtroArea !== "todas" ||
+                              periodoInicio ||
+                              periodoFim
                                 ? "Tente ajustar os filtros de busca."
                                 : "Registre o primeiro atendimento para começar."}
                             </EmptyDescription>
-                            {!busca && filtroTipo === "todos" && (
-                              <Button asChild className="mt-4">
-                                <Link href="/atendimentos/novo">
-                                  <Plus className="mr-2 h-4 w-4" />
-                                  Novo Atendimento
-                                </Link>
-                              </Button>
-                            )}
+                            {!busca &&
+                              filtroTipo === "todos" &&
+                              filtroArea === "todas" &&
+                              !periodoInicio &&
+                              !periodoFim && (
+                                <Button asChild className="mt-4">
+                                  <Link href="/atendimentos/novo">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Novo Atendimento
+                                  </Link>
+                                </Button>
+                              )}
                           </Empty>
                         </TableCell>
                       </TableRow>
@@ -220,6 +303,9 @@ export default function AtendimentosPage() {
                           </TableCell>
                           <TableCell className="max-w-[200px] truncate">
                             {atendimento.descricao}
+                          </TableCell>
+                          <TableCell className="max-w-[220px] truncate">
+                            {atendimento.observacoes || "-"}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-end">
