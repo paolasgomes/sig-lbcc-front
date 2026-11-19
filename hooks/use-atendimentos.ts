@@ -8,7 +8,11 @@ import {
   atualizarAtendimento,
   excluirAtendimento,
 } from "@/services/atendimentos-service";
-import type { AtendimentoCreateInput, AtendimentoUpdateInput } from "@/types";
+import type {
+  AtendimentoCreateInput,
+  AtendimentoUpdateInput,
+  FiltroAtendimento,
+} from "@/types";
 
 function invalidateAtendimentosAndHistorico(
   queryClient: ReturnType<typeof useQueryClient>,
@@ -20,12 +24,12 @@ function invalidateAtendimentosAndHistorico(
   }
 }
 
-export function useAtendimentos() {
+export function useAtendimentos(filtros?: FiltroAtendimento) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["atendimentos"],
-    queryFn: listarAtendimentos,
+    queryKey: ["atendimentos", filtros ?? {}],
+    queryFn: () => listarAtendimentos(filtros),
     staleTime: 1000 * 60,
   });
 
