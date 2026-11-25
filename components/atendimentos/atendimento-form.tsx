@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { FieldGroup, Field, FieldLabel } from "@/components/ui/field";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAreas } from "@/hooks/use-areas";
 import { usePacientes } from "@/hooks/use-pacientes";
 import { useAtendimentos } from "@/hooks/use-atendimentos";
 import {
@@ -43,12 +44,14 @@ export function AtendimentoForm({
   const searchParams = useSearchParams();
   const prefillPacienteId = searchParams.get("pacienteId") ?? "";
 
+  const { areas, isLoading: areasLoading, error: areasError } = useAreas();
   const { pacientes } = usePacientes();
   const { criarAtendimento, atualizarAtendimento, isCreating, isUpdating } =
     useAtendimentos();
 
   const [formData, setFormData] = useState({
     pacienteId: atendimento?.pacienteId || prefillPacienteId || "",
+    areaId: atendimento?.areaId || "",
     tipo: (atendimento?.tipo || "consulta") as TipoAtendimento,
     dataAtendimento: atendimento?.dataAtendimento || todayDateOnly(),
     descricao: atendimento?.descricao || "",
@@ -161,6 +164,44 @@ export function AtendimentoForm({
                   </option>
                 ))}
               </select>
+            </Field>
+
+            <Field>
+              <FieldLabel>Área de atendimento</FieldLabel>
+
+              <select
+                value={formData.areaId}
+                onChange={(e) => handleChange("areaId", e.target.value)}
+                disabled={areasLoading || Boolean(areasError)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">
+                  {areasLoading
+                    ? "Carregando áreas..."
+                    : areasError
+                      ? "Áreas indisponíveis"
+                      : "Sem área"}
+                </option>
+
+                {formData.areaId &&
+                  !areas.some((area) => area.id === formData.areaId) && (
+                    <option value={formData.areaId}>
+                      {atendimento?.areaNome || "Área atual"}
+                    </option>
+                  )}
+
+                {areas.map((area) => (
+                  <option key={area.id} value={area.id}>
+                    {area.nome}
+                  </option>
+                ))}
+              </select>
+
+              {areasError && (
+                <p className="text-sm text-destructive">
+                  Erro ao carregar áreas: {areasError}
+                </p>
+              )}
             </Field>
 
             <Field>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -14,7 +15,7 @@ import {
   Bell,
   Activity,
   AlertTriangle,
-  // BarChart3,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
@@ -70,11 +71,11 @@ const navItems: NavItem[] = [
     allowedRoles: ROLES_ATENDIMENTOS_E_COTACOES,
   },
   {
-  label: "Ordens",
-  href: "/fornecimento",
-  icon: FileText,
-  allowedRoles: ROLES_ORDEM_FORNECIMENTO,
-},
+    label: "Ordens",
+    href: "/fornecimento",
+    icon: FileText,
+    allowedRoles: ROLES_ORDEM_FORNECIMENTO,
+  },
   {
     label: "Divergências e Cancelamentos",
     href: "/divergencias",
@@ -116,12 +117,12 @@ const navItems: NavItem[] = [
     icon: Activity,
     perfilMinimo: [PerfilUsuario.GESTOR],
   },
-  // {
-  //   label: "Relatórios",
-  //   href: "/relatorios",
-  //   icon: BarChart3,
-  //   allowedRoles: ROLES_GESTAO_COMPLETA,
-  // },
+  {
+    label: "Relatórios",
+    href: "/relatorios",
+    icon: BarChart3,
+    allowedRoles: ROLES_GESTAO_COMPLETA,
+  },
 ];
 
 export function AppSidebar() {
@@ -138,7 +139,7 @@ export function AppSidebar() {
   return (
     <aside className="flex h-screen w-64 flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6">
-        <div className="flex items-center justify-center rounded-xl mx-auto">
+        <div className="mx-auto flex items-center justify-center rounded-xl">
           <Image
             src={Logo}
             alt="Logo LBCC"
